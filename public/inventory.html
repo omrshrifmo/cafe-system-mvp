@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>إدارة المخزون - كافيه مزاج</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/nav.js"></script>
+  <!-- Cairo Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            cairo: ['Cairo', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Cairo', sans-serif;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 h-screen max-h-screen flex flex-col overflow-hidden selection:bg-amber-500 selection:text-black">
+
+  <!-- Header (Shrink-0) -->
+  <header class="shrink-0 border-b border-slate-800 bg-slate-900 px-6 py-4 flex items-center justify-between shadow-xl z-20">
+    <div class="flex items-center gap-3">
+      <div class="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 text-2xl shadow-inner">
+        📦
+      </div>
+      <div>
+        <h1 class="text-xl font-black text-slate-100 tracking-wide">كافيه مزاج - شاشة إدارة المخزون (BOM Inventory)</h1>
+        <p class="text-xs text-amber-400 font-semibold">خصم آلي ومتابعة فورية للمواد الخام حسب الأقسام</p>
+      </div>
+    </div>
+
+    <!-- Actions: Refresh Button & Clock -->
+    <div class="flex items-center gap-4">
+      <button 
+        onclick="fetchInventory()"
+        class="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl shadow-lg cursor-pointer">
+        <span>🔄</span>
+        <span>تحديث (Refresh)</span>
+      </button>
+
+      <div id="live-clock" class="text-slate-400 font-mono text-sm bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700/50 hidden md:block">
+        00:00:00
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Container (Internal Scroll) -->
+  <main class="max-w-7xl w-full mx-auto p-6 md:p-8 flex-1 min-h-0 overflow-y-auto flex flex-col">
+    
+    <!-- Title & Stats Overview -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+      <div>
+        <h2 class="text-2xl md:text-3xl font-extrabold text-white mb-1">كافيه مزاج - رصيد الأقسام ومصفوفة الوصفات (BOM)</h2>
+        <p class="text-slate-400 text-sm">تتبع آلي للمستودع وتنبيهات فورية للمخزون المنخفض</p>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <div class="bg-slate-900 border border-slate-800 px-4 py-2 rounded-2xl flex items-center gap-2">
+          <span class="text-xs text-slate-400">إجمالي المواد الخام:</span>
+          <span id="items-count" class="text-amber-400 font-bold font-mono text-lg">0</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Loading State Container -->
+    <div id="inventory-loading" class="py-16 text-center text-slate-500 font-bold text-lg hidden">
+      جاري تحميل بيانات المخزون الأقسام...
+    </div>
+
+    <!-- 3 Department Columns Layout -->
+    <div id="inventory-columns" class="grid grid-cols-1 lg:grid-cols-3 gap-8 w-full">
+      
+      <!-- Department 1: Barista -->
+      <section class="bg-slate-900 border border-amber-500/30 rounded-3xl p-6 flex flex-col gap-6 shadow-xl">
+        <div class="flex items-center justify-between border-b border-amber-500/20 pb-4">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 text-xl">
+              ☕
+            </div>
+            <div>
+              <h3 class="text-xl font-black text-white">قسم البارستا</h3>
+              <p class="text-xs text-amber-400 font-medium">Barista Stock</p>
+            </div>
+          </div>
+          <span id="barista-count" class="text-xs font-mono font-bold px-3 py-1 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/30">0 أصناف</span>
+        </div>
+        <div id="barista-grid" class="flex flex-col gap-4">
+          <!-- Cards injected here -->
+        </div>
+      </section>
+
+      <!-- Department 2: Shisha -->
+      <section class="bg-slate-900 border border-purple-500/30 rounded-3xl p-6 flex flex-col gap-6 shadow-xl">
+        <div class="flex items-center justify-between border-b border-purple-500/20 pb-4">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-purple-400 text-xl">
+              💨
+            </div>
+            <div>
+              <h3 class="text-xl font-black text-white">قسم الشيشة</h3>
+              <p class="text-xs text-purple-400 font-medium">Shisha Stock</p>
+            </div>
+          </div>
+          <span id="shisha-count" class="text-xs font-mono font-bold px-3 py-1 rounded-full bg-purple-500/10 text-purple-300 border border-purple-500/30">0 أصناف</span>
+        </div>
+        <div id="shisha-grid" class="flex flex-col gap-4">
+          <!-- Cards injected here -->
+        </div>
+      </section>
+
+      <!-- Department 3: Kitchen -->
+      <section class="bg-slate-900 border border-orange-500/30 rounded-3xl p-6 flex flex-col gap-6 shadow-xl">
+        <div class="flex items-center justify-between border-b border-orange-500/20 pb-4">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-orange-500/20 border border-orange-500/40 flex items-center justify-center text-orange-400 text-xl">
+              🍳
+            </div>
+            <div>
+              <h3 class="text-xl font-black text-white">قسم المطبخ</h3>
+              <p class="text-xs text-orange-400 font-medium">Kitchen Stock</p>
+            </div>
+          </div>
+          <span id="kitchen-count" class="text-xs font-mono font-bold px-3 py-1 rounded-full bg-orange-500/10 text-orange-300 border border-orange-500/30">0 أصناف</span>
+        </div>
+        <div id="kitchen-grid" class="flex flex-col gap-4">
+          <!-- Cards injected here -->
+        </div>
+      </section>
+
+    </div>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="border-t border-slate-800 bg-slate-950 py-4 text-center text-xs text-slate-500">
+    كافيه مزاج - إدارة المخزون &copy; 2026
+  </footer>
+
+  <script>
+    // Live Clock
+    function updateClock() {
+      const now = new Date();
+      document.getElementById('live-clock').textContent = now.toLocaleTimeString('ar-EG');
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // Icon map for raw materials
+    function getMaterialIcon(name) {
+      if (name.includes('قهوة')) return '☕';
+      if (name.includes('حليب')) return '🥛';
+      if (name.includes('أكواب')) return '🥤';
+      if (name.includes('معسل')) return '💨';
+      if (name.includes('خبز')) return '🍞';
+      if (name.includes('دجاج')) return '🍗';
+      return '📦';
+    }
+
+    // Fetch Inventory API Handler
+    async function fetchInventory() {
+      try {
+        const loading = document.getElementById('inventory-loading');
+        loading.classList.remove('hidden');
+
+        const response = await fetch('/api/inventory');
+        const data = await response.json();
+
+        loading.classList.add('hidden');
+
+        if (response.ok && data.success && Array.isArray(data.inventory)) {
+          renderInventory(data.inventory);
+        } else {
+          alert('فشل في جلب بيانات المخزون.');
+        }
+      } catch (err) {
+        console.error('Failed to fetch inventory:', err);
+        document.getElementById('inventory-loading').textContent = 'خطأ بالاتصال بالسيرفر المحلي.';
+      }
+    }
+
+    // Render Stock Cards grouped into 3 columns
+    function renderInventory(items) {
+      document.getElementById('items-count').textContent = items.length;
+
+      const baristaGrid = document.getElementById('barista-grid');
+      const shishaGrid = document.getElementById('shisha-grid');
+      const kitchenGrid = document.getElementById('kitchen-grid');
+
+      baristaGrid.innerHTML = '';
+      shishaGrid.innerHTML = '';
+      kitchenGrid.innerHTML = '';
+
+      let baristaCount = 0;
+      let shishaCount = 0;
+      let kitchenCount = 0;
+
+      items.forEach(item => {
+        const icon = getMaterialIcon(item.name);
+        const stock = Number(item.current_stock);
+        const unit = item.unit;
+        const dept = (item.department || 'BARISTA').toUpperCase();
+
+        let statusBadge = '';
+        let borderClass = 'border-slate-800';
+
+        if (stock <= 500 && (unit === 'g' || unit === 'ml')) {
+          statusBadge = `<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30">منخفض جداً ⚠️</span>`;
+          borderClass = 'border-rose-500/60';
+        } else if (stock <= 500 && unit === 'pcs') {
+          statusBadge = `<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30">منخفض ⚠️</span>`;
+          borderClass = 'border-rose-500/60';
+        } else {
+          statusBadge = `<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">ممتاز ✅</span>`;
+          borderClass = 'border-slate-800';
+        }
+
+        const card = document.createElement('div');
+        card.className = `bg-slate-900 ${borderClass} rounded-2xl p-5 flex flex-col justify-between shadow-md`;
+        card.innerHTML = `
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <div class="w-12 h-12 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-2xl shadow-inner">
+                ${icon}
+              </div>
+              ${statusBadge}
+            </div>
+            
+            <h4 class="text-xl font-black text-white mb-1">${item.name}</h4>
+            <p class="text-xs text-slate-400 font-mono mb-3">ID: #${item.id}</p>
+          </div>
+
+          <div class="pt-3 border-t border-slate-800/80 flex items-baseline justify-between">
+            <span class="text-xs font-semibold text-slate-400">الرصيد المتبقي:</span>
+            <div class="flex items-baseline gap-1">
+              <span class="text-2xl font-black text-amber-400 font-mono">${stock.toLocaleString('ar-EG')}</span>
+              <span class="text-xs font-bold text-slate-300">${unit}</span>
+            </div>
+          </div>
+        `;
+
+        if (dept === 'SHISHA') {
+          shishaGrid.appendChild(card);
+          shishaCount++;
+        } else if (dept === 'KITCHEN') {
+          kitchenGrid.appendChild(card);
+          kitchenCount++;
+        } else {
+          baristaGrid.appendChild(card);
+          baristaCount++;
+        }
+      });
+
+      document.getElementById('barista-count').textContent = `${baristaCount} أصناف`;
+      document.getElementById('shisha-count').textContent = `${shishaCount} أصناف`;
+      document.getElementById('kitchen-count').textContent = `${kitchenCount} أصناف`;
+
+      if (baristaCount === 0) baristaGrid.innerHTML = `<p class="text-slate-500 text-xs text-center py-6">لا توجد مواد خام</p>`;
+      if (shishaCount === 0) shishaGrid.innerHTML = `<p class="text-slate-500 text-xs text-center py-6">لا توجد مواد خام</p>`;
+      if (kitchenCount === 0) kitchenGrid.innerHTML = `<p class="text-slate-500 text-xs text-center py-6">لا توجد مواد خام</p>`;
+    }
+
+    // Initial Load
+    fetchInventory();
+  </script>
+</body>
+</html>

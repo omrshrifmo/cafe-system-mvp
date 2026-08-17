@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" class="h-full bg-slate-950">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>كافيه مزاج - لوحة ذكاء الأعمال</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/nav.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Alexandria:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Alexandria', sans-serif; }
+    *, ::before, ::after {
+      transition: none !important;
+      animation: none !important;
+    }
+  </style>
+</head>
+<body class="h-screen overflow-hidden bg-slate-950 text-slate-100 flex flex-col select-none">
+
+  <!-- Header -->
+  <header class="shrink-0 border-b border-slate-800 bg-slate-900 px-4 py-2 flex items-center justify-between shadow-md z-20">
+    <div class="flex items-center gap-2">
+      <div class="w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 text-lg shadow-inner">
+        📈
+      </div>
+      <div>
+        <h1 class="text-base font-black text-slate-100 leading-none">كافيه مزاج - لوحة ذكاء الأعمال (BI Dashboard)</h1>
+        <p class="text-[10px] text-amber-400 font-semibold leading-tight">تحليل المبيعات والأقسام بالساعة والأصناف الأكثر مبيعاً</p>
+      </div>
+    </div>
+
+    <!-- Date Range Quick Filters & Navigation -->
+    <div class="flex items-center gap-3">
+      <!-- Range Filter Buttons -->
+      <div class="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs font-bold gap-1">
+        <button id="filter-today" onclick="setRange('today')" class="px-3 py-1 bg-amber-500 text-slate-950 rounded-lg font-black cursor-pointer">اليوم</button>
+        <button id="filter-week" onclick="setRange('week')" class="px-3 py-1 text-slate-400 hover:text-white rounded-lg cursor-pointer">هذا الأسبوع</button>
+        <button id="filter-month" onclick="setRange('month')" class="px-3 py-1 text-slate-400 hover:text-white rounded-lg cursor-pointer">هذا الشهر</button>
+      </div>
+
+      <!-- Links -->
+      <a href="/pos.html" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl border border-slate-700">📱 الكاشير</a>
+      <a href="/eod.html" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl border border-slate-700">📊 تقرير EOD</a>
+      <a href="/shareholders.html" class="px-2.5 py-1.5 bg-emerald-950 hover:bg-emerald-900 text-emerald-300 text-xs font-bold rounded-xl border border-emerald-500/40">💎 الشركاء</a>
+    </div>
+  </header>
+
+  <!-- Toast Notification Container -->
+  <div id="bi-toast-container" class="fixed top-14 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-1 pointer-events-none"></div>
+
+  <!-- Main Scrollable Dashboard Layout -->
+  <main class="max-w-7xl w-full mx-auto p-3 flex-1 min-h-0 overflow-y-auto space-y-3">
+
+    <!-- Row 1: Massive KPI Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-2.5">
+      <!-- Revenue KPI -->
+      <div class="bg-slate-900 border border-amber-500/40 rounded-2xl p-3 shadow-md flex flex-col justify-between">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-slate-400">إجمالي الإيرادات:</span>
+          <span class="text-lg">💰</span>
+        </div>
+        <div class="flex items-baseline justify-between mt-2">
+          <span id="kpi-revenue" class="text-2xl font-black text-amber-400 font-mono">0</span>
+          <span class="text-xs font-bold text-slate-500">ج.م</span>
+        </div>
+      </div>
+
+      <!-- Orders KPI -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3 shadow-md flex flex-col justify-between">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-slate-400">عدد الطلبات الإجمالي:</span>
+          <span class="text-lg">🧾</span>
+        </div>
+        <div class="flex items-baseline justify-between mt-2">
+          <span id="kpi-orders" class="text-2xl font-black text-blue-400 font-mono">0</span>
+          <span class="text-xs font-bold text-slate-500">طلب</span>
+        </div>
+      </div>
+
+      <!-- AOV KPI -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3 shadow-md flex flex-col justify-between">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-slate-400">متوسط الفاتورة (AOV):</span>
+          <span class="text-lg">📊</span>
+        </div>
+        <div class="flex items-baseline justify-between mt-2">
+          <span id="kpi-aov" class="text-2xl font-black text-emerald-400 font-mono">0</span>
+          <span class="text-xs font-bold text-slate-500">ج.م / طلب</span>
+        </div>
+      </div>
+
+      <!-- Waste Cost KPI -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3 shadow-md flex flex-col justify-between">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-slate-400">تقدير تكلفة الهالك:</span>
+          <span class="text-lg">🗑️</span>
+        </div>
+        <div class="flex items-baseline justify-between mt-2">
+          <span id="kpi-waste" class="text-2xl font-black text-rose-400 font-mono">0</span>
+          <span class="text-xs font-bold text-slate-500">ج.م</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 2: Zero-Animation Side-by-Side Charts -->
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-stretch">
+      <!-- Hourly Sales Line Chart (Left 7 Cols) -->
+      <section class="md:col-span-7 bg-slate-900 border border-slate-800 rounded-2xl p-3.5 shadow-md flex flex-col justify-between h-[280px]">
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="text-xs font-black text-white flex items-center gap-1.5">
+            <span>📈</span>
+            <span>اتجاه المبيعات بالساعة (Hourly Sales Trend)</span>
+          </h2>
+          <span class="text-[10px] text-amber-400 font-bold bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/30">00:00 - 23:00</span>
+        </div>
+        <div class="flex-1 min-h-0 relative">
+          <canvas id="hourlyChart"></canvas>
+        </div>
+      </section>
+
+      <!-- Department Sales Doughnut Chart (Right 5 Cols) -->
+      <section class="md:col-span-5 bg-slate-900 border border-slate-800 rounded-2xl p-3.5 shadow-md flex flex-col justify-between h-[280px]">
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="text-xs font-black text-white flex items-center gap-1.5">
+            <span>🍩</span>
+            <span>توزيع مبيعات الأقسام (Department Sales)</span>
+          </h2>
+        </div>
+        <div class="flex-1 min-h-0 relative flex items-center justify-center">
+          <canvas id="departmentChart"></canvas>
+        </div>
+      </section>
+    </div>
+
+    <!-- Row 3: Dense Data Tables Side-by-Side -->
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-start">
+      <!-- Top 10 Selling Items Table (Left 7 Cols) -->
+      <section class="md:col-span-7 bg-slate-900 border border-slate-800 rounded-2xl p-3.5 shadow-md">
+        <h2 class="text-xs font-black text-white mb-2 pb-2 border-b border-slate-800 flex items-center justify-between">
+          <span class="flex items-center gap-1.5">
+            <span>🔥</span>
+            <span>أكثر الأصناف مبيعاً (Top 10 Selling Items)</span>
+          </span>
+          <span class="text-[10px] text-slate-400 font-bold">مرتبة حسب الكمية</span>
+        </h2>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-right text-xs">
+            <thead>
+              <tr class="text-slate-400 border-b border-slate-800 font-bold bg-slate-950/50">
+                <th class="py-1.5 px-2">#</th>
+                <th class="py-1.5 px-2">اسم الصنف</th>
+                <th class="py-1.5 px-2 text-center">الكمية المباعة</th>
+                <th class="py-1.5 px-2 text-left">إجمالي المبيعات</th>
+              </tr>
+            </thead>
+            <tbody id="top-items-body" class="divide-y divide-slate-800/60 font-medium">
+              <!-- Rendered via JS -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Low Stock Alerts Table (Right 5 Cols) -->
+      <section class="md:col-span-5 bg-slate-900 border border-rose-500/40 rounded-2xl p-3.5 shadow-md">
+        <h2 class="text-xs font-black text-rose-400 mb-2 pb-2 border-b border-slate-800 flex items-center justify-between">
+          <span class="flex items-center gap-1.5">
+            <span>⚠️</span>
+            <span>تحذيرات المخزون المنخفض (Low Stock Alerts)</span>
+          </span>
+          <span class="text-[10px] text-rose-300 font-bold bg-rose-500/10 px-2 py-0.5 rounded border border-rose-500/30">أقل من 20 وحدة</span>
+        </h2>
+
+        <div class="overflow-x-auto max-h-[220px] overflow-y-auto">
+          <table class="w-full text-right text-xs">
+            <thead>
+              <tr class="text-slate-400 border-b border-slate-800 font-bold bg-slate-950/50">
+                <th class="py-1.5 px-2">خامة المخزون</th>
+                <th class="py-1.5 px-2 text-center">الرصيد المتبقي</th>
+                <th class="py-1.5 px-2 text-left">القسم</th>
+              </tr>
+            </thead>
+            <tbody id="low-stock-body" class="divide-y divide-slate-800/60 font-medium">
+              <!-- Rendered via JS -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="border-t border-slate-800 bg-slate-950 py-2 text-center text-[11px] text-slate-500">
+    كافيه مزاج &copy; 2026 - لوحة ذكاء الأعمال فائقة الاستجابة (Zero Animation BI)
+  </footer>
+
+  <script>
+    let currentRange = 'today';
+    let hourlyChart = null;
+    let departmentChart = null;
+
+    function showToast(message, isSuccess = true) {
+      const container = document.getElementById('bi-toast-container');
+      const toast = document.createElement('div');
+      toast.className = `px-4 py-2 rounded-xl border text-xs font-bold flex items-center gap-2 ${
+        isSuccess ? 'bg-emerald-950 text-emerald-300 border-emerald-500/50' : 'bg-rose-950 text-rose-300 border-rose-500/50'
+      }`;
+      toast.innerHTML = `<span>${isSuccess ? '✅' : '⚠️'}</span><span>${message}</span>`;
+      container.appendChild(toast);
+      setTimeout(() => toast.remove(), 2200);
+    }
+
+    function setRange(range) {
+      currentRange = range;
+      ['today', 'week', 'month'].forEach(r => {
+        const btn = document.getElementById(`filter-${r}`);
+        if (r === range) {
+          btn.className = 'px-3 py-1 bg-amber-500 text-slate-950 rounded-lg font-black cursor-pointer';
+        } else {
+          btn.className = 'px-3 py-1 text-slate-400 hover:text-white rounded-lg cursor-pointer';
+        }
+      });
+      fetchBIData();
+    }
+
+    async function fetchBIData() {
+      try {
+        const [biRes, invRes] = await Promise.all([
+          fetch(`/api/reports/bi?range=${currentRange}`),
+          fetch('/api/inventory')
+        ]);
+
+        const biData = await biRes.json();
+        const invData = await invRes.json();
+
+        if (biRes.ok && biData.success && biData.data) {
+          renderKPIs(biData.data.kpis);
+          renderHourlyChart(biData.data.hourly_sales);
+          renderDepartmentChart(biData.data.department_sales);
+          renderTopItems(biData.data.top_items);
+        }
+
+        if (invRes.ok && invData.success && Array.isArray(invData.inventory)) {
+          renderLowStock(invData.inventory);
+        }
+      } catch (err) {
+        console.error('Error fetching BI data:', err);
+        showToast('خطأ في جلب بيانات BI', false);
+      }
+    }
+
+    function renderKPIs(kpis) {
+      if (!kpis) return;
+      document.getElementById('kpi-revenue').textContent = (kpis.total_revenue || 0).toLocaleString();
+      document.getElementById('kpi-orders').textContent = (kpis.total_orders || 0).toLocaleString();
+      document.getElementById('kpi-aov').textContent = (kpis.aov || 0).toLocaleString();
+      document.getElementById('kpi-waste').textContent = (kpis.total_waste_cost || 0).toLocaleString();
+    }
+
+    function renderHourlyChart(hourlyRows) {
+      const labels = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, '0')}:00`);
+      const totalsMap = new Array(24).fill(0);
+
+      (hourlyRows || []).forEach(r => {
+        const h = parseInt(r.hour, 10);
+        if (!isNaN(h) && h >= 0 && h < 24) {
+          totalsMap[h] = r.total;
+        }
+      });
+
+      const ctx = document.getElementById('hourlyChart').getContext('2d');
+      if (hourlyChart) hourlyChart.destroy();
+
+      hourlyChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'المبيعات (ج.م)',
+            data: totalsMap,
+            borderColor: '#f59e0b',
+            backgroundColor: 'rgba(245, 158, 11, 0.1)',
+            borderWidth: 2,
+            fill: true,
+            tension: 0.1,
+            pointBackgroundColor: '#f59e0b',
+            pointRadius: 3
+          }]
+        },
+        options: {
+          animation: false,
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            x: {
+              ticks: { color: '#94a3b8', font: { size: 9 } },
+              grid: { color: '#1e293b' }
+            },
+            y: {
+              ticks: { color: '#94a3b8', font: { size: 9 } },
+              grid: { color: '#1e293b' }
+            }
+          }
+        }
+      });
+    }
+
+    function renderDepartmentChart(depts) {
+      const barista = (depts && depts.BARISTA) || 0;
+      const shisha = (depts && depts.SHISHA) || 0;
+      const kitchen = (depts && depts.KITCHEN) || 0;
+
+      const ctx = document.getElementById('departmentChart').getContext('2d');
+      if (departmentChart) departmentChart.destroy();
+
+      departmentChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: ['البارستا (Barista)', 'الشيشة (Shisha)', 'المطبخ (Kitchen)'],
+          datasets: [{
+            data: [barista, shisha, kitchen],
+            backgroundColor: ['#f59e0b', '#a855f7', '#f97316'],
+            borderColor: '#0f172a',
+            borderWidth: 2
+          }]
+        },
+        options: {
+          animation: false,
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: { color: '#cbd5e1', font: { size: 10, family: 'Alexandria' } }
+            }
+          }
+        }
+      });
+    }
+
+    function renderTopItems(items) {
+      const tbody = document.getElementById('top-items-body');
+      tbody.innerHTML = '';
+
+      if (!items || items.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" class="py-6 text-center text-slate-500">لا توجد مبيعات مسجلة في هذا النطاق الزمني</td></tr>`;
+        return;
+      }
+
+      items.forEach((item, index) => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-900/50';
+
+        tr.innerHTML = `
+          <td class="py-1.5 px-2 text-slate-400 font-mono font-bold text-[11px]">${index + 1}</td>
+          <td class="py-1.5 px-2 text-white font-bold">${item.item_name}</td>
+          <td class="py-1.5 px-2 text-center font-mono font-black text-amber-400 text-xs">${item.qty}</td>
+          <td class="py-1.5 px-2 text-left font-mono font-black text-emerald-400 text-xs">${item.total.toLocaleString()} ج.م</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function renderLowStock(inventory) {
+      const tbody = document.getElementById('low-stock-body');
+      tbody.innerHTML = '';
+
+      // Filter items with current_stock < 30
+      const lowItems = (inventory || []).filter(item => (Number(item.current_stock) || 0) < 30);
+
+      if (lowItems.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="3" class="py-4 text-center text-emerald-400 font-bold">جميع الخامات في مستوى آمن ✅</td></tr>`;
+        return;
+      }
+
+      lowItems.forEach(item => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-900/50';
+
+        let deptBadge = '<span class="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/30 text-[10px]">البارستا</span>';
+        if (item.department === 'SHISHA') deptBadge = '<span class="px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-300 border border-purple-500/30 text-[10px]">الشيشة</span>';
+        if (item.department === 'KITCHEN') deptBadge = '<span class="px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-300 border border-orange-500/30 text-[10px]">المطبخ</span>';
+
+        tr.innerHTML = `
+          <td class="py-1.5 px-2 text-white font-bold">${item.name}</td>
+          <td class="py-1.5 px-2 text-center font-mono font-black text-rose-400 text-xs">${item.current_stock} ${item.unit}</td>
+          <td class="py-1.5 px-2 text-left">${deptBadge}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // Initial Load
+    fetchBIData();
+  </script>
+</body>
+</html>

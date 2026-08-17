@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>إدارة القائمة - كافيه مزاج</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/nav.js"></script>
+  <!-- Cairo Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            cairo: ['Cairo', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Cairo', sans-serif;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 h-screen max-h-screen flex flex-col overflow-hidden selection:bg-amber-500 selection:text-black">
+
+  <!-- Header (Shrink-0) -->
+  <header class="shrink-0 border-b border-slate-800 bg-slate-900 px-4 py-3 flex items-center justify-between shadow-md z-20">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 text-xl">
+        🛠️
+      </div>
+      <div>
+        <h1 class="text-lg font-black text-slate-100 leading-tight">كافيه مزاج - لوحة إدارة الأصناف والمشروبات</h1>
+        <p class="text-[11px] text-amber-400 font-semibold">تعديل أسماء وأسعار وأقسام الأصناف المتاحة بالكاشير (Menu Admin Panel)</p>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-2">
+      <a href="/pos.html" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-lg border border-slate-700 flex items-center gap-1">
+        <span>📱</span>
+        <span>العودة للكاشير</span>
+      </a>
+      <div id="live-clock" class="text-slate-400 font-mono text-xs bg-slate-800 px-2.5 py-1 rounded border border-slate-700 hidden sm:block">
+        00:00:00
+      </div>
+    </div>
+  </header>
+
+  <!-- Toast Notification -->
+  <div id="toast-container" class="fixed top-16 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-2 pointer-events-none"></div>
+
+  <!-- Main Content Container (Flex-1) -->
+  <main class="max-w-6xl w-full mx-auto p-4 flex-1 min-h-0 flex flex-col gap-3 overflow-hidden">
+    
+    <!-- Action Bar (Shrink-0) -->
+    <div class="shrink-0 bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
+      <div>
+        <h2 class="text-xl font-extrabold text-white">جدول أسعار وأقسام المأكولات والمشروبات</h2>
+        <p class="text-slate-400 text-xs mt-0.5">قم بتحديث أي حقل مباشرة ثم اضغط "حفظ التعديلات" للتطبيق الفوري</p>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2">
+        <button 
+          onclick="downloadCsvTemplate()"
+          class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-xl text-xs font-bold flex items-center gap-1 cursor-pointer">
+          <span>📥</span>
+          <span>تحميل قالب CSV</span>
+        </button>
+
+        <label class="px-3 py-2 bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border border-emerald-500/40 rounded-xl text-xs font-bold flex items-center gap-1 cursor-pointer">
+          <span>📤</span>
+          <span>رفع ملف CSV</span>
+          <input type="file" id="csv-file-input" accept=".csv" onchange="uploadCsvFile(this)" class="hidden" />
+        </label>
+
+        <button 
+          onclick="openAddModal()"
+          class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-amber-400 border border-amber-500/40 rounded-xl text-xs font-black flex items-center gap-1 cursor-pointer">
+          <span>➕</span>
+          <span>إضافة عنصر جديد</span>
+        </button>
+
+        <button 
+          id="save-all-btn"
+          onclick="saveAllChanges()"
+          class="px-5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl text-xs font-black shadow-md flex items-center gap-1 cursor-pointer">
+          <span>💾</span>
+          <span>حفظ التعديلات</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Scrollable Dense Table Container -->
+    <div class="flex-1 min-h-0 bg-slate-900 border border-slate-800 rounded-2xl overflow-auto shadow-lg">
+      <table class="w-full text-right border-collapse text-xs">
+        <thead class="sticky top-0 bg-slate-800 z-10">
+          <tr class="text-slate-300 font-bold border-b border-slate-700 uppercase tracking-wider">
+            <th class="p-3">#</th>
+            <th class="p-3">اسم الصنف</th>
+            <th class="p-3">القسم (Category)</th>
+            <th class="p-3">السعر (ج.م)</th>
+          </tr>
+        </thead>
+        <tbody id="menu-table-body" class="divide-y divide-slate-800">
+          <tr>
+            <td colspan="4" class="p-8 text-center text-slate-500 font-bold">جاري تحميل عناصر القائمة...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </main>
+
+  <!-- Add Item Modal -->
+  <div id="add-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+    <div class="bg-slate-900 border border-amber-500/40 rounded-2xl max-w-md w-full p-5 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+        <h3 class="font-extrabold text-base text-white">إضافة عنصر جديد للقائمة</h3>
+        <button onclick="closeAddModal()" class="text-slate-400 hover:text-white font-bold text-base cursor-pointer">✕</button>
+      </div>
+
+      <form onsubmit="submitNewItem(event)" class="space-y-3">
+        <div>
+          <label class="block text-xs font-bold text-slate-300 mb-1">اسم الصنف:</label>
+          <input 
+            type="text" 
+            id="new-item-name" 
+            required 
+            placeholder="مثال: موهيتو فواكه" 
+            class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-white text-xs focus:border-amber-500 focus:outline-none" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-300 mb-1">القسم (Category):</label>
+          <select 
+            id="new-item-category" 
+            class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-white text-xs focus:border-amber-500 focus:outline-none">
+            <option value="BARISTA">قسم البارستا (BARISTA)</option>
+            <option value="SHISHA">قسم الشيشة (SHISHA)</option>
+            <option value="KITCHEN">قسم المطبخ (KITCHEN)</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-300 mb-1">السعر (جنيه مصري):</label>
+          <input 
+            type="number" 
+            id="new-item-price" 
+            required 
+            min="0" 
+            step="1" 
+            placeholder="0" 
+            class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-white text-xs font-mono focus:border-amber-500 focus:outline-none" />
+        </div>
+
+        <div class="pt-3 border-t border-slate-800 flex items-center justify-end gap-2">
+          <button 
+            type="button" 
+            onclick="closeAddModal()" 
+            class="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold cursor-pointer">
+            إلغاء
+          </button>
+          <button 
+            type="submit" 
+            class="px-5 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl text-xs font-black cursor-pointer">
+            حفظ وإضافة
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="border-t border-slate-800 bg-slate-950 py-3 text-center text-xs text-slate-500">
+    كافيه مزاج &copy; 2026 - لوحة التحكم السريعة بالأصناف والأسعار
+  </footer>
+
+  <script>
+    // Live Clock
+    function updateClock() {
+      const now = new Date();
+      document.getElementById('live-clock').textContent = now.toLocaleTimeString('ar-EG');
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // Toast
+    function showToast(msg, isSuccess = true) {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `px-5 py-2.5 rounded-xl border text-xs font-bold flex items-center gap-2 ${
+        isSuccess ? 'bg-emerald-950 text-emerald-300 border-emerald-500/50' : 'bg-rose-950 text-rose-300 border-rose-500/50'
+      }`;
+      toast.innerHTML = `<span>${isSuccess ? '✅' : '⚠️'}</span><span>${msg}</span>`;
+      container.appendChild(toast);
+      setTimeout(() => toast.remove(), 2500);
+    }
+
+    let menuState = [];
+
+    // Fetch Menu
+    async function fetchMenu() {
+      try {
+        const response = await fetch('/api/menu');
+        const data = await response.json();
+        if (response.ok && data.success && Array.isArray(data.menu)) {
+          menuState = data.menu;
+          renderMenuTable();
+        } else {
+          showToast('فشل في تحميل عناصر القائمة', false);
+        }
+      } catch (err) {
+        console.error('Failed to fetch menu:', err);
+        showToast('خطأ في الاتصال بالسيرفر المحلي', false);
+      }
+    }
+
+    // Render Dense Table
+    function renderMenuTable() {
+      const tbody = document.getElementById('menu-table-body');
+      tbody.innerHTML = '';
+
+      if (menuState.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-slate-500 font-bold">لا توجد أصناف بالقائمة حتى الآن.</td></tr>`;
+        return;
+      }
+
+      menuState.forEach((item, index) => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-800/40';
+        tr.innerHTML = `
+          <td class="p-3 text-slate-500 font-mono font-bold w-12">${index + 1}</td>
+          <td class="p-3">
+            <input 
+              type="text" 
+              data-index="${index}" 
+              data-field="menu_item_name" 
+              value="${item.menu_item_name}" 
+              class="w-full px-2 py-1 bg-slate-950 border border-slate-700 rounded-lg text-white font-bold focus:border-amber-500 focus:outline-none" />
+          </td>
+          <td class="p-3 w-48">
+            <select 
+              data-index="${index}" 
+              data-field="category" 
+              class="w-full px-2 py-1 bg-slate-950 border border-slate-700 rounded-lg text-amber-400 font-bold focus:border-amber-500 focus:outline-none">
+              <option value="BARISTA" ${item.category === 'BARISTA' ? 'selected' : ''}>BARISTA (البارستا)</option>
+              <option value="SHISHA" ${item.category === 'SHISHA' ? 'selected' : ''}>SHISHA (الشيشة)</option>
+              <option value="KITCHEN" ${item.category === 'KITCHEN' ? 'selected' : ''}>KITCHEN (المطبخ)</option>
+            </select>
+          </td>
+          <td class="p-3 w-36">
+            <input 
+              type="number" 
+              data-index="${index}" 
+              data-field="price" 
+              value="${item.price}" 
+              min="0" 
+              step="1" 
+              class="w-full px-2 py-1 bg-slate-950 border border-slate-700 rounded-lg text-amber-400 font-mono font-black text-left dir-ltr focus:border-amber-500 focus:outline-none" />
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // Save All Changes Bulk API Handler
+    async function saveAllChanges() {
+      const saveBtn = document.getElementById('save-all-btn');
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'جاري الحفظ... ⏳';
+
+      const rows = document.querySelectorAll('#menu-table-body tr');
+      const updatedItems = [];
+
+      rows.forEach((tr) => {
+        const nameInput = tr.querySelector('[data-field="menu_item_name"]');
+        const catSelect = tr.querySelector('[data-field="category"]');
+        const priceInput = tr.querySelector('[data-field="price"]');
+
+        if (nameInput && catSelect && priceInput) {
+          const index = parseInt(nameInput.getAttribute('data-index'), 10);
+          const original = menuState[index] ? menuState[index].menu_item_name : nameInput.value.trim();
+
+          updatedItems.push({
+            original_name: original,
+            menu_item_name: nameInput.value.trim(),
+            category: catSelect.value,
+            price: Number(priceInput.value) || 0
+          });
+        }
+      });
+
+      try {
+        const response = await fetch('/api/menu/bulk', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ items: updatedItems })
+        });
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          showToast('تم حفظ التعديلات بنجاح!', true);
+          fetchMenu();
+        } else {
+          showToast('فشل في حفظ التعديلات', false);
+        }
+      } catch (err) {
+        console.error('Error saving menu bulk:', err);
+        showToast('خطأ بالاتصال بالسيرفر', false);
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = `<span>💾</span><span>حفظ التعديلات</span>`;
+      }
+    }
+
+    // Modal Control
+    function openAddModal() {
+      document.getElementById('add-modal').classList.remove('hidden');
+    }
+    function closeAddModal() {
+      document.getElementById('add-modal').classList.add('hidden');
+      document.getElementById('new-item-name').value = '';
+      document.getElementById('new-item-price').value = '';
+    }
+
+    // Submit single new item
+    async function submitNewItem(e) {
+      e.preventDefault();
+      const name = document.getElementById('new-item-name').value.trim();
+      const cat = document.getElementById('new-item-category').value;
+      const price = Number(document.getElementById('new-item-price').value) || 0;
+
+      if (!name) return;
+
+      try {
+        const response = await fetch('/api/menu/add', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ menu_item_name: name, category: cat, price: price })
+        });
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          showToast('تمت إضافة العنصر بنجاح!', true);
+          closeAddModal();
+          fetchMenu();
+        } else {
+          showToast(data.error || 'فشل في إضافة العنصر', false);
+        }
+      } catch (err) {
+        console.error('Error adding item:', err);
+        showToast('خطأ بالاتصال بالسيرفر', false);
+      }
+    }
+
+    // CSV Bulk Template Download
+    function downloadCsvTemplate() {
+      const csvContent = "Name,Category,Price\nلاتيه ماكياتو,BARISTA,55\nمعسل فاخر,SHISHA,110\nساندوتش دجاج,KITCHEN,130";
+      const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.setAttribute('download', 'mazaj_menu_template.csv');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showToast('تم تحميل قالب CSV بنجاح!', true);
+    }
+
+    // CSV Bulk Upload
+    async function uploadCsvFile(input) {
+      if (!input.files || input.files.length === 0) return;
+      const file = input.files[0];
+      const formData = new FormData();
+      formData.append('csvFile', file);
+
+      showToast('جاري رفع ومعالجة ملف CSV...', true);
+
+      try {
+        const response = await fetch('/api/menu/upload', {
+          method: 'POST',
+          body: formData
+        });
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          showToast(data.message || 'تم تحديث المنيو من ملف CSV بنجax!', true);
+          fetchMenu();
+        } else {
+          showToast(data.error || 'فشل في رفع ملف CSV', false);
+        }
+      } catch (err) {
+        console.error('Error uploading CSV:', err);
+        showToast('خطأ بالاتصال بالسيرفر أثناء رفع CSV', false);
+      } finally {
+        input.value = '';
+      }
+    }
+
+    // Initial Load
+    fetchMenu();
+  </script>
+</body>
+</html>

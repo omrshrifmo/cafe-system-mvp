@@ -1,0 +1,45 @@
+nohup: ignoring input
+
+==================================================
+🚀 Cafe POS, KDS & Inventory System Running!
+🌐 Local Domain: http://mazaj.local:3000
+📡 Local IP: http://192.168.1.31:3000
+📱 Cashier POS UI: http://mazaj.local:3000/pos.html
+🛠️ Menu Admin UI: http://mazaj.local:3000/admin-menu.html
+🏃 Runner Pickup UI: http://mazaj.local:3000/runner.html
+☕ Barista KDS UI: http://mazaj.local:3000/kds.html
+💨 Shisha KDS UI: http://mazaj.local:3000/shisha.html
+🍳 Kitchen KDS UI: http://mazaj.local:3000/kitchen.html
+📦 Inventory UI: http://mazaj.local:3000/inventory.html
+==================================================
+
+✅ Connected to SQLite database: cafe.db
+✅ Database tables initialized (orders, table_sessions, waste_log, inventory, recipes).
+✅ Inventory items seeded/verified.
+🔌 [WebSocket] Client connected from 127.0.0.1 (Total clients: 1)
+🔌 [WebSocket] Client connected from 127.0.0.1 (Total clients: 2)
+🔌 [WebSocket] Client connected from 127.0.0.1 (Total clients: 3)
+🔌 [WebSocket] Client connected from 127.0.0.1 (Total clients: 4)
+🔌 [WebSocket] Client connected from 127.0.0.1 (Total clients: 5)
+🔐 [LOGIN SUCCESS] User: المالك (OWNER)
+🔐 [LOGIN SUCCESS] User: مدير الكافيه (OP_MANAGER)
+🔐 [LOGIN SUCCESS] User: كاشير (OP_ASSISTANT_CASHIER)
+🔐 [LOGIN SUCCESS] User: ويتر الصالة (WAITER)
+➕ [NEW ORDER] #66 - قهوة تركية (x2) [Table #5] Price: 0 EGP [Category: BARISTA]
+💳 [CHECKOUT COMPLETE] Table #5 - Payments: [{"method":"CASH","amount":80}] [Tip: 10 EGP] 
+💵 [HR ADVANCE LOGGED] ويتر الصالة - 20 EGP
+➕ [NEW ORDER] #67 - لاتيه (x2) [Table #1] Price: 50 EGP [Category: BARISTA]
+💳 [CHECKOUT COMPLETE] Table #1 - Payments: [{"method":"CASH","amount":200}] [Tip: 10 EGP] - Customer: 01012345678 (140 pts)
+❌ [WebSocket] Client disconnected (Total clients: 4)
+🔌 [WebSocket] Client connected from 127.0.0.1 (Total clients: 5)
+❌ [WebSocket] Client disconnected (Total clients: 4)
+🔌 [WebSocket] Client connected from 127.0.0.1 (Total clients: 5)
+❌ [WebSocket] Client disconnected (Total clients: 4)
+🔌 [WebSocket] Client connected from 127.0.0.1 (Total clients: 5)
+❌ [WebSocket] Client disconnected (Total clients: 4)
+❌ [WebSocket] Client disconnected (Total clients: 3)
+❌ [WebSocket] Client disconnected (Total clients: 2)
+🔌 [WebSocket] Client connected from 127.0.0.1 (Total clients: 3)
+❌ [WebSocket] Client disconnected (Total clients: 2)
+❌ [WebSocket] Client disconnected (Total clients: 1)
+❌ [WebSocket] Client disconnected (Total clients: 0)

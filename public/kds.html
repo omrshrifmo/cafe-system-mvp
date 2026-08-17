@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>شاشة البارستا - كافيه مزاج</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/nav.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: { extend: { fontFamily: { cairo: ['Cairo', 'sans-serif'] } } }
+    }
+  </script>
+  <style> body { font-family: 'Cairo', sans-serif; } </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col overflow-y-auto selection:bg-emerald-500 selection:text-black">
+
+  <!-- Header (Shrink-0) -->
+  <header class="shrink-0 border-b border-slate-800 bg-slate-900 px-6 py-3 flex items-center justify-between shadow-xl z-20">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 text-xl shadow-inner">
+        ☕
+      </div>
+      <div>
+        <h1 class="text-lg font-black text-slate-100 tracking-wide">كافيه مزاج - شاشة البارستا (Barista KDS)</h1>
+        <p class="text-[11px] text-emerald-400 font-semibold">استقبال وتجهيز طلبات المشروبات فوراً</p>
+      </div>
+    </div>
+
+    <!-- Status & Counter -->
+    <div class="flex items-center gap-4">
+      <div class="flex items-center gap-2 bg-slate-800 px-3 py-1 rounded-xl border border-slate-700">
+        <span class="text-xs text-slate-400">النشطة:</span>
+        <span id="pending-counter" class="text-sm font-extrabold text-amber-400 font-mono">0</span>
+      </div>
+
+      <div id="ws-status" class="flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-bold">
+        <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+        <span id="ws-status-text">جاري الاتصال...</span>
+      </div>
+
+      <div id="live-clock" class="text-slate-400 font-mono text-xs bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700/50 hidden md:block">
+        00:00:00
+      </div>
+    </div>
+  </header>
+
+  <!-- 4-Tab Navigation Bar (Shrink-0) -->
+  <nav class="shrink-0 bg-slate-900 border-b border-slate-800 px-6 py-2 flex items-center gap-2 z-10 flex-wrap">
+    <button onclick="switchTab('live')" id="tab-btn-live" class="px-4 py-2 rounded-xl text-xs font-black bg-emerald-600 text-white cursor-pointer">
+      ⚡ الطلبات النشطة (<span id="live-tab-count">0</span>)
+    </button>
+    <button onclick="switchTab('past')" id="tab-btn-past" class="px-4 py-2 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 cursor-pointer">
+      📜 السجلات اليومية (Past Orders)
+    </button>
+    <button onclick="switchTab('inventory')" id="tab-btn-inventory" class="px-4 py-2 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 cursor-pointer">
+      📦 مخزون البارستا (Local Inventory)
+    </button>
+    <button onclick="switchTab('waste')" id="tab-btn-waste" class="px-4 py-2 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 cursor-pointer">
+      ⚠️ تسجيل الهالك (Log Waste)
+    </button>
+  </nav>
+
+  <!-- Toast Area -->
+  <div id="kds-toast-container" class="fixed top-24 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-2 pointer-events-none"></div>
+
+  <!-- Main Content Container (Responsive Scroll) -->
+  <main class="max-w-7xl w-full mx-auto p-4 flex-1 flex flex-col min-h-0 overflow-y-auto">
+
+    <!-- Tab 1: Live 4-Lane KDS Grid -->
+    <section id="tab-content-live" class="w-full flex-1 flex flex-col min-h-0">
+
+      <!-- Empty State -->
+      <div id="empty-state" class="hidden my-auto flex flex-col items-center justify-center text-center py-16 px-4 border-2 border-dashed border-slate-800 rounded-3xl bg-slate-900/30">
+        <div class="w-20 h-20 rounded-full bg-slate-800/60 flex items-center justify-center text-4xl mb-3 text-slate-600">✨</div>
+        <h2 class="text-xl font-bold text-slate-300 mb-1">لا توجد طلبات معلقة الآن</h2>
+        <p class="text-slate-500 text-xs">جميع طلبات البارستا مكتملة!</p>
+      </div>
+
+      <!-- 4-Lane KDS State Machine Grid -->
+      <div id="orders-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 w-full flex-1 min-h-[500px]">
+        <!-- Lane 1: Pending -->
+        <div class="bg-slate-900/60 border border-amber-500/30 rounded-2xl p-3 flex flex-col max-h-[650px]">
+          <h3 class="text-xs font-black text-amber-400 mb-2 border-b border-amber-500/20 pb-2 flex items-center justify-between">
+            <span>🟡 طلبات جديدة</span>
+            <span id="count-pending" class="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-mono text-[10px]">0</span>
+          </h3>
+          <div id="lane-pending" class="space-y-3 overflow-y-auto flex-1 pr-1"></div>
+        </div>
+
+        <!-- Lane 2: Accepted -->
+        <div class="bg-slate-900/60 border border-blue-500/30 rounded-2xl p-3 flex flex-col max-h-[650px]">
+          <h3 class="text-xs font-black text-blue-400 mb-2 border-b border-blue-500/20 pb-2 flex items-center justify-between">
+            <span>⏳ جاري التجهيز</span>
+            <span id="count-accepted" class="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 font-mono text-[10px]">0</span>
+          </h3>
+          <div id="lane-accepted" class="space-y-3 overflow-y-auto flex-1 pr-1"></div>
+        </div>
+
+        <!-- Lane 3: Ready -->
+        <div class="bg-slate-900/60 border border-emerald-500/30 rounded-2xl p-3 flex flex-col max-h-[650px]">
+          <h3 class="text-xs font-black text-emerald-400 mb-2 border-b border-emerald-500/20 pb-2 flex items-center justify-between">
+            <span>☕ جاهز للاستلام</span>
+            <span id="count-ready" class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-mono text-[10px]">0</span>
+          </h3>
+          <div id="lane-ready" class="space-y-3 overflow-y-auto flex-1 pr-1"></div>
+        </div>
+
+        <!-- Lane 4: Delivered -->
+        <div class="bg-slate-900/60 border border-slate-700/50 rounded-2xl p-3 flex flex-col max-h-[650px]">
+          <h3 class="text-xs font-black text-slate-400 mb-2 border-b border-slate-700/50 pb-2 flex items-center justify-between">
+            <span>✓ تم التسليم</span>
+            <span id="count-delivered" class="px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 font-mono text-[10px]">0</span>
+          </h3>
+          <div id="lane-delivered" class="space-y-3 overflow-y-auto flex-1 pr-1 opacity-75"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tab 2: Past Orders -->
+    <section id="tab-content-past" class="w-full hidden">
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+        <h3 class="text-sm font-black text-amber-400 mb-3 flex items-center gap-2">
+          <span>📜</span> طلبات البارستا المكتملة اليوم
+        </h3>
+        <div id="past-orders-list" class="space-y-2 max-h-[500px] overflow-y-auto pr-1"></div>
+      </div>
+    </section>
+
+    <!-- Tab 3: Local Inventory -->
+    <section id="tab-content-inventory" class="w-full hidden">
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+        <h3 class="text-sm font-black text-emerald-400 mb-3 flex items-center gap-2">
+          <span>📦</span> رصيد خامات قسم البارستا (BARISTA)
+        </h3>
+        <div id="inventory-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3"></div>
+      </div>
+    </section>
+
+    <!-- Tab 4: Log Waste -->
+    <section id="tab-content-waste" class="w-full hidden">
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-lg mx-auto w-full">
+        <h3 class="text-base font-black text-rose-400 mb-4 flex items-center gap-2">
+          <span>⚠️</span> تسجيل مواد هالكة/مفقودة - قسم البارستا
+        </h3>
+        <form onsubmit="submitWasteLog(event)" class="space-y-4">
+          <div>
+            <label class="block text-xs font-bold text-slate-300 mb-1">اختر الخامة:</label>
+            <select id="waste-inv-select" required class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-white text-xs focus:border-amber-500 focus:outline-none">
+              <!-- Rendered via JS -->
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-300 mb-1">الكمية الهالكة:</label>
+            <input type="number" step="0.1" min="0.1" id="waste-qty-input" required placeholder="مثال: 50" class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-amber-400 font-mono font-black text-xs focus:border-amber-500 focus:outline-none" />
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-300 mb-1">سبب الهدر / الملاحظات:</label>
+            <input type="text" id="waste-reason-input" placeholder="مثال: انسحاب حليب / تلف بن" class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-white text-xs focus:border-amber-500 focus:outline-none" />
+          </div>
+          <button type="submit" class="w-full py-3 bg-rose-600 hover:bg-rose-500 text-white font-black rounded-xl text-sm shadow-lg cursor-pointer">
+            تسجيل وتحديث رصيد المخزون ⚠️
+          </button>
+        </form>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="border-t border-slate-800 bg-slate-950 py-3 text-center text-xs text-slate-500">
+    كافيه مزاج - شاشة البارستا KDS &copy; 2026
+  </footer>
+
+  <script>
+    const STATION_DEPARTMENT = 'BARISTA';
+
+    function updateClock() {
+      document.getElementById('live-clock').textContent = new Date().toLocaleTimeString('ar-EG');
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    const ordersMap = new Map();
+    let ws = null;
+    let localInventory = [];
+
+    function switchTab(tabName) {
+      ['live', 'past', 'inventory', 'waste'].forEach(t => {
+        document.getElementById(`tab-content-${t}`).classList.add('hidden');
+        const btn = document.getElementById(`tab-btn-${t}`);
+        btn.className = 'px-4 py-2 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 cursor-pointer';
+      });
+
+      document.getElementById(`tab-content-${tabName}`).classList.remove('hidden');
+      const activeBtn = document.getElementById(`tab-btn-${tabName}`);
+      activeBtn.className = 'px-4 py-2 rounded-xl text-xs font-black bg-emerald-600 text-white cursor-pointer';
+
+      if (tabName === 'past') fetchPastOrders();
+      if (tabName === 'inventory' || tabName === 'waste') fetchLocalInventory();
+    }
+
+    function showToast(message, isInfo = true) {
+      const container = document.getElementById('kds-toast-container');
+      const toast = document.createElement('div');
+      toast.className = `px-5 py-2.5 rounded-xl border text-xs font-bold flex items-center gap-2 ${
+        isInfo ? 'bg-amber-950 text-amber-300 border-amber-500/50' : 'bg-emerald-950 text-emerald-300 border-emerald-500/50'
+      }`;
+      toast.innerHTML = `<span>${isInfo ? '🔔' : '✅'}</span><span>${message}</span>`;
+      container.appendChild(toast);
+      setTimeout(() => toast.remove(), 2500);
+    }
+
+    function playBeep() {
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.1, audioCtx.currentTime + 0.3);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.3);
+      } catch (e) {}
+    }
+
+    function connectWebSocket() {
+      const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      ws = new WebSocket(`${protocol}//${location.host}`);
+
+      ws.onopen = () => {
+        document.getElementById('ws-status-text').textContent = 'متصل (Realtime)';
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if ((data.type === 'NEW_ORDER' || data.type === 'KDS_STATUS_UPDATED' || data.type === 'CANCEL_REQUESTED' || data.type === 'CANCEL_RESOLVED') && data.order && data.order.category === STATION_DEPARTMENT) {
+            playBeep();
+            ordersMap.set(data.order.id, data.order);
+            renderAllLanes();
+          } else if (data.type === 'ORDER_COMPLETED' && data.orderId) {
+            ordersMap.delete(data.orderId);
+            renderAllLanes();
+          } else {
+            fetchPendingOrders();
+          }
+        } catch (err) {}
+      };
+
+      ws.onclose = () => setTimeout(connectWebSocket, 3000);
+    }
+
+    async function fetchPendingOrders() {
+      try {
+        const res = await fetch('/api/orders');
+        const data = await res.json();
+        if (res.ok && data.success && Array.isArray(data.orders)) {
+          ordersMap.clear();
+          data.orders.forEach(o => { if (o.category === STATION_DEPARTMENT) ordersMap.set(o.id, o); });
+          renderAllLanes();
+        }
+      } catch (e) {}
+    }
+
+    async function fetchPastOrders() {
+      try {
+        const res = await fetch(`/api/orders/past?category=${STATION_DEPARTMENT}`);
+        const data = await res.json();
+        const container = document.getElementById('past-orders-list');
+        if (res.ok && data.success && Array.isArray(data.orders)) {
+          if (data.orders.length === 0) {
+            container.innerHTML = '<p class="text-xs text-slate-500 text-center py-6">لا توجد طلبات سابقة اليوم</p>';
+            return;
+          }
+          container.innerHTML = data.orders.map(o => `
+            <div class="flex items-center justify-between p-2.5 bg-slate-800/80 border border-slate-700/50 rounded-xl text-xs">
+              <div class="flex items-center gap-2">
+                <span class="font-bold text-emerald-400 font-mono">#${o.id}</span>
+                <span class="font-bold text-white">${o.item_name} (x${o.quantity})</span>
+                ${o.table_number ? `<span class="bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded text-[10px]">طاولة ${o.table_number}</span>` : ''}
+              </div>
+              <span class="text-[10px] font-mono text-slate-400">${new Date(o.created_at).toLocaleTimeString('ar-EG')}</span>
+            </div>
+          `).join('');
+        }
+      } catch (e) {}
+    }
+
+    async function fetchLocalInventory() {
+      try {
+        const res = await fetch('/api/inventory');
+        const data = await res.json();
+        if (res.ok && data.success && Array.isArray(data.inventory)) {
+          localInventory = data.inventory.filter(i => i.department === STATION_DEPARTMENT);
+          
+          const invGrid = document.getElementById('inventory-grid');
+          invGrid.innerHTML = localInventory.map(item => `
+            <div class="bg-slate-800/90 border border-slate-700/80 p-3 rounded-xl flex items-center justify-between">
+              <div>
+                <h4 class="font-bold text-white text-xs">${item.name}</h4>
+                <span class="text-[10px] text-slate-400">وحدة: ${item.unit}</span>
+              </div>
+              <span class="text-base font-black font-mono text-amber-400">${item.current_stock}</span>
+            </div>
+          `).join('');
+
+          const wasteSelect = document.getElementById('waste-inv-select');
+          wasteSelect.innerHTML = localInventory.map(item => `
+            <option value="${item.id}">${item.name} (الرصيد: ${item.current_stock} ${item.unit})</option>
+          `).join('');
+        }
+      } catch (e) {}
+    }
+
+    async function submitWasteLog(e) {
+      e.preventDefault();
+      const invId = document.getElementById('waste-inv-select').value;
+      const qty = document.getElementById('waste-qty-input').value;
+      const reason = document.getElementById('waste-reason-input').value;
+
+      const selectedItem = localInventory.find(i => i.id == invId);
+      const itemName = selectedItem ? selectedItem.name : 'خامة';
+
+      try {
+        const res = await fetch('/api/waste', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            inventory_id: invId,
+            item_name: itemName,
+            quantity: qty,
+            reason: reason,
+            department: STATION_DEPARTMENT
+          })
+        });
+
+        const data = await res.json();
+        if (res.ok && data.success) {
+          showToast(`تم تسجيل هالك ${itemName} بنجاح`, false);
+          document.getElementById('waste-qty-input').value = '';
+          document.getElementById('waste-reason-input').value = '';
+          fetchLocalInventory();
+          switchTab('inventory');
+        } else {
+          showToast(data.error || 'خطأ في تسجيل الهالك', true);
+        }
+      } catch (e) {
+        showToast('خطأ بالاتصال بالسيرفر', true);
+      }
+    }
+
+    function renderAllLanes() {
+      const lanePending = document.getElementById('lane-pending');
+      const laneAccepted = document.getElementById('lane-accepted');
+      const laneReady = document.getElementById('lane-ready');
+      const laneDelivered = document.getElementById('lane-delivered');
+
+      lanePending.innerHTML = '';
+      laneAccepted.innerHTML = '';
+      laneReady.innerHTML = '';
+      laneDelivered.innerHTML = '';
+
+      let cPending = 0, cAccepted = 0, cReady = 0, cDelivered = 0;
+
+      ordersMap.forEach(order => {
+        const status = (order.kds_status || 'PENDING').toUpperCase();
+        const card = createKdsCard(order, status);
+
+        if (status === 'PENDING') {
+          lanePending.appendChild(card);
+          cPending++;
+        } else if (status === 'ACCEPTED') {
+          laneAccepted.appendChild(card);
+          cAccepted++;
+        } else if (status === 'READY') {
+          laneReady.appendChild(card);
+          cReady++;
+        } else if (status === 'DELIVERED') {
+          laneDelivered.appendChild(card);
+          cDelivered++;
+        }
+      });
+
+      document.getElementById('count-pending').textContent = cPending;
+      document.getElementById('count-accepted').textContent = cAccepted;
+      document.getElementById('count-ready').textContent = cReady;
+      document.getElementById('count-delivered').textContent = cDelivered;
+
+      document.getElementById('pending-counter').textContent = cPending + cAccepted;
+      document.getElementById('live-tab-count').textContent = cPending + cAccepted;
+    }
+
+    function createKdsCard(order, status) {
+      const card = document.createElement('div');
+      const tableText = order.table_number && order.table_number > 0 ? `طاولة ${order.table_number}` : 'طلب مباشر';
+      const isCancelRequested = order.edit_request === 'CANCEL_REQUESTED';
+
+      card.className = `bg-slate-900 border ${isCancelRequested ? 'border-rose-500 animate-pulse' : 'border-slate-800'} rounded-2xl p-3.5 flex flex-col justify-between shadow-lg text-right`;
+
+      const modifiersText = [order.sugar_level, order.roast_type].filter(Boolean).join(' | ');
+
+      card.innerHTML = `
+        <div>
+          <div class="flex items-center justify-between border-b border-slate-800 pb-1.5 mb-2">
+            <div class="flex items-center gap-1.5">
+              <span class="text-xs font-mono font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300">#${order.id}</span>
+            </div>
+            <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-300">${tableText}</span>
+          </div>
+
+          ${isCancelRequested ? `
+            <div class="mb-2 p-2 bg-rose-950/80 border border-rose-500/50 rounded-xl text-rose-300 text-xs font-bold text-center">
+              ⚠️ طلب إلغاء من الويتر!
+              <div class="flex gap-1 mt-2">
+                <button onclick="resolveCancel(${order.id}, true)" class="w-1/2 py-1 bg-rose-600 text-white rounded text-[11px] font-black">موافقة ✓</button>
+                <button onclick="resolveCancel(${order.id}, false)" class="w-1/2 py-1 bg-slate-700 text-slate-200 rounded text-[11px] font-bold">رفض ✕</button>
+              </div>
+            </div>
+          ` : ''}
+
+          <h4 class="text-base font-black text-white leading-snug">${order.item_name}</h4>
+          ${modifiersText ? `<div class="text-[11px] font-bold text-amber-400 my-1">✨ ${modifiersText}</div>` : ''}
+
+          <div class="flex items-center justify-between bg-slate-800 px-2.5 py-1 rounded-lg mt-2 text-xs">
+            <span class="text-slate-400">الكمية:</span>
+            <span class="text-amber-400 font-mono font-extrabold">x${order.quantity}</span>
+          </div>
+        </div>
+
+        <div class="mt-3 pt-2 border-t border-slate-800/80">
+          ${status === 'PENDING' ? `
+            <button onclick="changeKdsStatus(${order.id}, 'ACCEPTED')" class="w-full py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl text-xs">
+              بدء التجهيز ⏳
+            </button>
+          ` : ''}
+          ${status === 'ACCEPTED' ? `
+            <button onclick="changeKdsStatus(${order.id}, 'READY')" class="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs">
+              جاهز للاستلام ☕
+            </button>
+          ` : ''}
+          ${status === 'READY' ? `
+            <button onclick="changeKdsStatus(${order.id}, 'DELIVERED')" class="w-full py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold rounded-xl text-xs">
+              تسليم للعميل 🚀
+            </button>
+          ` : ''}
+          ${status === 'DELIVERED' ? `
+            <div class="text-[11px] text-emerald-400 font-bold text-center py-1">✓ مكتمل وتسلم</div>
+          ` : ''}
+        </div>
+      `;
+      return card;
+    }
+
+    async function changeKdsStatus(orderId, nextStatus) {
+      try {
+        const order = ordersMap.get(orderId);
+        if (order) {
+          order.kds_status = nextStatus;
+          renderAllLanes();
+        }
+        const res = await fetch('/api/orders/kds-status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: orderId, kds_status: nextStatus })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          ordersMap.set(orderId, data.order);
+          renderAllLanes();
+        }
+      } catch (e) {}
+    }
+
+    async function resolveCancel(orderId, approved) {
+      try {
+        const res = await fetch('/api/orders/resolve-cancel', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: orderId, approved })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          showToast(data.message, false);
+          fetchPendingOrders();
+        }
+      } catch (e) {}
+    }
+
+    function updateEmptyState() {
+      const count = ordersMap.size;
+      document.getElementById('pending-counter').textContent = count;
+      document.getElementById('live-tab-count').textContent = count;
+      const emptyState = document.getElementById('empty-state');
+      if (emptyState) {
+        if (count === 0) emptyState.classList.remove('hidden');
+        else emptyState.classList.add('hidden');
+      }
+    }
+
+    fetchPendingOrders();
+    connectWebSocket();
+  </script>
+</body>
+</html>

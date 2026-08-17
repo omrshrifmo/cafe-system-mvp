@@ -1,0 +1,1123 @@
+const express = require('express');
+const http = require('http');
+const path = require('path');
+const os = require('os');
+const { WebSocketServer, WebSocket } = require('ws');
+const cors = require('cors');
+const multicastDNS = require('multicast-dns');
+const multer = require('multer');
+const csvParser = require('csv-parser');
+const fs = require('fs');
+const { 
+  createOrderWithBOM, 
+  completeOrder, 
+  getPendingOrders, 
+  getInventory, 
+  getMenu, 
+  updateMenuBulk, 
+  addMenuItem,
+  getOpenTableSessions,
+  openTableSession,
+  closeTableSession,
+  getTableOrders,
+  logWaste,
+  getPastOrdersToday,
+  saveOrderPayments,
+  logEmployeeAdvance,
+  getTodayAdvances,
+  logDailyExpense,
+  getTodayExpenses,
+  getEodReport,
+  getCustomer,
+  addOrUpdateCustomer,
+  moveTableSession,
+  logShareholderTransaction,
+  getShareholderLedger,
+  getBIData,
+  loginWithPin,
+  logPurchase,
+  getPurchasesHistory,
+  clockInUser,
+  clockOutUser,
+  getActiveShifts,
+  getUserShiftStatus,
+  getTotalTipsPool,
+  voidOrder,
+  declareCash,
+  getDrawerDeclarations,
+  logAudit,
+  getAuditLogs,
+  updateKdsStatus,
+  requestOrderCancellation,
+  resolveOrderCancellation,
+  updateUserHourlyRate,
+  logPenalty,
+  getPenalties,
+  getPayrollData,
+  logComplaint,
+  getComplaints,
+  resolveComplaint,
+  getAllTables,
+  seatTable,
+  requestTableCheck,
+  vacateTable,
+  updateTableTimestampsOnOrder,
+  updateTableStatusOnCheckout,
+  db 
+} = require('./database');
+
+const upload = multer({ dest: path.join(__dirname, 'uploads/') });
+
+// Ensure uploads folder exists
+const uploadsDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir);
+}
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+const HOST = '0.0.0.0';
+
+// Helper function to find local non-internal IPv4 address
+function getLocalIpAddress() {
+  const interfaces = os.networkInterfaces();
+  for (const name of Object.keys(interfaces)) {
+    for (const iface of interfaces[name]) {
+      if (iface.family === 'IPv4' && !iface.internal) {
+        return iface.address;
+      }
+    }
+  }
+  return '127.0.0.1';
+}
+
+// mDNS (Multicast DNS) Domain Broadcasting
+const mdns = multicastDNS();
+
+mdns.on('query', (query) => {
+  const questions = query.questions || [];
+  const matchesMazaj = questions.some((q) => q.name === 'mazaj.local' && (q.type === 'A' || q.type === 'ANY'));
+
+  if (matchesMazaj) {
+    const localIp = getLocalIpAddress();
+    mdns.respond({
+      answers: [{
+        name: 'mazaj.local',
+        type: 'A',
+        ttl: 300,
+        data: localIp
+      }]
+    });
+  }
+});
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Serve static files from /public
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Create HTTP server
+const server = http.createServer(app);
+
+// Attach WebSocket server
+const wss = new WebSocketServer({ server });
+
+/**
+ * Broadcast message to all connected WebSocket clients
+ * @param {Object} data - Payload object to send
+ */
+function broadcast(data) {
+  const payload = JSON.stringify(data);
+  wss.clients.forEach((client) => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(payload);
+    }
+  });
+}
+
+// WebSocket connection handling
+wss.on('connection', (ws, req) => {
+  const clientIp = req.socket.remoteAddress;
+  console.log(`🔌 [WebSocket] Client connected from ${clientIp} (Total clients: ${wss.clients.size})`);
+
+  ws.send(JSON.stringify({ type: 'CONNECTED', message: 'Connected to Cafe POS/KDS WebSocket Server' }));
+
+  ws.on('message', (message) => {
+    try {
+      const data = JSON.parse(message);
+      if (data.type === 'RUNNER_BUSY' || data.type === 'RUNNER_DELIVERED') {
+        broadcast(data);
+      }
+    } catch (e) {
+      console.error('Error handling WebSocket message:', e.message);
+    }
+  });
+
+  ws.on('close', () => {
+    console.log(`❌ [WebSocket] Client disconnected (Total clients: ${wss.clients.size})`);
+  });
+
+  ws.on('error', (err) => {
+    console.error(`⚠️ [WebSocket] Client error:`, err.message);
+  });
+});
+
+// API Routes
+
+/**
+ * POST /api/auth/login
+ * Role-Based Access Control PIN Authentication
+ */
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { pin_code } = req.body;
+    if (!pin_code) {
+      return res.status(400).json({ success: false, error: 'رمز PIN مطلوب' });
+    }
+    const user = await loginWithPin(pin_code);
+    if (!user) {
+      return res.status(401).json({ success: false, error: 'رمز PIN غير صحيح' });
+    }
+
+    const roleRoutes = {
+      BARISTA: [
+        { name: 'شاشة البارستا (Barista KDS)', url: 'kds.html', icon: '☕' }
+      ],
+      SHIASH: [
+        { name: 'شاشة الشيشة (Shisha KDS)', url: 'shisha.html', icon: '💨' }
+      ],
+      CHEF: [
+        { name: 'شاشة المطبخ (Kitchen KDS)', url: 'kitchen.html', icon: '🍳' }
+      ],
+      WAITER: [
+        { name: 'نقطة البيع والصالة', url: 'pos.html', icon: '💳' },
+        { name: 'شاشة استلام الطلبات (Runner)', url: 'runner.html', icon: '🏃' }
+      ],
+      HALL_MANAGER: [
+        { name: 'نقطة البيع والصالة', url: 'pos.html', icon: '💳' },
+        { name: 'شاشة استلام الطلبات (Runner)', url: 'runner.html', icon: '🏃' }
+      ],
+      OP_ASSISTANT_CASHIER: [
+        { name: 'نقطة البيع والدفع (POS)', url: 'pos.html', icon: '💳' },
+        { name: 'تقفيل الدرج (الإقرار الأعمى)', url: 'hr.html', icon: '🔒' }
+      ],
+      CASHIER: [
+        { name: 'نقطة البيع والدفع (POS)', url: 'pos.html', icon: '💳' },
+        { name: 'تقفيل الدرج (الإقرار الأعمى)', url: 'hr.html', icon: '🔒' }
+      ],
+      OP_MANAGER: [
+        { name: 'نقطة البيع (POS)', url: 'pos.html', icon: '💳' },
+        { name: 'مؤشرات الأداء (BI Dashboard)', url: 'bi.html', icon: '📊' },
+        { name: 'التقرير المالي اليومي (EOD)', url: 'eod.html', icon: '📜' },
+        { name: 'مشتريات المخزون', url: 'purchasing.html', icon: '🛒' },
+        { name: 'إدارة الموارد البشرية والرواتب', url: 'hr.html', icon: '👥' },
+        { name: 'إدارة الجودة والشكاوى', url: 'qa.html', icon: '🛡️' },
+        { name: 'مخزون الخامات (BOM)', url: 'inventory.html', icon: '📦' },
+        { name: 'تعديل المنيو الأسعار', url: 'admin-menu.html', icon: '📋' }
+      ],
+      MANAGER: [
+        { name: 'نقطة البيع (POS)', url: 'pos.html', icon: '💳' },
+        { name: 'مؤشرات الأداء (BI Dashboard)', url: 'bi.html', icon: '📊' },
+        { name: 'التقرير المالي اليومي (EOD)', url: 'eod.html', icon: '📜' },
+        { name: 'مشتريات المخزون', url: 'purchasing.html', icon: '🛒' },
+        { name: 'إدارة الموارد البشرية والرواتب', url: 'hr.html', icon: '👥' },
+        { name: 'إدارة الجودة والشكاوى', url: 'qa.html', icon: '🛡️' },
+        { name: 'مخزون الخامات (BOM)', url: 'inventory.html', icon: '📦' },
+        { name: 'تعديل المنيو الأسعار', url: 'admin-menu.html', icon: '📋' }
+      ],
+      OWNER: [
+        { name: 'نقطة البيع (POS)', url: 'pos.html', icon: '💳' },
+        { name: 'مؤشرات الأداء (BI Dashboard)', url: 'bi.html', icon: '📊' },
+        { name: 'التقرير المالي اليومي (EOD)', url: 'eod.html', icon: '📜' },
+        { name: 'مشتريات المخزون', url: 'purchasing.html', icon: '🛒' },
+        { name: 'إدارة الموارد البشرية والرواتب', url: 'hr.html', icon: '👥' },
+        { name: 'إدارة الجودة والشكاوى', url: 'qa.html', icon: '🛡️' },
+        { name: 'مخزون الخامات (BOM)', url: 'inventory.html', icon: '📦' },
+        { name: 'تعديل المنيو والأسعار', url: 'admin-menu.html', icon: '📋' },
+        { name: 'حسابات الشركاء', url: 'shareholders.html', icon: '🏛️' },
+        { name: 'شاشة البارستا', url: 'kds.html', icon: '☕' },
+        { name: 'شاشة الشيشة', url: 'shisha.html', icon: '💨' },
+        { name: 'شاشة المطبخ', url: 'kitchen.html', icon: '🍳' },
+        { name: 'شاشة الصالة (Runner)', url: 'runner.html', icon: '🏃' }
+      ],
+      ADMIN: [
+        { name: 'نقطة البيع (POS)', url: 'pos.html', icon: '💳' },
+        { name: 'مؤشرات الأداء (BI Dashboard)', url: 'bi.html', icon: '📊' },
+        { name: 'التقرير المالي اليومي (EOD)', url: 'eod.html', icon: '📜' },
+        { name: 'مشتريات المخزون', url: 'purchasing.html', icon: '🛒' },
+        { name: 'إدارة الموارد البشرية والرواتب', url: 'hr.html', icon: '👥' },
+        { name: 'إدارة الجودة والشكاوى', url: 'qa.html', icon: '🛡️' },
+        { name: 'مخزون الخامات (BOM)', url: 'inventory.html', icon: '📦' },
+        { name: 'تعديل المنيو والأسعار', url: 'admin-menu.html', icon: '📋' },
+        { name: 'حسابات الشركاء', url: 'shareholders.html', icon: '🏛️' },
+        { name: 'شاشة البارستا', url: 'kds.html', icon: '☕' },
+        { name: 'شاشة الشيشة', url: 'shisha.html', icon: '💨' },
+        { name: 'شاشة المطبخ', url: 'kitchen.html', icon: '🍳' },
+        { name: 'شاشة الصالة (Runner)', url: 'runner.html', icon: '🏃' }
+      ]
+    };
+
+    const tools = roleRoutes[user.role] || roleRoutes.CASHIER;
+    const activeShift = await getUserShiftStatus(user.id);
+
+    console.log(`🔐 [LOGIN SUCCESS] User: ${user.name} (${user.role})`);
+    res.json({
+      success: true,
+      user: {
+        id: user.id,
+        name: user.name,
+        role: user.role
+      },
+      tools,
+      activeShift
+    });
+  } catch (err) {
+    console.error('Error in login endpoint:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * Purchasing API Routes
+ */
+app.post('/api/purchases', async (req, res) => {
+  try {
+    const { inventory_id, qty_added, total_cost } = req.body;
+    if (!inventory_id || !qty_added) {
+      return res.status(400).json({ success: false, error: 'بيانات الشراء غير مكتملة' });
+    }
+    const purchase = await logPurchase(inventory_id, qty_added, total_cost || 0);
+    console.log(`🛒 [PURCHASE LOGGED] Inv #${inventory_id} +${qty_added} (Cost: ${total_cost} EGP)`);
+    broadcast({ type: 'PURCHASE_LOGGED', purchase });
+    res.status(201).json({ success: true, purchase });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.get('/api/purchases', async (req, res) => {
+  try {
+    const purchases = await getPurchasesHistory();
+    res.json({ success: true, purchases });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * Shift Management API Routes
+ */
+app.post('/api/orders/complete', async (req, res) => {
+  try {
+    const { id } = req.body;
+    if (!id) return res.status(400).json({ success: false, error: 'ID الطلب مطلوب' });
+    const order = await completeOrder(id);
+    if (!order) return res.status(404).json({ success: false, error: 'الطلب غير موجود' });
+    broadcast({ type: 'ORDER_COMPLETED', order });
+    res.json({ success: true, order });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * Void / Refund Order Endpoint (Manager PIN protected)
+ */
+app.post('/api/orders/void', async (req, res) => {
+  try {
+    const { order_id, manager_pin } = req.body;
+    if (!order_id || !manager_pin) {
+      return res.status(400).json({ success: false, error: 'رقم الطلب ورمز PIN للمدير مطلوبان' });
+    }
+
+    const result = await voidOrder(order_id, manager_pin);
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+
+    broadcast({ type: 'ORDER_VOIDED', order: result.voided_order });
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+
+
+app.post('/api/shifts/clock-in', async (req, res) => {
+  try {
+    const { user_id } = req.body;
+    if (!user_id) {
+      return res.status(400).json({ success: false, error: 'معرف الموظف مطلوب' });
+    }
+    const shift = await clockInUser(user_id);
+    console.log(`⏰ [CLOCK IN] User #${user_id} (${shift.user_name})`);
+    broadcast({ type: 'SHIFT_UPDATED', shift });
+    res.json({ success: true, shift });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post('/api/shifts/clock-out', async (req, res) => {
+  try {
+    const { user_id } = req.body;
+    if (!user_id) {
+      return res.status(400).json({ success: false, error: 'معرف الموظف مطلوب' });
+    }
+    const result = await clockOutUser(user_id);
+    console.log(`⏱️ [CLOCK OUT] User #${user_id}`);
+    broadcast({ type: 'SHIFT_UPDATED', result });
+    res.json({ success: true, result });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.get('/api/shifts/active', async (req, res) => {
+  try {
+    const activeShifts = await getActiveShifts();
+    res.json({ success: true, shifts: activeShifts });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.get('/api/shifts/user/:userId', async (req, res) => {
+  try {
+    const shift = await getUserShiftStatus(req.params.userId);
+    res.json({ success: true, shift });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * GET /api/menu
+ */
+app.get('/api/menu', async (req, res) => {
+  try {
+    const menu = await getMenu();
+    res.json({ success: true, menu });
+  } catch (err) {
+    console.error('Error fetching menu:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * POST /api/menu/bulk
+ */
+app.post('/api/menu/bulk', async (req, res) => {
+  try {
+    const { items } = req.body;
+    if (!Array.isArray(items)) {
+      return res.status(400).json({ success: false, error: 'قائمة العناصر مفقودة (items array is required)' });
+    }
+    await updateMenuBulk(items);
+    console.log(`📝 [MENU UPDATED] Bulk update completed for ${items.length} items.`);
+    res.json({ success: true, message: 'تم تحديث قائمة المشروبات والمأكولات بنجاح' });
+  } catch (err) {
+    console.error('Error bulk updating menu:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * POST /api/menu/add
+ */
+app.post('/api/menu/add', async (req, res) => {
+  try {
+    const { menu_item_name, price, category } = req.body;
+    if (!menu_item_name || typeof menu_item_name !== 'string' || !menu_item_name.trim()) {
+      return res.status(400).json({ success: false, error: 'اسم الصنف مطلوب (menu_item_name is required)' });
+    }
+
+    const newItem = await addMenuItem(menu_item_name.trim(), price, category);
+    console.log(`➕ [MENU ITEM ADDED] ${newItem.menu_item_name} - ${newItem.price} EGP (${newItem.category})`);
+    res.status(201).json({ success: true, item: newItem });
+  } catch (err) {
+    console.error('Error adding menu item:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * POST /api/menu/upload
+ * CSV Upload via Multer & CSV Parser
+ * Format: Name, Category, Price, Recipe_Item, Recipe_Qty
+ */
+app.post('/api/menu/upload', upload.single('csvFile'), async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ success: false, error: 'يرجى إرفاق ملف CSV' });
+  }
+
+  const results = [];
+  const filePath = req.file.path;
+
+  fs.createReadStream(filePath)
+    .pipe(csvParser())
+    .on('data', (data) => {
+      const name = data.Name || data.name || data.menu_item_name || data['اسم الصنف'];
+      const category = (data.Category || data.category || data['القسم'] || 'BARISTA').toUpperCase();
+      const price = Number(data.Price || data.price || data['السعر']) || 0;
+      if (name && name.trim()) {
+        results.push({
+          menu_item_name: name.trim(),
+          category,
+          price
+        });
+      }
+    })
+    .on('end', async () => {
+      try {
+        if (results.length > 0) {
+          // Insert items into recipes
+          for (const item of results) {
+            await addMenuItem(item.menu_item_name, item.price, item.category);
+          }
+          await updateMenuBulk(results);
+        }
+        fs.unlinkSync(filePath); // Clean temp file
+        res.json({ success: true, count: results.length, message: `تم رفع وتحديث ${results.length} صنف بنجاح` });
+      } catch (err) {
+        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+        res.status(500).json({ success: false, error: err.message });
+      }
+    })
+    .on('error', (err) => {
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+      res.status(500).json({ success: false, error: err.message });
+    });
+});
+
+/**
+ * Dynamic Table Lifecycle Endpoints
+ */
+app.get('/api/tables', async (req, res) => {
+  try {
+    const tables = await getAllTables();
+    res.json({ success: true, tables });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post('/api/tables/seat', async (req, res) => {
+  try {
+    const { table_number, custom_name, customer_name, customer_phone } = req.body;
+    if (!table_number) return res.status(400).json({ success: false, error: 'رقم الطاولة مطلوب' });
+    const result = await seatTable(table_number, custom_name, customer_name, customer_phone);
+    broadcast({ type: 'TABLE_SEATED', table_number, custom_name, customer_name });
+    res.json({ success: true, result });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post('/api/tables/request-check', async (req, res) => {
+  try {
+    const { table_number } = req.body;
+    if (!table_number) return res.status(400).json({ success: false, error: 'رقم الطاولة مطلوب' });
+    const result = await requestTableCheck(table_number);
+    broadcast({ type: 'TABLE_CHECK_REQUESTED', table_number });
+    res.json({ success: true, result });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post('/api/tables/vacate', async (req, res) => {
+  try {
+    const { table_number } = req.body;
+    if (!table_number) return res.status(400).json({ success: false, error: 'رقم الطاولة مطلوب' });
+    const result = await vacateTable(table_number);
+    broadcast({ type: 'TABLE_VACATED', table_number });
+    res.json({ success: true, result });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post('/api/tables/open', async (req, res) => {
+  try {
+    const { table_number } = req.body;
+    if (!table_number) return res.status(400).json({ success: false, error: 'رقم الطاولة مطلوب' });
+    const session = await openTableSession(table_number);
+    res.json({ success: true, session });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post('/api/tables/close', async (req, res) => {
+  try {
+    const { table_number } = req.body;
+    if (!table_number) return res.status(400).json({ success: false, error: 'رقم الطاولة مطلوب' });
+    const session = await closeTableSession(table_number);
+    res.json({ success: true, session });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.get('/api/tables/:table_number/orders', async (req, res) => {
+  try {
+    const orders = await getTableOrders(req.params.table_number);
+    res.json({ success: true, orders });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * Waste Logging Endpoint
+ */
+app.post('/api/waste', async (req, res) => {
+  try {
+    const { inventory_id, item_name, quantity, reason, department } = req.body;
+    if (!inventory_id || !quantity) {
+      return res.status(400).json({ success: false, error: 'بيانات الهالك غير مكتملة (inventory_id and quantity are required)' });
+    }
+    const log = await logWaste(inventory_id, item_name || 'خامة مخزون', quantity, reason || 'هالك قسم', department || 'BARISTA');
+    console.log(`⚠️ [WASTE LOGGED] ${log.item_name} - ${log.quantity} (${log.department})`);
+    
+    // Broadcast waste update to inventory screens
+    broadcast({ type: 'WASTE_LOGGED', log });
+    res.status(201).json({ success: true, log });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * GET /api/orders/past
+ */
+app.get('/api/orders/past', async (req, res) => {
+  try {
+    const category = req.query.category;
+    const orders = await getPastOrdersToday(category);
+    res.json({ success: true, orders });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * GET /api/inventory
+ */
+app.get('/api/inventory', async (req, res) => {
+  try {
+    const inventory = await getInventory();
+    res.json({ success: true, inventory });
+  } catch (err) {
+    console.error('Error fetching inventory:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * GET /api/orders
+ */
+app.get('/api/orders', async (req, res) => {
+  try {
+    const orders = await getPendingOrders();
+    res.json({ success: true, orders });
+  } catch (err) {
+    console.error('Error fetching pending orders:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * POST /api/orders
+ */
+app.post('/api/orders', async (req, res) => {
+  try {
+    const { item_name, quantity, price, table_number, waiter_id, sugar_level, roast_type } = req.body;
+
+    if (!item_name || typeof item_name !== 'string' || !item_name.trim()) {
+      return res.status(400).json({ success: false, error: 'اسم الصنف مطلوب (item_name is required)' });
+    }
+
+    const qty = parseInt(quantity, 10) || 1;
+    const inputPrice = price !== undefined && price !== null ? Number(price) : null;
+    const tNum = parseInt(table_number, 10) || 0;
+    const newOrder = await createOrderWithBOM(item_name.trim(), qty, inputPrice, tNum, waiter_id, sugar_level, roast_type);
+
+    if (tNum > 0) {
+      await updateTableTimestampsOnOrder(tNum);
+    }
+
+    console.log(`➕ [NEW ORDER] #${newOrder.id} - ${newOrder.item_name} (x${newOrder.quantity}) [Table #${newOrder.table_number}] Price: ${newOrder.price} EGP [Category: ${newOrder.category}]`);
+
+    broadcast({
+      type: 'NEW_ORDER',
+      order: newOrder
+    });
+
+    return res.status(201).json({ success: true, order: newOrder });
+  } catch (err) {
+    console.error('Error creating order:', err);
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * KDS State Machine & Cancellation Handshake Endpoints
+ */
+app.post('/api/orders/kds-status', async (req, res) => {
+  try {
+    const { id, kds_status, user_id } = req.body;
+    if (!id || !kds_status) return res.status(400).json({ success: false, error: 'معرف الطلب والحالة جديدان مطلوبان' });
+    const order = await updateKdsStatus(id, kds_status, user_id);
+    broadcast({ type: 'KDS_STATUS_UPDATED', order });
+    res.json({ success: true, order });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post('/api/orders/request-cancel', async (req, res) => {
+  try {
+    const { id, waiter_id } = req.body;
+    if (!id) return res.status(400).json({ success: false, error: 'معرف الطلب مطلوب' });
+    const result = await requestOrderCancellation(id, waiter_id);
+    broadcast({ type: 'CANCEL_REQUESTED', orderId: id, result });
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post('/api/orders/resolve-cancel', async (req, res) => {
+  try {
+    const { id, approved, user_id } = req.body;
+    if (!id || approved === undefined) return res.status(400).json({ success: false, error: 'معرف الطلب والقرار مطلوبان' });
+    const result = await resolveOrderCancellation(id, approved, user_id);
+    broadcast({ type: 'CANCEL_RESOLVED', orderId: id, result });
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * POST /api/orders/complete
+ * Broadcasts ORDER_COMPLETED and PICKUP_ALERT for runner screens
+ */
+app.post('/api/orders/complete', async (req, res) => {
+  try {
+    const { id, order_id } = req.body;
+    const targetId = id || order_id;
+
+    if (!targetId) {
+      return res.status(400).json({ success: false, error: 'معرف الطلب مطلوب (id is required)' });
+    }
+
+    const updatedOrder = await completeOrder(targetId);
+
+    if (!updatedOrder) {
+      return res.status(404).json({ success: false, error: 'الطلب غير موجود (Order not found)' });
+    }
+
+    console.log(`✅ [ORDER COMPLETED] #${updatedOrder.id} - ${updatedOrder.item_name} (Table #${updatedOrder.table_number})`);
+
+    // Broadcast completion to WebSockets
+    broadcast({
+      type: 'ORDER_COMPLETED',
+      orderId: updatedOrder.id,
+      order: updatedOrder
+    });
+
+    // Broadcast Pickup Alert to Runners
+    broadcast({
+      type: 'PICKUP_ALERT',
+      id: updatedOrder.id,
+      item_name: updatedOrder.item_name,
+      quantity: updatedOrder.quantity,
+      table_number: updatedOrder.table_number || 0,
+      category: updatedOrder.category,
+      station: updatedOrder.category === 'BARISTA' ? 'البارستا' : (updatedOrder.category === 'SHISHA' ? 'الشيشة' : 'المطبخ')
+    });
+
+    return res.json({ success: true, orderId: updatedOrder.id, order: updatedOrder });
+  } catch (err) {
+    console.error('Error completing order:', err);
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * POST /api/checkout
+ * Multi-method payment split, loyalty points processing & table session closure
+ */
+app.post('/api/checkout', async (req, res) => {
+  try {
+    const { order_id, table_number, payments, customer_phone, points_redeemed, tip_amount } = req.body;
+    const tNum = parseInt(table_number, 10) || 0;
+    const redeemed = Math.max(0, parseInt(points_redeemed, 10) || 0);
+
+    // Save payments breakdown with tips
+    await saveOrderPayments(order_id || null, tNum, Array.isArray(payments) ? payments : [], tip_amount || 0);
+
+    if (tNum > 0) {
+      await updateTableStatusOnCheckout(tNum);
+    }
+    
+    // Calculate net total paid across all payment methods
+    const totalPaid = (Array.isArray(payments) ? payments : []).reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+
+    // Process Loyalty Points if phone is provided
+    let customerResult = null;
+    if (customer_phone && String(customer_phone).trim().length > 0) {
+      const cleanPhone = String(customer_phone).trim();
+      // Earn 1 point per 10 EGP spent
+      const earnedPoints = Math.floor(totalPaid / 10);
+      // Net point adjustment = Earned - Redeemed
+      const netPointChange = earnedPoints - redeemed;
+      customerResult = await addOrUpdateCustomer(cleanPhone, null, netPointChange, totalPaid);
+    }
+
+    console.log(`💳 [CHECKOUT COMPLETE] Table #${tNum} - Payments: ${JSON.stringify(payments)} [Tip: ${tip_amount || 0} EGP] ${customerResult ? `- Customer: ${customerResult.phone} (${customerResult.points} pts)` : ''}`);
+    
+    broadcast({ type: 'TABLE_CLOSED', table_number: tNum });
+    res.json({ 
+      success: true, 
+      message: 'تم إغلاق الحساب وتسجيل الدفع بنجاح', 
+      customer: customerResult 
+    });
+  } catch (err) {
+    console.error('Error during checkout:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * GET /api/tips/total
+ * Fetch total tips pool today
+ */
+app.get('/api/tips/total', async (req, res) => {
+  try {
+    const totalTips = await getTotalTipsPool();
+    res.json({ success: true, total_tips: totalTips });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * GET /api/customers/:phone
+ * Fetch customer loyalty points record
+ */
+app.get('/api/customers/:phone', async (req, res) => {
+  try {
+    const customer = await getCustomer(req.params.phone);
+    res.json({ success: true, customer });
+  } catch (err) {
+    console.error('Error fetching customer:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * POST /api/tables/move
+ * Transfer an open table session to another table number
+ */
+app.post('/api/tables/move', async (req, res) => {
+  try {
+    const { from_table, to_table } = req.body;
+    const fromT = parseInt(from_table, 10);
+    const toT = parseInt(to_table, 10);
+
+    if (!fromT || !toT) {
+      return res.status(400).json({ success: false, error: 'رقم الطاولة الحالي والجديد مطلوبان' });
+    }
+
+    const result = await moveTableSession(fromT, toT);
+    broadcast({ type: 'TABLE_MOVED', from_table: fromT, to_table: toT });
+    res.json({ success: true, message: `تم نقل الطاولة #${fromT} إلى الطاولة #${toT} بنجاح`, result });
+  } catch (err) {
+    console.error('Error moving table session:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * Shareholder & Profit Ledger API Routes
+ */
+app.get('/api/shareholders', async (req, res) => {
+  try {
+    const data = await getShareholderLedger();
+    res.json({ success: true, ...data });
+  } catch (err) {
+    console.error('Error fetching shareholder ledger:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post('/api/shareholders', async (req, res) => {
+  try {
+    const { partner_name, amount, type, description } = req.body;
+    if (!partner_name || !amount || !type) {
+      return res.status(400).json({ success: false, error: 'اسم الشريك، المبلغ، ونوع العملية مطلوبان' });
+    }
+
+    const record = await logShareholderTransaction(partner_name, amount, type, description || '');
+    res.json({ success: true, record });
+  } catch (err) {
+    console.error('Error logging shareholder transaction:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * HR Employee Advances API Routes
+ */
+app.post('/api/hr/advances', async (req, res) => {
+  try {
+    const { employee_name, amount } = req.body;
+    if (!employee_name || !amount) {
+      return res.status(400).json({ success: false, error: 'اسم الموظف والمبلغ مطلوبين' });
+    }
+    const advance = await logEmployeeAdvance(employee_name.trim(), amount);
+    console.log(`💵 [HR ADVANCE LOGGED] ${advance.employee_name} - ${advance.amount} EGP`);
+    res.status(201).json({ success: true, advance });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.get('/api/hr/advances', async (req, res) => {
+  try {
+    const advances = await getTodayAdvances();
+    res.json({ success: true, advances });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * Blind Cash Declaration Endpoints
+ */
+app.post('/api/hr/declare-cash', async (req, res) => {
+  try {
+    const { user_id, declared_amount } = req.body;
+    if (declared_amount === undefined || declared_amount === null) {
+      return res.status(400).json({ success: false, error: 'المبلغ النظري المصرح به مطلوب' });
+    }
+    const result = await declareCash(user_id, declared_amount);
+    broadcast({ type: 'DRAWER_DECLARED', declaration: result });
+    res.json({ success: true, declaration: result });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.get('/api/hr/declarations', async (req, res) => {
+  try {
+    const declarations = await getDrawerDeclarations();
+    res.json({ success: true, declarations });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * Daily Cafe Expenses API Routes
+ */
+app.post('/api/expenses', async (req, res) => {
+  try {
+    const { description, amount, payment_source } = req.body;
+    if (!description || !amount) {
+      return res.status(400).json({ success: false, error: 'وصف المصروف والمبلغ مطلوبين' });
+    }
+    const expense = await logDailyExpense(description.trim(), amount, payment_source || 'DRAWER');
+    console.log(`💸 [EXPENSE LOGGED] ${expense.description} - ${expense.amount} EGP (${expense.payment_source})`);
+    res.status(201).json({ success: true, expense });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.get('/api/expenses', async (req, res) => {
+  try {
+    const expenses = await getTodayExpenses();
+    res.json({ success: true, expenses });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * Universal Audit Logs Endpoint
+ * GET /api/audits?limit=100
+ */
+app.get('/api/audits', async (req, res) => {
+  try {
+    const role = req.headers['x-user-role'] || req.query.role;
+    if (role && !['OWNER', 'OP_MANAGER', 'ADMIN', 'MANAGER'].includes(String(role).toUpperCase())) {
+      return res.status(403).json({ success: false, error: 'غير مصرح بدخول سجل التدقيق الفني' });
+    }
+    const limit = parseInt(req.query.limit, 10) || 100;
+    const logs = await getAuditLogs(limit);
+    res.json({ success: true, logs });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * End-of-Day (EOD) Report API Route (Strict Financial Privacy)
+ */
+app.get('/api/reports/eod', async (req, res) => {
+  try {
+    const role = req.headers['x-user-role'] || req.query.role;
+    if (role && !['OWNER', 'OP_MANAGER', 'ADMIN', 'MANAGER'].includes(String(role).toUpperCase())) {
+      return res.status(403).json({ success: false, error: 'غير مصرح للوظيفة الحالية بالاطلاع على الإيرادات والتقارير المالية الكلية' });
+    }
+    const report = await getEodReport();
+    res.json({ success: true, report });
+  } catch (err) {
+    console.error('Error generating EOD report:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * Business Intelligence (BI) Dashboard API Route (Strict Financial Privacy)
+ * GET /api/reports/bi?range=today|week|month
+ */
+app.get('/api/reports/bi', async (req, res) => {
+  try {
+    const role = req.headers['x-user-role'] || req.query.role;
+    if (role && !['OWNER', 'OP_MANAGER', 'ADMIN', 'MANAGER'].includes(String(role).toUpperCase())) {
+      return res.status(403).json({ success: false, error: 'غير مصرح للوظيفة الحالية بالاطلاع على الإيرادات والتقارير المالية الكلية' });
+    }
+    const range = req.query.range || 'today';
+    const data = await getBIData(range);
+    res.json({ success: true, data });
+  } catch (err) {
+    console.error('Error fetching BI report data:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * Automated Payroll Engine Endpoints
+ * GET /api/hr/payroll?start_date=YYYY-MM-DD&end_date=YYYY-MM-DD
+ */
+app.get('/api/hr/payroll', async (req, res) => {
+  try {
+    const role = req.headers['x-user-role'] || req.query.role;
+    if (role && !['OWNER', 'OP_MANAGER', 'ADMIN', 'MANAGER'].includes(String(role).toUpperCase())) {
+      return res.status(403).json({ success: false, error: 'غير مصرح بالاطلاع على مسير الرواتب الحساس' });
+    }
+    const { start_date, end_date } = req.query;
+    const payroll = await getPayrollData(start_date, end_date);
+    res.json({ success: true, payroll });
+  } catch (err) {
+    console.error('Error fetching payroll:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post('/api/hr/hourly-rate', async (req, res) => {
+  try {
+    const { user_id, hourly_rate } = req.body;
+    if (!user_id || hourly_rate === undefined) {
+      return res.status(400).json({ success: false, error: 'معرف الموظف وأجر الساعة مطلوبان' });
+    }
+    const result = await updateUserHourlyRate(user_id, hourly_rate);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post('/api/hr/penalties', async (req, res) => {
+  try {
+    const { user_id, amount, reason } = req.body;
+    if (!user_id || !amount) {
+      return res.status(400).json({ success: false, error: 'الموظف ومبلغ الجزاء مطلوبان' });
+    }
+    const penalty = await logPenalty(user_id, amount, reason);
+    res.status(201).json({ success: true, penalty });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.get('/api/hr/penalties', async (req, res) => {
+  try {
+    const userId = req.query.user_id;
+    const penalties = await getPenalties(userId);
+    res.json({ success: true, penalties });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * Quality Assurance & Complaints API Routes
+ */
+app.post('/api/qa/complaints', async (req, res) => {
+  try {
+    const { order_id, logged_by_user_id, against_user_id, description, severity } = req.body;
+    if (!description) {
+      return res.status(400).json({ success: false, error: 'تفاصيل ووصف الشكوى مطلوبة' });
+    }
+    const complaint = await logComplaint(order_id, logged_by_user_id, against_user_id, description, severity);
+    broadcast({ type: 'COMPLAINT_LOGGED', complaint });
+    res.status(201).json({ success: true, complaint });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.get('/api/qa/complaints', async (req, res) => {
+  try {
+    const complaints = await getComplaints();
+    res.json({ success: true, complaints });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post('/api/qa/complaints/resolve', async (req, res) => {
+  try {
+    const { complaint_id, user_id } = req.body;
+    if (!complaint_id) {
+      return res.status(400).json({ success: false, error: 'معرف الشكوى مطلوب' });
+    }
+    const result = await resolveComplaint(complaint_id, user_id);
+    broadcast({ type: 'COMPLAINT_RESOLVED', complaintId: complaint_id });
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Start Server
+server.listen(PORT, HOST, () => {
+  const localIp = getLocalIpAddress();
+  console.log(`\n==================================================`);
+  console.log(`🚀 Cafe POS, KDS & Inventory System Running!`);
+  console.log(`🌐 Local Domain: http://mazaj.local:${PORT}`);
+  console.log(`📡 Local IP: http://${localIp}:${PORT}`);
+  console.log(`📱 Cashier POS UI: http://mazaj.local:${PORT}/pos.html`);
+  console.log(`🛠️ Menu Admin UI: http://mazaj.local:${PORT}/admin-menu.html`);
+  console.log(`🏃 Runner Pickup UI: http://mazaj.local:${PORT}/runner.html`);
+  console.log(`☕ Barista KDS UI: http://mazaj.local:${PORT}/kds.html`);
+  console.log(`💨 Shisha KDS UI: http://mazaj.local:${PORT}/shisha.html`);
+  console.log(`🍳 Kitchen KDS UI: http://mazaj.local:${PORT}/kitchen.html`);
+  console.log(`📦 Inventory UI: http://mazaj.local:${PORT}/inventory.html`);
+  console.log(`==================================================\n`);
+});
+
+
+
+

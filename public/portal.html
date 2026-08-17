@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>كافيه مزاج - بوابة الأنظمة</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/nav.js"></script>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background-color: #0f172a;
+      color: #f8fafc;
+      user-select: none;
+    }
+    .tool-card {
+      transition: transform 0.1s ease, border-color 0.1s ease;
+    }
+    .tool-card:hover {
+      border-color: #f59e0b;
+    }
+    .tool-card:active {
+      transform: scale(0.98);
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col bg-slate-950">
+
+  <!-- Navigation Bar -->
+  <header class="bg-slate-900 border-b border-slate-800 px-6 py-4 flex items-center justify-between shadow-md">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 bg-amber-600 rounded-lg flex items-center justify-center text-xl font-bold text-slate-950">
+        ☕
+      </div>
+      <div>
+        <h1 class="text-xl font-bold text-slate-100">كافيه مزاج - بوابة الأنظمة</h1>
+        <p class="text-xs text-slate-400">منظومة إدارة الكافيه المتكاملة</p>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-4">
+      <div class="text-left bg-slate-800 border border-slate-700 px-3 py-1.5 rounded-lg flex items-center gap-2">
+        <span class="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse"></span>
+        <div>
+          <div id="userName" class="text-sm font-bold text-amber-400">---</div>
+          <div id="userRole" class="text-[11px] text-slate-400">---</div>
+        </div>
+      </div>
+      <button onclick="logout()" class="bg-rose-950 hover:bg-rose-900 border border-rose-800 text-rose-300 text-xs px-3 py-2 rounded-lg font-bold flex items-center gap-1">
+        تسجيل الخروج 🚪
+      </button>
+    </div>
+  </header>
+
+  <main class="flex-1 max-w-6xl w-full mx-auto p-6 flex flex-col gap-6">
+
+    <!-- Shift Management Section -->
+    <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-4">
+        <div id="shiftIcon" class="w-12 h-12 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-2xl">
+          ⏰
+        </div>
+        <div>
+          <div class="text-sm text-slate-400 font-semibold">إدارة الورديات وتنسيق الحضور:</div>
+          <div id="shiftStatusText" class="text-lg font-bold text-slate-200 mt-0.5">جارٍ تحميل حالة ورديتك...</div>
+        </div>
+      </div>
+
+      <button id="clockBtn" onclick="toggleShift()" class="w-full sm:w-auto px-6 py-3 rounded-lg font-bold text-sm border flex items-center justify-center gap-2 shadow-md bg-amber-600 hover:bg-amber-500 text-slate-950 border-amber-500">
+        <span id="clockBtnText">تسجيل حضور ⏰</span>
+      </button>
+    </div>
+
+    <!-- Authorized Tools Grid Section -->
+    <div>
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-bold text-slate-200 flex items-center gap-2">
+          <span>🛠️</span> الأدوات والشاشات المتاحة لدورك الوظيفي
+        </h2>
+        <span id="toolCount" class="text-xs font-semibold text-slate-400 bg-slate-800 border border-slate-700 px-2.5 py-1 rounded-full">
+          0 أدوات
+        </span>
+      </div>
+
+      <div id="toolsGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+  </main>
+
+  <footer class="bg-slate-900 border-t border-slate-800 text-center py-3 text-xs text-slate-500">
+    كافيه مزاج Enterprise ERP &copy; 2026 - جميع الحقوق محفوظة
+  </footer>
+
+  <script>
+    let currentUser = null;
+    let currentShift = null;
+
+    // Translation maps
+    const roleLabels = {
+      BARISTA: "باريستا الكافيه",
+      SHIASH: "معد الشيشة",
+      CHEF: "شيف المطبخ",
+      WAITER: "ويتر الصالة",
+      CASHIER: "كاشير الصالة",
+      MANAGER: "مدير الكافيه",
+      OWNER: "مالك المنشأة",
+      ADMIN: "مدير النظام"
+    };
+
+    function initPortal() {
+      const userStr = localStorage.getItem('currentUser');
+      if (!userStr) {
+        window.location.href = 'index.html';
+        return;
+      }
+
+      currentUser = JSON.parse(userStr);
+      document.getElementById('userName').textContent = currentUser.name || "مستخدم";
+      document.getElementById('userRole').textContent = roleLabels[currentUser.role] || currentUser.role;
+
+      const toolsStr = localStorage.getItem('userTools');
+      const tools = toolsStr ? JSON.parse(toolsStr) : [];
+      renderTools(tools);
+
+      fetchShiftStatus();
+    }
+
+    function renderTools(tools) {
+      const grid = document.getElementById('toolsGrid');
+      document.getElementById('toolCount').textContent = `${tools.length} أدوات`;
+      grid.innerHTML = "";
+
+      if (tools.length === 0) {
+        grid.innerHTML = `
+          <div class="col-span-full text-center py-12 text-slate-500 bg-slate-900 border border-slate-800 rounded-xl">
+            لا توجد أدوات مخصصة لدورك الحالي.
+          </div>
+        `;
+        return;
+      }
+
+      tools.forEach(tool => {
+        const card = document.createElement('a');
+        card.href = tool.url;
+        card.className = "tool-card bg-slate-900 border border-slate-800 rounded-xl p-5 flex flex-col items-center justify-center text-center gap-3 hover:bg-slate-850 cursor-pointer shadow-md";
+        card.innerHTML = `
+          <div class="w-14 h-14 bg-slate-800 border border-slate-700 rounded-2xl flex items-center justify-center text-3xl">
+            ${tool.icon || '📌'}
+          </div>
+          <div>
+            <div class="font-bold text-slate-100 text-base mb-1">${tool.name}</div>
+            <div class="text-xs text-amber-400 font-semibold flex items-center justify-center gap-1">
+              <span>افتح الشاشة</span>
+              <span>←</span>
+            </div>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    async function fetchShiftStatus() {
+      if (!currentUser || !currentUser.id) return;
+      try {
+        const res = await fetch(`/api/shifts/user/${currentUser.id}`);
+        const data = await res.json();
+
+        const statusText = document.getElementById('shiftStatusText');
+        const clockBtn = document.getElementById('clockBtn');
+        const clockBtnText = document.getElementById('clockBtnText');
+        const shiftIcon = document.getElementById('shiftIcon');
+
+        if (data.success && data.shift && data.shift.status === 'ACTIVE') {
+          currentShift = data.shift;
+          const clockInTime = new Date(data.shift.clock_in).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+          statusText.innerHTML = `<span class="text-emerald-400 font-bold">ورديتك نشطة حالياً 🟢</span> <span class="text-xs text-slate-400">(تسجيل الحضور: ${clockInTime})</span>`;
+          shiftIcon.className = "w-12 h-12 rounded-xl bg-emerald-950 border border-emerald-800 text-emerald-400 flex items-center justify-center text-2xl";
+          clockBtn.className = "w-full sm:w-auto px-6 py-3 rounded-lg font-bold text-sm border flex items-center justify-center gap-2 shadow-md bg-rose-950 hover:bg-rose-900 text-rose-300 border-rose-800";
+          clockBtnText.textContent = "تسجيل انصراف (Clock Out) ⏱️";
+        } else {
+          currentShift = null;
+          statusText.innerHTML = `<span class="text-rose-400 font-bold">غير مسجل حضور حالياً 🔴</span>`;
+          shiftIcon.className = "w-12 h-12 rounded-xl bg-slate-800 border border-slate-700 text-slate-400 flex items-center justify-center text-2xl";
+          clockBtn.className = "w-full sm:w-auto px-6 py-3 rounded-lg font-bold text-sm border flex items-center justify-center gap-2 shadow-md bg-amber-600 hover:bg-amber-500 text-slate-950 border-amber-500";
+          clockBtnText.textContent = "تسجيل حضور (Clock In) ⏰";
+        }
+      } catch (err) {
+        console.error("Error fetching shift status:", err);
+      }
+    }
+
+    async function toggleShift() {
+      if (!currentUser || !currentUser.id) return;
+      const endpoint = currentShift ? '/api/shifts/clock-out' : '/api/shifts/clock-in';
+
+      try {
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user_id: currentUser.id })
+        });
+        const data = await res.json();
+        if (data.success) {
+          await fetchShiftStatus();
+        } else {
+          alert(data.error || "تعذر إتمام عملية الحضور/الانصراف");
+        }
+      } catch (err) {
+        alert("حدث خطأ أثناء الاتصال بالخادم");
+      }
+    }
+
+    function logout() {
+      localStorage.removeItem('currentUser');
+      localStorage.removeItem('userTools');
+      localStorage.removeItem('activeShift');
+      window.location.href = 'index.html';
+    }
+
+    window.addEventListener('DOMContentLoaded', initPortal);
+  </script>
+</body>
+</html>

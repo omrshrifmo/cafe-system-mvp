@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>كافيه مزاج - شاشة الـ Runner</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/nav.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@500;700;900&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Tajawal', sans-serif; background-color: #0f172a; color: #f8fafc; }
+    /* Flashing border without animation delay for maximum urgency */
+    .flash-green { border: 4px solid #22c55e; background-color: #064e3b; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 h-screen max-h-screen flex flex-col overflow-hidden selection:bg-amber-500 selection:text-black">
+
+  <!-- Header (Shrink-0) -->
+  <header class="shrink-0 border-b border-slate-800 bg-slate-900 px-6 py-3 flex items-center justify-between shadow-xl z-20">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 text-xl shadow-inner">
+        🏃‍♂️
+      </div>
+      <div>
+        <h1 class="text-lg font-black text-slate-100 tracking-wide">كافيه مزاج - شاشة متابعة الـ Runner (Pickup Alerts)</h1>
+        <p class="text-[11px] text-amber-400 font-semibold">تنبيهات فورية عالية التباين لاستلام وتسليم الطلبات الجاهزة</p>
+      </div>
+    </div>
+
+    <!-- Status & Clock -->
+    <div class="flex items-center gap-4">
+      <div class="flex items-center gap-2 bg-slate-800 px-3 py-1 rounded-xl border border-slate-700">
+        <span class="text-xs text-slate-400">تنبيهات جارية:</span>
+        <span id="alerts-counter" class="text-sm font-extrabold text-emerald-400 font-mono">0</span>
+      </div>
+
+      <div id="ws-status" class="flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-bold">
+        <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+        <span id="ws-status-text">جاري الاتصال...</span>
+      </div>
+
+      <div id="live-clock" class="text-slate-400 font-mono text-xs bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700/50 hidden md:block">
+        00:00:00
+      </div>
+    </div>
+  </header>
+
+  <!-- Toast Container -->
+  <div id="runner-toast-container" class="fixed top-16 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-2 pointer-events-none"></div>
+
+  <!-- Main Alerts Feed (Internal Scroll) -->
+  <main class="max-w-7xl w-full mx-auto p-4 md:p-6 flex-1 min-h-0 overflow-y-auto">
+    <div id="alerts-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <!-- Dynamic Runner Pickup Cards -->
+    </div>
+    <div id="empty-state" class="text-center py-20 bg-slate-800/40 rounded-xl border border-slate-700/50">
+      <span class="text-6xl block mb-3">⚡</span>
+      <h2 class="text-2xl font-bold text-slate-400">لا توجد طلبات جاهزة للتسليم حالياً</h2>
+      <p class="text-sm text-slate-500 mt-1">ستظهر التنبيهات فوراً عند تجهيز الطلب في البارستا أو الشيشة أو المطبخ</p>
+    </div>
+  </main>
+
+  <script>
+    let ws;
+    const alertsGrid = document.getElementById('alerts-grid');
+    const emptyState = document.getElementById('empty-state');
+    const wsStatus = document.getElementById('ws-status');
+    const activeAlerts = new Map();
+
+    function connectWebSocket() {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${protocol}//${window.location.host}`;
+      ws = new WebSocket(wsUrl);
+
+      ws.onopen = () => {
+        wsStatus.textContent = '🟢 متصل';
+        wsStatus.className = 'bg-emerald-600 text-white text-xs px-3 py-1 rounded-full font-bold';
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === 'PICKUP_ALERT') {
+            addPickupAlert(data);
+          } else if (data.type === 'RUNNER_DELIVERED') {
+            removePickupAlert(data.id);
+          } else if (data.type === 'RUNNER_BUSY') {
+            // Re-highlight or bounce alert
+            bouncePickupAlert(data.id);
+          }
+        } catch (e) {
+          console.error('Error parsing WebSocket message:', e);
+        }
+      };
+
+      ws.onclose = () => {
+        wsStatus.textContent = '🔴 غير متصل';
+        wsStatus.className = 'bg-red-600 text-white text-xs px-3 py-1 rounded-full font-bold';
+        setTimeout(connectWebSocket, 3000);
+      };
+    }
+
+    function addPickupAlert(data) {
+      if (!data || !data.id) return;
+      activeAlerts.set(data.id, data);
+      renderAlerts();
+    }
+
+    function removePickupAlert(id) {
+      activeAlerts.delete(id);
+      renderAlerts();
+    }
+
+    function bouncePickupAlert(id) {
+      const card = document.getElementById(`alert-card-${id}`);
+      if (card) {
+        card.classList.add('border-amber-400');
+        setTimeout(() => card.classList.remove('border-amber-400'), 1500);
+      }
+    }
+
+    function renderAlerts() {
+      if (activeAlerts.size === 0) {
+        alertsGrid.innerHTML = '';
+        emptyState.style.display = 'block';
+        return;
+      }
+
+      emptyState.style.display = 'none';
+      let html = '';
+
+      activeAlerts.forEach((alert) => {
+        const tableTxt = alert.table_number && alert.table_number > 0 ? `طاولة ${alert.table_number}` : 'طلب مباشر (بدون طاولة)';
+        html += `
+          <div id="alert-card-${alert.id}" class="flash-green p-6 rounded-2xl text-center text-white shadow-2xl border-4">
+            <div class="flex justify-between items-center mb-2 text-emerald-200 text-sm font-bold">
+              <span>قسم: ${alert.station || alert.category}</span>
+              <span>طلب #${alert.id}</span>
+            </div>
+            <h2 class="text-4xl font-black text-white mb-2">${tableTxt}</h2>
+            <p class="text-2xl font-bold text-emerald-100 mb-6">${alert.item_name} (x${alert.quantity || 1})</p>
+            <div class="grid grid-cols-2 gap-3">
+              <button onclick="markDelivered(${alert.id})" class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xl py-4 rounded-xl shadow-lg border border-emerald-300">
+                ✅ تم التسليم
+              </button>
+              <button onclick="markBusy(${alert.id})" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xl py-4 rounded-xl shadow-lg border border-amber-300">
+                ⌛ مشغول (تحويل)
+              </button>
+            </div>
+          </div>
+        `;
+      });
+
+      alertsGrid.innerHTML = html;
+    }
+
+    function markDelivered(id) {
+      removePickupAlert(id);
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'RUNNER_DELIVERED', id }));
+      }
+    }
+
+    function markBusy(id) {
+      bouncePickupAlert(id);
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'RUNNER_BUSY', id }));
+      }
+    }
+
+    connectWebSocket();
+  </script>
+</body>
+</html>

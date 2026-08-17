@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>كافيه مزاج - نظام المشتريات والتوريد</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/nav.js"></script>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background-color: #0f172a;
+      color: #f8fafc;
+      user-select: none;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col bg-slate-950">
+
+  <!-- Header -->
+  <header class="bg-slate-900 border-b border-slate-800 px-6 py-4 flex items-center justify-between shadow-md">
+    <div class="flex items-center gap-3">
+      <a href="portal.html" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg border border-slate-700 text-xs font-semibold flex items-center gap-1">
+        <span>←</span> العودة للبوابة
+      </a>
+      <div class="h-5 w-px bg-slate-800"></div>
+      <div class="w-9 h-9 bg-amber-600 rounded-lg flex items-center justify-center text-lg font-bold text-slate-950">
+        🛒
+      </div>
+      <div>
+        <h1 class="text-xl font-bold text-slate-100">إدارة المشتريات والتوريد</h1>
+        <p class="text-xs text-slate-400">تسجيل فواتير وتوريدات المواد الخام وإعادة تغذية المخزون (BOM)</p>
+      </div>
+    </div>
+
+    <div id="userBadge" class="text-xs bg-slate-800 border border-slate-700 px-3 py-1.5 rounded-lg text-slate-300">
+      مدير النظام
+    </div>
+  </header>
+
+  <main class="flex-1 max-w-6xl w-full mx-auto p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    <!-- Form Section -->
+    <div class="lg:col-span-1 bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg h-fit">
+      <h2 class="text-base font-bold text-slate-200 mb-4 pb-3 border-b border-slate-800 flex items-center gap-2">
+        <span>➕</span> تسجيل فاتورة شراء جديدة
+      </h2>
+
+      <form id="purchaseForm" onsubmit="handlePurchaseSubmit(event)" class="flex flex-col gap-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1.5">اختر خام المخزون (Item)</label>
+          <select id="inventorySelect" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-amber-500">
+            <option value="">جارٍ تحميل قائمة الخامات...</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1.5">الكمية المضافة (Qty Added)</label>
+          <div class="flex items-center">
+            <input type="number" id="qtyAdded" step="any" min="0.01" required placeholder="مثال: 5000" class="w-full bg-slate-950 border border-slate-700 rounded-r-lg px-3 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-amber-500">
+            <span id="unitBadge" class="bg-slate-800 border border-l-0 border-slate-700 text-slate-400 text-xs px-3 py-2.5 rounded-l-lg font-mono min-w-[50px] text-center">---</span>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1.5">إجمالي التكلفة بالجنيه (Total Cost EGP)</label>
+          <input type="number" id="totalCost" step="any" min="0" required placeholder="مثال: 1200" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-amber-500">
+        </div>
+
+        <button type="submit" id="submitBtn" class="mt-2 w-full bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold py-3 rounded-lg border border-amber-500 shadow-md text-sm flex items-center justify-center gap-2">
+          تسجيل شراء وتغذية المخزون 🛒
+        </button>
+      </form>
+    </div>
+
+    <!-- Right Side: Inventory Overview & Log History -->
+    <div class="lg:col-span-2 flex flex-col gap-6">
+
+      <!-- Current Stock Quick Status -->
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-base font-bold text-slate-200 flex items-center gap-2">
+            <span>📦</span> الرصيد الحالي للخامات في المستودع
+          </h2>
+          <button onclick="loadInventory()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded border border-slate-700">تحديث ↻</button>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-right text-xs">
+            <thead class="bg-slate-950 text-slate-400 border-b border-slate-800">
+              <tr>
+                <th class="p-2.5">اسم الخامة</th>
+                <th class="p-2.5">الرصيد الحالي</th>
+                <th class="p-2.5">القسم</th>
+              </tr>
+            </thead>
+            <tbody id="inventoryTableBody" class="divide-y divide-slate-800/50">
+              <!-- Rendered dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Purchase History Log -->
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg">
+        <h2 class="text-base font-bold text-slate-200 mb-3 flex items-center gap-2">
+          <span>📜</span> سجل عمليات الشراء والتوريد السابقة
+        </h2>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-right text-xs">
+            <thead class="bg-slate-950 text-slate-400 border-b border-slate-800">
+              <tr>
+                <th class="p-2.5">#</th>
+                <th class="p-2.5">الخامة المشتراة</th>
+                <th class="p-2.5">الكمية المضافة</th>
+                <th class="p-2.5">التكلفة الإجمالية</th>
+                <th class="p-2.5">تاريخ التوريد</th>
+              </tr>
+            </thead>
+            <tbody id="purchasesTableBody" class="divide-y divide-slate-800/50">
+              <!-- Rendered dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    let inventoryMap = {};
+
+    async function initPurchasing() {
+      const userStr = localStorage.getItem('currentUser');
+      if (userStr) {
+        const u = JSON.parse(userStr);
+        document.getElementById('userBadge').textContent = `${u.name} (${u.role})`;
+      }
+
+      await loadInventory();
+      await loadPurchasesHistory();
+
+      // Listen for unit change when select updates
+      document.getElementById('inventorySelect').addEventListener('change', (e) => {
+        const selectedId = e.target.value;
+        const unitBadge = document.getElementById('unitBadge');
+        if (selectedId && inventoryMap[selectedId]) {
+          unitBadge.textContent = inventoryMap[selectedId].unit;
+        } else {
+          unitBadge.textContent = '---';
+        }
+      });
+    }
+
+    async function loadInventory() {
+      try {
+        const res = await fetch('/api/inventory');
+        const data = await res.json();
+        if (data.success && Array.isArray(data.inventory)) {
+          const select = document.getElementById('inventorySelect');
+          const tbody = document.getElementById('inventoryTableBody');
+          
+          select.innerHTML = '<option value="">-- اختر صنف الخام --</option>';
+          tbody.innerHTML = '';
+
+          inventoryMap = {};
+          data.inventory.forEach(item => {
+            inventoryMap[item.id] = item;
+
+            // Option item
+            const opt = document.createElement('option');
+            opt.value = item.id;
+            opt.textContent = `${item.name} (الرصيد: ${item.current_stock} ${item.unit})`;
+            select.appendChild(opt);
+
+            // Table row
+            const tr = document.createElement('tr');
+            const isLow = item.current_stock < 100;
+            tr.innerHTML = `
+              <td class="p-2.5 font-bold text-slate-200">${item.name}</td>
+              <td class="p-2.5 font-mono ${isLow ? 'text-rose-400 font-bold' : 'text-emerald-400'}">${item.current_stock} ${item.unit}</td>
+              <td class="p-2.5 text-slate-400">${item.department || 'BARISTA'}</td>
+            `;
+            tbody.appendChild(tr);
+          });
+        }
+      } catch (err) {
+        console.error("Error loading inventory:", err);
+      }
+    }
+
+    async function loadPurchasesHistory() {
+      try {
+        const res = await fetch('/api/purchases');
+        const data = await res.json();
+        if (data.success && Array.isArray(data.purchases)) {
+          const tbody = document.getElementById('purchasesTableBody');
+          tbody.innerHTML = '';
+
+          if (data.purchases.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-500">لا توجد سجلات شراء حتى الآن</td></tr>`;
+            return;
+          }
+
+          data.purchases.forEach(p => {
+            const tr = document.createElement('tr');
+            const dateStr = new Date(p.created_at).toLocaleString('ar-EG', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' });
+            tr.innerHTML = `
+              <td class="p-2.5 text-slate-500 font-mono">#${p.id}</td>
+              <td class="p-2.5 font-bold text-amber-400">${p.item_name || 'خام مخزون'}</td>
+              <td class="p-2.5 font-mono text-slate-200">+${p.qty_added} ${p.unit || ''}</td>
+              <td class="p-2.5 font-mono text-emerald-400 font-bold">${p.total_cost} ج.م</td>
+              <td class="p-2.5 text-slate-400 text-[11px]">${dateStr}</td>
+            `;
+            tbody.appendChild(tr);
+          });
+        }
+      } catch (err) {
+        console.error("Error loading purchases history:", err);
+      }
+    }
+
+    async function handlePurchaseSubmit(e) {
+      e.preventDefault();
+      const invId = document.getElementById('inventorySelect').value;
+      const qty = document.getElementById('qtyAdded').value;
+      const cost = document.getElementById('totalCost').value;
+
+      if (!invId || !qty || !cost) {
+        alert("يرجى إدخال كافة البيانات المطلوبة");
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/purchases', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            inventory_id: parseInt(invId, 10),
+            qty_added: parseFloat(qty),
+            total_cost: parseFloat(cost)
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert("تم تسجيل الشراء وإعادة تغذية المخزون بنجاح!");
+          document.getElementById('purchaseForm').reset();
+          document.getElementById('unitBadge').textContent = '---';
+          await loadInventory();
+          await loadPurchasesHistory();
+        } else {
+          alert(data.error || "خطأ في تسجيل الشراء");
+        }
+      } catch (err) {
+        alert("حدث خطأ أثناء الاتصال بالخادم");
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', initPurchasing);
+  </script>
+</body>
+</html>

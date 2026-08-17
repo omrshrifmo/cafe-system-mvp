@@ -1,0 +1,1352 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>كافيه مزاج - نظام الكاشير السريع</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/nav.js"></script>
+  <!-- Cairo Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            cairo: ['Cairo', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Cairo', sans-serif;
+    }
+    /* Custom scrollbar for fast scrolling */
+    ::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.8);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(245, 158, 11, 0.5);
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 h-screen max-h-screen flex flex-col overflow-hidden selection:bg-amber-500 selection:text-black">
+
+  <!-- Header (Shrink-0, Top static) -->
+  <header class="shrink-0 border-b border-slate-800 bg-slate-900 px-4 py-2 flex items-center justify-between shadow-md z-20">
+    <div class="flex items-center gap-2">
+      <div class="w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 text-lg shadow-inner">
+        💻
+      </div>
+      <div>
+        <h1 class="text-base font-black text-slate-100 leading-none">كافيه مزاج - شاشة الكاشير السريع (POS Terminal)</h1>
+        <p class="text-[10px] text-amber-400 font-semibold leading-tight">استجابة فورية فائقة السرعة للمواسم والازدحام</p>
+      </div>
+    </div>
+
+    <!-- Clock, Network Status & Admin Link -->
+    <div class="flex items-center gap-3">
+      <div id="net-status-indicator" class="flex items-center gap-1.5 px-2 py-1 bg-slate-950 rounded-lg border border-slate-800 text-[11px] font-bold" title="حالة الاتصال بالسيرفر والشبكة">
+        <span id="net-status-dot" class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+        <span id="net-status-text" class="text-emerald-400">متصل</span>
+      </div>
+      <a href="/bi.html" class="px-2.5 py-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 text-xs font-bold rounded-lg border border-amber-500/30 flex items-center gap-1">
+        <span>📈</span>
+        <span>التقارير</span>
+      </a>
+      <a href="/admin-menu.html" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-amber-400 text-xs font-bold rounded-lg border border-amber-500/30 flex items-center gap-1">
+        <span>⚙️</span>
+        <span>تعديل الأسعار والقائمة</span>
+      </a>
+      <div id="connection-status" class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[11px] font-bold">
+        <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+        <span>متصل (mazaj.local)</span>
+      </div>
+      <div id="live-clock" class="text-slate-400 font-mono text-xs bg-slate-800 px-2 py-1 rounded border border-slate-700 hidden sm:block">
+        00:00:00
+      </div>
+    </div>
+  </header>
+
+  <!-- Toast Notification Area -->
+  <div id="pos-toast-container" class="fixed top-14 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-1 pointer-events-none"></div>
+
+  <!-- Main Non-Overlapping Layout Split -->
+  <main class="max-w-7xl w-full mx-auto p-2 md:p-3 flex-1 min-h-0 overflow-hidden">
+    
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-2.5 items-stretch w-full h-full min-h-0">
+      
+      <!-- Right Side: Current Ticket / Cart Section (Self-contained Flex Scroll) -->
+      <section class="md:col-span-5 lg:col-span-4 md:order-2 bg-slate-900 border border-amber-500/40 rounded-2xl p-3 flex flex-col justify-between shadow-xl h-full min-h-0 overflow-hidden">
+        <div class="flex flex-col h-full min-h-0">
+          <!-- Ticket Header -->
+          <div class="shrink-0 flex items-center justify-between border-b border-slate-800 pb-2 mb-2">
+            <div class="flex items-center gap-1.5">
+              <span class="text-xl">🧾</span>
+              <div>
+                <h2 class="text-base font-black text-white leading-none">الفاتورة الحالية</h2>
+                <p class="text-[10px] text-amber-400 font-semibold">Current Ticket</p>
+              </div>
+            </div>
+            <button 
+              onclick="clearCart()"
+              class="px-2.5 py-1 bg-slate-800 hover:bg-rose-950/60 text-slate-400 hover:text-rose-400 border border-slate-700 rounded-lg text-xs font-bold flex items-center gap-1 cursor-pointer">
+              <span>🗑️</span>
+              <span>مسح السلة</span>
+            </button>
+          </div>
+
+          <!-- Cart Items Container (Internal Scrollable) -->
+          <div id="cart-items-container" class="flex-1 min-h-0 overflow-y-auto space-y-1.5 pr-1">
+            <div id="empty-cart-msg" class="py-12 text-center text-slate-500 flex flex-col items-center justify-center">
+              <span class="text-3xl mb-1 opacity-50">🛒</span>
+              <p class="text-xs font-bold">السلة فارغة حالياً</p>
+              <p class="text-[10px] opacity-75 mt-0.5">اضغط الأصناف لإضافتها فوراً</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Ticket Summary & Action Button -->
+        <div class="shrink-0 mt-2 pt-2 border-t border-slate-800">
+          <div class="flex items-center justify-between mb-1 px-1 text-xs">
+            <span class="font-bold text-slate-400">عدد الأصناف:</span>
+            <span id="cart-total-qty" class="font-black text-amber-400 font-mono text-sm">0</span>
+          </div>
+
+          <!-- Total Price Calculation -->
+          <div class="flex items-center justify-between mb-2 px-1 py-1.5 bg-slate-950 rounded-xl border border-slate-800">
+            <span class="text-xs font-black text-white">إجمالي الفاتورة:</span>
+            <div class="flex items-baseline gap-1">
+              <span id="cart-total-price" class="text-xl font-black text-amber-400 font-mono">0</span>
+              <span class="text-xs font-bold text-slate-400">ج.م</span>
+            </div>
+          </div>
+
+          <!-- Action Buttons: إرسال الطلبات & دفع الحساب -->
+          <div class="grid grid-cols-2 gap-2">
+            <button 
+              id="send-orders-btn"
+              onclick="sendCartOrders()"
+              disabled
+              class="py-2.5 px-3 bg-amber-500 hover:bg-amber-400 disabled:opacity-30 disabled:pointer-events-none text-slate-950 font-black rounded-xl text-sm shadow-md flex items-center justify-center gap-1 cursor-pointer">
+              <span>🚀</span>
+              <span id="send-btn-text">إرسال (0)</span>
+            </button>
+
+            <button 
+              id="checkout-btn"
+              onclick="openCheckoutModal()"
+              class="py-2.5 px-3 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-xl text-sm shadow-md flex items-center justify-center gap-1 cursor-pointer">
+              <span>💳</span>
+              <span>دفع الحساب</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Left Side: Menu Grid & Table Selector (Vertical Scroll Container) -->
+      <section class="md:col-span-7 lg:col-span-8 md:order-1 flex flex-col gap-2.5 h-full min-h-0 overflow-y-auto pr-1">
+        
+        <!-- Table Grid Bar (Tables 1-20 & Seated Timer) -->
+        <div class="shrink-0 bg-slate-900 border border-slate-800 rounded-2xl p-3 shadow-sm">
+          <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center gap-2">
+              <span class="text-xl">🪑</span>
+              <div>
+                <h2 class="text-sm font-black text-white leading-tight">إدارة الطاولات والتوقيت الحي</h2>
+                <p class="text-[10px] text-amber-400 font-semibold" id="selected-table-info">الطاولة المحددة: طلب مباشر (بدون طاولة)</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <button onclick="openTableSeatingModal()" class="px-2.5 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/50 rounded-lg text-xs font-bold cursor-pointer flex items-center gap-1">
+                <span>🪑</span>
+                <span>تسجيل جلوس / اسم مخصص</span>
+              </button>
+              <button onclick="requestTableCheckAction()" id="request-check-btn" class="px-2.5 py-1 bg-sky-950/80 hover:bg-sky-900 text-sky-300 border border-sky-500/40 rounded-lg text-xs font-bold cursor-pointer flex items-center gap-1">
+                <span>📜</span>
+                <span>طلب الحساب</span>
+              </button>
+              <button onclick="openMoveTableModal()" id="move-table-btn" class="hidden px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg text-xs font-bold cursor-pointer">
+                نقل 🔀
+              </button>
+              <button onclick="vacateCurrentTable()" id="close-table-btn" class="hidden px-2.5 py-1 bg-rose-950/60 hover:bg-rose-900 text-rose-300 border border-rose-500/40 rounded-lg text-xs font-bold cursor-pointer">
+                مغادرة الضيف 🚪
+              </button>
+              <button onclick="selectTable(0)" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-lg border border-slate-700 cursor-pointer">
+                طلب مباشر (بدون طاولة)
+              </button>
+            </div>
+          </div>
+
+          <!-- Tables Grid 1-20 (Horizontal scroll container) -->
+          <div id="tables-grid" class="flex gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
+            <!-- Rendered via JS -->
+          </div>
+
+          <!-- Smart Upsell Alert Banner -->
+          <div id="smart-upsell-alert" class="hidden mt-2.5 p-2 rounded-xl bg-rose-950/90 border border-rose-500/80 text-rose-200 text-xs font-black flex items-center justify-between shadow-md">
+            <span class="flex items-center gap-1.5">
+              <span class="text-base">💡</span>
+              <span>اقتراح مبيعات: الطاولة جالس منذ أكثر من 45 دقيقة والحساب أقل من 150 ج.م — عرض تجديد شيشة أو حلى!</span>
+            </span>
+          </div>
+        </div>
+
+        <!-- Category Banner Header -->
+        <div class="shrink-0 bg-slate-900 border border-slate-800 rounded-2xl p-3 flex items-center justify-between shadow-sm">
+          <div>
+            <h2 class="text-base font-black text-white">كافيه مزاج - قائمة الطلبات السريعة</h2>
+            <p class="text-slate-400 text-[11px]">اضغط على الصنف للإضافة الفورية إلى الفاتورة</p>
+          </div>
+          <button 
+            onclick="openCustomItemModal()"
+            class="px-3 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl text-xs flex items-center gap-1 shadow-md cursor-pointer">
+            <span>✨</span>
+            <span>عنصر مخصص (Custom Item)</span>
+          </button>
+        </div>
+
+        <!-- Tight Menu Grid (gap-2, p-2 button padding) -->
+        <div id="menu-grid" class="shrink-0 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 w-full">
+          <!-- Dynamic Menu Items Rendered Here -->
+        </div>
+
+        <!-- Recent Sent Orders Log -->
+        <div class="shrink-0 bg-slate-900 border border-slate-800 rounded-2xl p-3 shadow-sm">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="font-bold text-xs text-slate-200 flex items-center gap-1">
+              <span>📋</span> سجل الطلبات المرسلة
+            </h3>
+            <span id="order-count" class="text-[10px] font-bold px-2 py-0.5 bg-slate-800 rounded-full text-slate-400 border border-slate-700">0 طلبات</span>
+          </div>
+          <div id="recent-orders" class="space-y-1 max-h-36 overflow-y-auto pr-1">
+            <p class="text-slate-500 text-xs text-center py-2">لا توجد طلبات حديثة مرسلة حتى الآن.</p>
+          </div>
+        </div>
+
+      </section>
+
+    </div>
+
+  </main>
+
+  <!-- Table Seating & Custom Naming Modal -->
+  <div id="table-seating-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+    <div class="bg-slate-900 border border-amber-500/50 rounded-2xl max-w-md w-full p-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-2 mb-3">
+        <h3 class="font-extrabold text-sm text-white flex items-center gap-1.5">
+          <span class="text-base">🪑</span>
+          <span id="seating-modal-title">تسجيل جلوس ورقم الطاولة</span>
+        </h3>
+        <button onclick="closeTableSeatingModal()" class="text-slate-400 hover:text-white font-bold text-base cursor-pointer">✕</button>
+      </div>
+
+      <form onsubmit="submitTableSeating(event)" class="space-y-3">
+        <input type="hidden" id="seat-table-number" />
+        <div>
+          <label class="block text-xs font-bold text-slate-300 mb-1">اسم الطاولة المخصص (داخلي للفريق):</label>
+          <input 
+            type="text" 
+            id="seat-custom-name" 
+            placeholder="مثال: VIP 1 / ترابيزة الركن الهادئ / صالة 2" 
+            class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-amber-400 font-bold text-xs focus:border-amber-500 focus:outline-none" />
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-xs font-bold text-slate-300 mb-1">اسم العميل (اختياري):</label>
+            <input 
+              type="text" 
+              id="seat-customer-name" 
+              placeholder="مثال: أ. أحمد" 
+              class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-white text-xs focus:border-amber-500 focus:outline-none" />
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-300 mb-1">رقم الهاتف (نقاط الولاء):</label>
+            <input 
+              type="tel" 
+              id="seat-customer-phone" 
+              placeholder="010XXXXXXXX" 
+              class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-white text-xs focus:border-amber-500 focus:outline-none" />
+          </div>
+        </div>
+
+        <div class="pt-2 border-t border-slate-800 flex items-center justify-between gap-2">
+          <button 
+            type="button"
+            onclick="vacateCurrentTable()"
+            id="vacate-modal-btn"
+            class="hidden px-3 py-1.5 bg-rose-950/80 hover:bg-rose-900 text-rose-300 border border-rose-500/40 rounded-xl text-xs font-bold cursor-pointer flex items-center gap-1">
+            <span>🚪</span>
+            <span>تفريغ الطاولة (مغادرة)</span>
+          </button>
+          <div class="flex items-center gap-2 mr-auto">
+            <button 
+              type="button" 
+              onclick="closeTableSeatingModal()" 
+              class="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold cursor-pointer">
+              إلغاء
+            </button>
+            <button 
+              type="submit" 
+              class="px-5 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl text-xs font-black cursor-pointer shadow-md">
+              تأكيد الجلوس 🪑
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Custom Item Modal -->
+  <div id="custom-item-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+    <div class="bg-slate-900 border border-amber-500/50 rounded-2xl max-w-sm w-full p-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-2 mb-3">
+        <h3 class="font-extrabold text-sm text-white flex items-center gap-1">
+          <span>✨</span> إضافة عنصر مخصص للفاتورة
+        </h3>
+        <button onclick="closeCustomItemModal()" class="text-slate-400 hover:text-white font-bold text-base cursor-pointer">✕</button>
+      </div>
+
+      <form onsubmit="submitCustomItem(event)" class="space-y-3">
+        <div>
+          <label class="block text-xs font-bold text-slate-300 mb-1">اسم الصنف:</label>
+          <input 
+            type="text" 
+            id="custom-name-input" 
+            required 
+            placeholder="مثال: شاي بالنعناع / حلوى خفيفة" 
+            class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-white text-xs focus:border-amber-500 focus:outline-none" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-300 mb-1">السعر (جنيه مصري):</label>
+          <input 
+            type="number" 
+            id="custom-price-input" 
+            required 
+            min="0" 
+            step="1" 
+            placeholder="مثال: 25" 
+            class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-amber-400 font-mono font-black text-xs focus:border-amber-500 focus:outline-none" />
+        </div>
+
+        <div class="pt-2 border-t border-slate-800 flex items-center justify-end gap-2">
+          <button 
+            type="button" 
+            onclick="closeCustomItemModal()" 
+            class="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold cursor-pointer">
+            إلغاء
+          </button>
+          <button 
+            type="submit" 
+            class="px-5 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl text-xs font-black cursor-pointer">
+            إضافة للفاتورة
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Move Table Modal -->
+  <div id="move-table-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+    <div class="bg-slate-900 border border-amber-500/50 rounded-2xl max-w-sm w-full p-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-2 mb-3">
+        <h3 class="font-extrabold text-sm text-white flex items-center gap-1">
+          <span>🔀</span> نقل الطاولة وتغيير الحجز
+        </h3>
+        <button onclick="closeMoveTableModal()" class="text-slate-400 hover:text-white font-bold text-base cursor-pointer">✕</button>
+      </div>
+
+      <form onsubmit="submitMoveTable(event)" class="space-y-3">
+        <div>
+          <label class="block text-xs font-bold text-slate-300 mb-1">من الطاولة الحالية:</label>
+          <input type="text" id="move-from-table" readonly class="w-full px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-xl text-amber-400 font-mono font-black text-xs" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-300 mb-1">إلى الطاولة الجديدة (1-20):</label>
+          <input type="number" id="move-to-table" required min="1" max="20" placeholder="مثال: 5" class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-white font-mono font-bold text-xs focus:border-amber-500 focus:outline-none" />
+        </div>
+
+        <div class="pt-2 border-t border-slate-800 flex items-center justify-end gap-2">
+          <button type="button" onclick="closeMoveTableModal()" class="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold cursor-pointer">إلغاء</button>
+          <button type="submit" class="px-5 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl text-xs font-black cursor-pointer">نقل الحساب والطلبات</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Checkout Modal (Multi-Method Payment Split + Loyalty Points) -->
+  <div id="checkout-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[100] flex items-center justify-center hidden p-4">
+    <div class="bg-slate-900 border border-emerald-500/50 rounded-2xl max-w-md w-full p-5 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-3">
+        <h3 class="font-black text-base text-white flex items-center gap-2">
+          <span>💳</span>
+          <span>دفع الحساب ونقاط الولاء</span>
+        </h3>
+        <button onclick="closeCheckoutModal()" class="text-slate-400 hover:text-white font-bold text-base cursor-pointer">✕</button>
+      </div>
+
+      <!-- Customer Loyalty Search Block -->
+      <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 mb-3 space-y-2">
+        <label class="block text-[11px] font-bold text-slate-300">👤 رقم هاتف العميل (نظام نقاط الولاء):</label>
+        <div class="flex items-center gap-2">
+          <input type="tel" id="customer-phone" placeholder="01xxxxxxxxx" class="flex-1 px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-xl text-white font-mono font-bold text-xs focus:border-emerald-500 focus:outline-none" />
+          <button type="button" onclick="searchCustomerLoyalty()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-emerald-400 rounded-xl text-xs font-bold border border-slate-700 cursor-pointer">بحث 🔍</button>
+        </div>
+
+        <div id="loyalty-info" class="hidden flex items-center justify-between pt-2 border-t border-slate-800/80 text-xs">
+          <span id="customer-name-display" class="font-bold text-slate-300">عميل جديد</span>
+          <div class="flex items-center gap-2">
+            <span class="text-amber-400 font-bold">النقاط: <span id="customer-points-display" class="font-mono text-sm font-black">0</span></span>
+            <label class="flex items-center gap-1 cursor-pointer bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/30 text-[11px] font-bold text-amber-300">
+              <input type="checkbox" id="redeem-points-toggle" onchange="updateCheckoutRemaining()" class="accent-amber-500" />
+              <span>خصم النقاط</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 mb-3 flex items-center justify-between">
+        <span class="text-xs font-bold text-slate-300">إجمالي المبلغ المطلوب:</span>
+        <span id="checkout-total-bill" class="text-2xl font-black text-emerald-400 font-mono">0 ج.م</span>
+      </div>
+
+      <form onsubmit="submitCheckout(event)" class="space-y-3">
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-xs font-bold text-slate-300 mb-1">💵 كاش (Cash):</label>
+            <input type="number" id="pay-cash" min="0" step="1" placeholder="0" oninput="updateCheckoutRemaining()" class="w-full px-3 py-1.5 bg-slate-950 border border-slate-700 rounded-xl text-white font-mono font-bold text-xs focus:border-emerald-500 focus:outline-none" />
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-300 mb-1">📱 InstaPay:</label>
+            <input type="number" id="pay-instapay" min="0" step="1" placeholder="0" oninput="updateCheckoutRemaining()" class="w-full px-3 py-1.5 bg-slate-950 border border-slate-700 rounded-xl text-emerald-400 font-mono font-bold text-xs focus:border-emerald-500 focus:outline-none" />
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-300 mb-1">💳 فيزا (Visa):</label>
+            <input type="number" id="pay-visa" min="0" step="1" placeholder="0" oninput="updateCheckoutRemaining()" class="w-full px-3 py-1.5 bg-slate-950 border border-slate-700 rounded-xl text-blue-400 font-mono font-bold text-xs focus:border-emerald-500 focus:outline-none" />
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-300 mb-1">👛 محفظة (Wallet):</label>
+            <input type="number" id="pay-wallet" min="0" step="1" placeholder="0" oninput="updateCheckoutRemaining()" class="w-full px-3 py-1.5 bg-slate-950 border border-slate-700 rounded-xl text-purple-400 font-mono font-bold text-xs focus:border-emerald-500 focus:outline-none" />
+          </div>
+          <div class="col-span-2">
+            <label class="block text-xs font-bold text-amber-400 mb-1">🎁 البقشيش / الإكرامية (Tips EGP):</label>
+            <input type="number" id="pay-tip" min="0" step="1" placeholder="0" class="w-full px-3 py-1.5 bg-slate-950 border border-amber-500/50 rounded-xl text-amber-300 font-mono font-bold text-xs focus:border-amber-400 focus:outline-none" />
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button type="button" onclick="autofillPayment('CASH')" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-[11px] font-bold border border-slate-700">دفع كاش بالكامل</button>
+          <button type="button" onclick="autofillPayment('INSTAPAY')" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-emerald-300 rounded-lg text-[11px] font-bold border border-slate-700">دفع InstaPay بالكامل</button>
+        </div>
+
+        <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between text-xs">
+          <span class="font-bold text-slate-400">المبلغ المتبقي:</span>
+          <span id="checkout-remaining" class="font-black font-mono text-amber-400 text-sm">0 ج.م</span>
+        </div>
+
+        <div class="pt-2 border-t border-slate-800 flex items-center justify-end gap-2">
+          <button type="button" onclick="closeCheckoutModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold cursor-pointer">إلغاء</button>
+          <button type="submit" class="px-5 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs shadow-md cursor-pointer">إتمام الدفع وإغلاق الحساب</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="border-t border-slate-800 bg-slate-950 py-2 text-center text-[11px] text-slate-500">
+    كافيه مزاج &copy; 2026 - نظام الكاشير عالي السرعة (Zero Latency POS)
+  </footer>
+
+  <script>
+    // Live Clock
+    function updateClock() {
+      const now = new Date();
+      document.getElementById('live-clock').textContent = now.toLocaleTimeString('ar-EG');
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // Local JS Cart State, Table Sessions & Order Logs
+    let cart = [];
+    const recentOrdersLog = [];
+    let menuItems = [];
+    let selectedTableNumber = 0;
+    let tablesMap = new Map();
+
+    // Table Lifecycle & Seating Functions
+    async function fetchTableSessions() {
+      try {
+        const res = await fetch('/api/tables');
+        const data = await res.json();
+        if (res.ok && data.success && Array.isArray(data.tables)) {
+          tablesMap.clear();
+          data.tables.forEach(t => tablesMap.set(t.table_number, t));
+          renderTablesGrid();
+        }
+      } catch (err) {
+        console.error('Error fetching table sessions:', err);
+      }
+    }
+
+    function renderTablesGrid() {
+      const container = document.getElementById('tables-grid');
+      container.innerHTML = '';
+
+      for (let i = 1; i <= 12; i++) {
+        const tbl = tablesMap.get(i) || { table_number: i, status: 'VACANT' };
+        const isSelected = selectedTableNumber === i;
+        
+        let statusBadge = '<span class="text-[9px] opacity-60">🟢 خالية</span>';
+        let bgClass = 'bg-slate-800 text-slate-300 border-slate-700';
+
+        if (tbl.status === 'SEATED') {
+          const mins = tbl.seated_minutes || 0;
+          statusBadge = `<span class="text-[9px] font-mono text-emerald-300 font-black">🔵 جالس (${mins}د)</span>`;
+          bgClass = mins > 45 ? 'bg-amber-950/90 border-amber-500/80 text-amber-200' : 'bg-emerald-950/80 border-emerald-500/60 text-emerald-300';
+        } else if (tbl.status === 'CHECK_REQUESTED') {
+          const mins = tbl.check_requested_minutes || 0;
+          statusBadge = `<span class="text-[9px] font-mono text-amber-300 font-black">🟡 طلب حساب (${mins}د)</span>`;
+          bgClass = 'bg-amber-950/90 border-amber-400 text-amber-200 font-bold';
+        } else if (tbl.status === 'PAID') {
+          const mins = tbl.paid_minutes || 0;
+          statusBadge = `<span class="text-[9px] font-mono text-purple-300 font-black">🟣 تم الدفع (${mins}د)</span>`;
+          bgClass = 'bg-purple-950/90 border-purple-400 text-purple-200 font-bold';
+        }
+
+        if (isSelected) {
+          bgClass = 'bg-amber-500 text-slate-950 border-amber-300 font-black shadow-lg scale-105';
+        }
+
+        const displayName = tbl.custom_name ? `ط ${i} - ${tbl.custom_name}` : `طاولة ${i}`;
+        const custName = tbl.customer_name ? `<span class="text-[9px] font-bold text-amber-300 truncate max-w-[80px]">👤 ${tbl.customer_name}</span>` : '';
+
+        const btn = document.createElement('button');
+        btn.onclick = () => selectTable(i);
+        btn.ondblclick = () => openTableSeatingModal(i);
+        btn.className = `px-2.5 py-1.5 rounded-xl border text-xs flex flex-col items-center justify-center min-w-[85px] shrink-0 cursor-pointer transition-all ${bgClass}`;
+        btn.innerHTML = `
+          <span class="font-extrabold truncate max-w-[80px]">${displayName}</span>
+          ${statusBadge}
+          ${custName}
+        `;
+
+        container.appendChild(btn);
+      }
+
+      // Update Selected Table Header Information
+      const infoElem = document.getElementById('selected-table-info');
+      const closeBtn = document.getElementById('close-table-btn');
+      const moveBtn = document.getElementById('move-table-btn');
+      const upsellBanner = document.getElementById('smart-upsell-alert');
+
+      if (selectedTableNumber === 0) {
+        infoElem.textContent = 'الطاولة المحددة: طلب مباشر (بدون طاولة)';
+        closeBtn.classList.add('hidden');
+        moveBtn.classList.add('hidden');
+        upsellBanner.classList.add('hidden');
+      } else {
+        const tbl = tablesMap.get(selectedTableNumber);
+        if (tbl) {
+          const nameTxt = tbl.custom_name ? ` (${tbl.custom_name})` : '';
+          const custTxt = tbl.customer_name ? ` — العميل: ${tbl.customer_name}` : '';
+          const timeTxt = tbl.seated_minutes ? ` [جالس منذ ${tbl.seated_minutes} دقيقة]` : '';
+          
+          infoElem.textContent = `طاولة ${selectedTableNumber}${nameTxt}${custTxt}${timeTxt} — الحالة: ${tbl.status}`;
+          closeBtn.classList.remove('hidden');
+          moveBtn.classList.remove('hidden');
+
+          if (tbl.seated_minutes > 45 && tbl.active_total_amount < 150) {
+            upsellBanner.classList.remove('hidden');
+          } else {
+            upsellBanner.classList.add('hidden');
+          }
+        }
+      }
+    }
+
+    function selectTable(num) {
+      selectedTableNumber = num;
+      renderTablesGrid();
+      if (num > 0) {
+        showToast(`تم اختيار طاولة ${num}`, true);
+      } else {
+        showToast('تم اختيار طلب مباشر بدون طاولة', true);
+      }
+    }
+
+    // Open Custom Seating Modal
+    function openTableSeatingModal(tableNum = null) {
+      const num = tableNum || selectedTableNumber;
+      if (!num || num === 0) {
+        showToast('يرجى اختيار طاولة أولاً لتعيين البيانات', false);
+        return;
+      }
+
+      document.getElementById('seat-table-number').value = num;
+      document.getElementById('seating-modal-title').textContent = `تعديل جلسة واسم الطاولة رقم ${num}`;
+      
+      const tbl = tablesMap.get(num);
+      if (tbl) {
+        document.getElementById('seat-custom-name').value = tbl.custom_name || '';
+        document.getElementById('seat-customer-name').value = tbl.customer_name || '';
+        document.getElementById('seat-customer-phone').value = tbl.customer_phone || '';
+        if (tbl.status !== 'VACANT') {
+          document.getElementById('vacate-modal-btn').classList.remove('hidden');
+        } else {
+          document.getElementById('vacate-modal-btn').classList.add('hidden');
+        }
+      } else {
+        document.getElementById('seat-custom-name').value = '';
+        document.getElementById('seat-customer-name').value = '';
+        document.getElementById('seat-customer-phone').value = '';
+        document.getElementById('vacate-modal-btn').classList.add('hidden');
+      }
+
+      document.getElementById('table-seating-modal').classList.remove('hidden');
+    }
+
+    function closeTableSeatingModal() {
+      document.getElementById('table-seating-modal').classList.add('hidden');
+    }
+
+    async function submitTableSeating(e) {
+      e.preventDefault();
+      const num = parseInt(document.getElementById('seat-table-number').value, 10);
+      const custom_name = document.getElementById('seat-custom-name').value.trim() || null;
+      const customer_name = document.getElementById('seat-customer-name').value.trim() || null;
+      const customer_phone = document.getElementById('seat-customer-phone').value.trim() || null;
+
+      try {
+        const res = await fetch('/api/tables/seat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ table_number: num, custom_name, customer_name, customer_phone })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          showToast(`تم تسجيل جلوس ورقم الطاولة ${num} بنجاح!`, true);
+          closeTableSeatingModal();
+          selectTable(num);
+          fetchTableSessions();
+        } else {
+          showToast(data.error || 'خطأ في حفظ البيانات', false);
+        }
+      } catch (err) {
+        showToast('خطأ في الاتصال بالسيرفر', false);
+      }
+    }
+
+    async function vacateCurrentTable() {
+      const num = selectedTableNumber;
+      if (!num || num === 0) return;
+      if (!confirm(`هل أنت تأكد من إخلاء ومغادرة الضيف للطاولة رقم ${num}؟`)) return;
+
+      try {
+        const res = await fetch('/api/tables/vacate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ table_number: num })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          showToast(`تم تفريغ الطاولة ${num} وإعادتها لمتاحة 🟢`, true);
+          closeTableSeatingModal();
+          fetchTableSessions();
+        }
+      } catch (err) {
+        showToast('خطأ بالاتصال بالسيرفر', false);
+      }
+    }
+
+    async function requestTableCheckAction() {
+      const num = selectedTableNumber;
+      if (!num || num === 0) {
+        showToast('اختر طاولة أولاً لطلب الشيك', false);
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/tables/request-check', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ table_number: num })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          showToast(`تم طلب الحساب وطباعة إيصال الشيك للطاولة ${num} 📜`, true);
+          fetchTableSessions();
+        }
+      } catch (err) {
+        showToast('خطأ بطلب الحساب', false);
+      }
+    }
+
+    // Move Table Modal Logic
+    function openMoveTableModal() {
+      if (selectedTableNumber === 0) return;
+      document.getElementById('move-from-table').value = `طاولة ${selectedTableNumber}`;
+      document.getElementById('move-to-table').value = '';
+      document.getElementById('move-table-modal').classList.remove('hidden');
+    }
+
+    function closeMoveTableModal() {
+      document.getElementById('move-table-modal').classList.add('hidden');
+    }
+
+    async function submitMoveTable(e) {
+      e.preventDefault();
+      const toTable = Number(document.getElementById('move-to-table').value);
+      if (!toTable || toTable === selectedTableNumber) return;
+      if (!confirm(`هل أنت تأكد من نقل جميع الطلبات من الطاولة #${selectedTableNumber} إلى الطاولة #${toTable}؟`)) return;
+
+      try {
+        const res = await fetch('/api/tables/move', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ from_table: selectedTableNumber, to_table: toTable })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          showToast(`تم نقل الطاولة إلى #${toTable} بنجاح!`, true);
+          closeMoveTableModal();
+          selectedTableNumber = toTable;
+          fetchTableSessions();
+        } else {
+          showToast(data.error || 'حدث خطأ أثناء نقل الطاولة', false);
+        }
+      } catch (err) {
+        showToast('خطأ في الاتصال بالخادم', false);
+      }
+    }
+
+    async function closeCurrentTableSession() {
+      if (selectedTableNumber === 0) return;
+      try {
+        const res = await fetch('/api/tables/close', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ table_number: selectedTableNumber })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          showToast(`تم إغلاق طاولة ${selectedTableNumber} بنجاح`, true);
+          selectedTableNumber = 0;
+          await fetchTableSessions();
+        }
+      } catch (err) {
+        showToast('فشل إغلاق حجز الطاولة', false);
+      }
+    }
+
+    // Refresh Table Sessions every 10 seconds
+    setInterval(fetchTableSessions, 10000);
+    fetchTableSessions();
+
+    // Instant Toast Notification
+    function showToast(message, isSuccess = true) {
+      const container = document.getElementById('pos-toast-container');
+      const toast = document.createElement('div');
+      toast.className = `px-4 py-2 rounded-xl border text-xs font-bold flex items-center gap-2 ${
+        isSuccess ? 'bg-emerald-950 text-emerald-300 border-emerald-500/50' : 'bg-rose-950 text-rose-300 border-rose-500/50'
+      }`;
+      toast.innerHTML = `<span>${isSuccess ? '✅' : '⚠️'}</span><span>${message}</span>`;
+      container.appendChild(toast);
+
+      setTimeout(() => toast.remove(), 2200);
+    }
+
+    // Icon helper for menu items
+    function getItemIcon(name, category) {
+      if (name.includes('لاتيه')) return '🥛';
+      if (name.includes('اسبريسو') || name.includes('قهوة')) return '☕';
+      if (name.includes('شيشة') || category === 'SHISHA') return '💨';
+      if (name.includes('ساندوتش') || category === 'KITCHEN') return '🥪';
+      return '🍹';
+    }
+
+    // Fetch Dynamic Menu
+    async function fetchMenu() {
+      try {
+        const response = await fetch('/api/menu');
+        const data = await response.json();
+
+        if (response.ok && data.success && Array.isArray(data.menu)) {
+          menuItems = data.menu;
+          renderMenuGrid();
+        } else {
+          showToast('فشل في جلب قائمة الطعام', false);
+        }
+      } catch (err) {
+        console.error('Failed to fetch menu:', err);
+        showToast('خطأ بالاتصال بالسيرفر', false);
+      }
+    }
+
+    // Render Compact Menu Buttons Grid (gap-2, p-2 padding)
+    function renderMenuGrid() {
+      const grid = document.getElementById('menu-grid');
+      grid.innerHTML = '';
+
+      // Permanent Custom Item Button on Menu Grid
+      const customBtn = document.createElement('button');
+      customBtn.onclick = openCustomItemModal;
+      customBtn.className = 'bg-amber-500/10 border-2 border-amber-500/60 rounded-xl p-2 flex flex-col items-center justify-between text-center min-h-[110px] cursor-pointer';
+      customBtn.innerHTML = `
+        <div class="w-10 h-10 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center text-xl font-bold">
+          ✨
+        </div>
+        <div class="my-1">
+          <span class="block text-sm font-black text-amber-300">عنصر مخصص</span>
+          <span class="block text-[10px] font-semibold text-slate-400">إدخال يدوي</span>
+        </div>
+        <div class="w-full py-1 bg-amber-500 text-slate-950 font-black rounded-lg text-[10px]">
+          + إدخال سعر
+        </div>
+      `;
+      grid.appendChild(customBtn);
+
+      menuItems.forEach(item => {
+        const icon = getItemIcon(item.menu_item_name, item.category);
+        const price = Number(item.price) || 0;
+
+        let deptBadge = 'text-amber-400 border-amber-500/30 bg-amber-500/10';
+        if (item.category === 'SHISHA') deptBadge = 'text-purple-400 border-purple-500/30 bg-purple-500/10';
+        if (item.category === 'KITCHEN') deptBadge = 'text-orange-400 border-orange-500/30 bg-orange-500/10';
+
+        const btn = document.createElement('button');
+        btn.onclick = () => addToCart(item.menu_item_name, item.category, icon, price);
+        btn.className = 'bg-slate-900 border border-slate-800 hover:border-amber-500/60 rounded-xl p-2 flex flex-col items-center justify-between text-center min-h-[110px] cursor-pointer';
+        btn.innerHTML = `
+          <div class="w-10 h-10 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-xl shadow-inner">
+            ${icon}
+          </div>
+          <div class="my-1 w-full px-1">
+            <span class="block text-xs font-extrabold text-white truncate">${item.menu_item_name}</span>
+            <span class="block text-[11px] font-black text-amber-400 font-mono">${price} ج.م</span>
+          </div>
+          <div class="w-full py-1 bg-slate-800 text-slate-200 font-bold rounded-lg text-[10px]">
+            + إضافة
+          </div>
+        `;
+        grid.appendChild(btn);
+      });
+    }
+
+    let pendingItemForModifier = null;
+    let selectedSugar = 'مظبوط';
+    let selectedRoast = 'افتراضي';
+
+    function openModifierModal(itemName, category, icon, price) {
+      pendingItemForModifier = { itemName, category, icon, price };
+      selectedSugar = 'مظبوط';
+      selectedRoast = 'افتراضي';
+      document.getElementById('modifier-item-title').textContent = `تخصيص: ${itemName}`;
+      renderModifierSelections();
+      document.getElementById('modifier-modal').classList.remove('hidden');
+    }
+
+    function closeModifierModal() {
+      document.getElementById('modifier-modal').classList.add('hidden');
+      pendingItemForModifier = null;
+    }
+
+    function selectSugar(val) {
+      selectedSugar = val;
+      renderModifierSelections();
+    }
+
+    function selectRoast(val) {
+      selectedRoast = val;
+      renderModifierSelections();
+    }
+
+    function renderModifierSelections() {
+      document.querySelectorAll('.sugar-btn').forEach(btn => {
+        if (btn.textContent.trim() === selectedSugar) {
+          btn.className = "sugar-btn p-2 bg-amber-500/20 border border-amber-500 text-amber-300 rounded-lg font-bold";
+        } else {
+          btn.className = "sugar-btn p-2 bg-slate-800 border border-slate-700 text-slate-400 rounded-lg font-bold";
+        }
+      });
+      document.querySelectorAll('.roast-btn').forEach(btn => {
+        if (btn.textContent.trim() === selectedRoast) {
+          btn.className = "roast-btn p-1.5 bg-amber-500/20 border border-amber-500 text-amber-300 rounded-lg font-bold";
+        } else {
+          btn.className = "roast-btn p-1.5 bg-slate-800 border border-slate-700 text-slate-400 rounded-lg font-bold";
+        }
+      });
+    }
+
+    function confirmItemWithModifiers() {
+      if (!pendingItemForModifier) return;
+      const { itemName, category, icon, price } = pendingItemForModifier;
+      
+      const existingIndex = cart.findIndex(item => item.item_name === itemName && item.price === price && item.sugar_level === selectedSugar && item.roast_type === selectedRoast);
+      if (existingIndex > -1) {
+        cart[existingIndex].quantity += 1;
+      } else {
+        cart.push({
+          item_name: itemName,
+          category: category || 'BARISTA',
+          icon: icon || '🍹',
+          price: Number(price) || 0,
+          quantity: 1,
+          sugar_level: selectedSugar,
+          roast_type: selectedRoast
+        });
+      }
+      closeModifierModal();
+      renderCartUI();
+    }
+
+    // Add item to local cart
+    function addToCart(itemName, category, icon, price = 0) {
+      openModifierModal(itemName, category, icon, price);
+    }
+
+    // Change quantity of item in cart
+    function updateCartQuantity(index, change) {
+      if (index >= 0 && index < cart.length) {
+        cart[index].quantity += change;
+        if (cart[index].quantity <= 0) {
+          cart.splice(index, 1);
+        }
+        renderCartUI();
+      }
+    }
+
+    // Remove item completely
+    function removeFromCart(index) {
+      if (index >= 0 && index < cart.length) {
+        cart.splice(index, 1);
+        renderCartUI();
+      }
+    }
+
+    // Clear cart
+    function clearCart() {
+      cart = [];
+      renderCartUI();
+    }
+
+    // Custom Item Modal logic
+    function openCustomItemModal() {
+      document.getElementById('custom-item-modal').classList.remove('hidden');
+      document.getElementById('custom-name-input').focus();
+    }
+    function closeCustomItemModal() {
+      document.getElementById('custom-item-modal').classList.add('hidden');
+      document.getElementById('custom-name-input').value = '';
+      document.getElementById('custom-price-input').value = '';
+    }
+
+    function submitCustomItem(e) {
+      e.preventDefault();
+      const name = document.getElementById('custom-name-input').value.trim();
+      const price = Number(document.getElementById('custom-price-input').value) || 0;
+
+      if (!name) return;
+
+      addToCart(name, 'BARISTA', '✨', price);
+      closeCustomItemModal();
+      showToast(`تمت إضافة "${name}" للفاتورة`, true);
+    }
+
+    // Render Cart Ticket UI
+    function renderCartUI() {
+      const container = document.getElementById('cart-items-container');
+      const totalQtyElem = document.getElementById('cart-total-qty');
+      const totalPriceElem = document.getElementById('cart-total-price');
+      const sendBtn = document.getElementById('send-orders-btn');
+      const sendBtnText = document.getElementById('send-btn-text');
+
+      let totalQty = 0;
+      let totalPrice = 0;
+
+      if (cart.length === 0) {
+        container.innerHTML = `
+          <div id="empty-cart-msg" class="py-12 text-center text-slate-500 flex flex-col items-center justify-center">
+            <span class="text-3xl mb-1 opacity-50">🛒</span>
+            <p class="text-xs font-bold">السلة فارغة حالياً</p>
+            <p class="text-[10px] opacity-75 mt-0.5">اضغط الأصناف لإضافتها فوراً</p>
+          </div>
+        `;
+        totalQtyElem.textContent = '0';
+        totalPriceElem.textContent = '0';
+        sendBtn.disabled = true;
+        sendBtnText.textContent = 'إرسال الطلبات (0)';
+        return;
+      }
+
+      container.innerHTML = '';
+
+      cart.forEach((item, index) => {
+        const itemSubtotal = item.quantity * item.price;
+        totalQty += item.quantity;
+        totalPrice += itemSubtotal;
+
+        const cartItemDiv = document.createElement('div');
+        cartItemDiv.className = 'flex items-center justify-between p-2 bg-slate-800/90 border border-slate-700/80 rounded-xl text-xs';
+        
+        cartItemDiv.innerHTML = `
+          <div class="flex items-center gap-2">
+            <span class="text-lg">${item.icon}</span>
+            <div>
+              <h4 class="font-extrabold text-white text-xs leading-tight">${item.item_name}</h4>
+              <div class="flex items-center gap-2 mt-0.5">
+                <span class="text-[10px] font-mono text-amber-400 font-bold">${item.price} ج.م</span>
+                <span class="text-[10px] text-slate-400 font-mono font-bold">= ${itemSubtotal} ج.م</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-1.5">
+            <div class="flex items-center gap-1 bg-slate-900 border border-slate-700 rounded-lg p-0.5">
+              <button 
+                onclick="updateCartQuantity(${index}, -1)"
+                class="w-6 h-6 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold flex items-center justify-center cursor-pointer">
+                -
+              </button>
+              <span class="w-5 text-center font-black font-mono text-amber-400 text-xs">${item.quantity}</span>
+              <button 
+                onclick="updateCartQuantity(${index}, 1)"
+                class="w-6 h-6 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold flex items-center justify-center cursor-pointer">
+                +
+              </button>
+            </div>
+            <button 
+              onclick="removeFromCart(${index})"
+              class="w-7 h-7 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 flex items-center justify-center cursor-pointer">
+              🗑️
+            </button>
+          </div>
+        `;
+
+        container.appendChild(cartItemDiv);
+      });
+
+      totalQtyElem.textContent = totalQty;
+      totalPriceElem.textContent = totalPrice.toLocaleString('ar-EG');
+      sendBtn.disabled = false;
+      sendBtnText.textContent = `إرسال الطلبات (${totalQty})`;
+    }
+
+    // Send Cart Orders Action Handler
+    async function sendCartOrders() {
+      if (cart.length === 0) return;
+
+      const sendBtn = document.getElementById('send-orders-btn');
+      const sendBtnText = document.getElementById('send-btn-text');
+
+      sendBtn.disabled = true;
+      sendBtnText.textContent = 'جاري الإرسال... ⏳';
+
+      const itemsToSend = [...cart];
+      let successCount = 0;
+      let failureCount = 0;
+
+      for (const cartItem of itemsToSend) {
+        try {
+          const response = await fetch('/api/orders', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              item_name: cartItem.item_name,
+              quantity: cartItem.quantity,
+              price: cartItem.price,
+              table_number: selectedTableNumber
+            })
+          });
+
+          const data = await response.json();
+
+          if (response.ok && data.success && data.order) {
+            successCount += cartItem.quantity;
+            addOrderToHistoryLog(data.order);
+          } else {
+            failureCount++;
+          }
+        } catch (err) {
+          console.error('Error submitting order:', err);
+          failureCount++;
+        }
+      }
+
+      if (failureCount === 0) {
+        showToast(`تم إرسال ${successCount} طلب بنجاح!`, true);
+        cart = [];
+        renderCartUI();
+      } else {
+        showToast(`تم إرسال بعض الطلبات وحصل خطأ في ${failureCount}`, false);
+        renderCartUI();
+      }
+    }
+
+    // Append order to log
+    function addOrderToHistoryLog(order) {
+      recentOrdersLog.unshift(order);
+      const container = document.getElementById('recent-orders');
+      document.getElementById('order-count').textContent = `${recentOrdersLog.length} طلبات`;
+
+      const orderItem = document.createElement('div');
+      orderItem.className = 'flex items-center justify-between p-2 rounded-lg bg-slate-800/80 border border-slate-700/50 text-xs';
+      orderItem.innerHTML = `
+        <div class="flex items-center gap-2">
+          <span class="font-bold text-amber-400 font-mono">#${order.id}</span>
+          <span class="font-bold text-white">${order.item_name}</span>
+          <span class="text-[10px] text-amber-300 font-mono font-bold bg-amber-500/10 px-1.5 py-0.5 rounded">x${order.quantity} (${order.price || 0}ج.م)</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-[10px] text-slate-400 font-mono">${new Date(order.created_at || Date.now()).toLocaleTimeString('ar-EG')}</span>
+        </div>
+      `;
+
+      if (recentOrdersLog.length === 1) {
+        container.innerHTML = '';
+      }
+      container.insertBefore(orderItem, container.firstChild);
+    }
+
+    // Checkout Modal Logic
+    let currentCheckoutTotal = 0;
+    let currentCustomerData = null;
+
+    function openCheckoutModal() {
+      // Calculate total bill (from cart or table orders)
+      const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+      currentCheckoutTotal = cartTotal;
+
+      document.getElementById('checkout-total-bill').textContent = `${currentCheckoutTotal} ج.م`;
+      document.getElementById('pay-cash').value = currentCheckoutTotal > 0 ? currentCheckoutTotal : '';
+      document.getElementById('pay-instapay').value = '';
+      document.getElementById('pay-visa').value = '';
+      document.getElementById('pay-wallet').value = '';
+      document.getElementById('pay-tip').value = '';
+      
+      // Reset customer loyalty UI
+      document.getElementById('customer-phone').value = '';
+      document.getElementById('loyalty-info').classList.add('hidden');
+      document.getElementById('redeem-points-toggle').checked = false;
+      currentCustomerData = null;
+
+      updateCheckoutRemaining();
+      document.getElementById('checkout-modal').classList.remove('hidden');
+    }
+
+    function closeCheckoutModal() {
+      document.getElementById('checkout-modal').classList.add('hidden');
+    }
+
+    async function searchCustomerLoyalty() {
+      const phone = document.getElementById('customer-phone').value.trim();
+      if (!phone) {
+        showToast('يرجى إدخال رقم الهاتف للبحث', false);
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/customers/${phone}`);
+        const data = await res.json();
+        if (res.ok && data.success && data.customer) {
+          currentCustomerData = data.customer;
+          document.getElementById('customer-name-display').textContent = data.customer.name || `عميل ${phone}`;
+          document.getElementById('customer-points-display').textContent = data.customer.points || 0;
+          document.getElementById('loyalty-info').classList.remove('hidden');
+          showToast(`تم العثور على حساب العميل (${data.customer.points || 0} نقطة)`, true);
+          updateCheckoutRemaining();
+        }
+      } catch (err) {
+        showToast('خطأ بالبحث عن بيانات العميل', false);
+      }
+    }
+
+    function updateCheckoutRemaining() {
+      const cash = Number(document.getElementById('pay-cash').value) || 0;
+      const instapay = Number(document.getElementById('pay-instapay').value) || 0;
+      const visa = Number(document.getElementById('pay-visa').value) || 0;
+      const wallet = Number(document.getElementById('pay-wallet').value) || 0;
+
+      // Points discount deduction (1 point = 1 EGP)
+      let pointsDiscount = 0;
+      const redeemToggle = document.getElementById('redeem-points-toggle');
+      if (redeemToggle && redeemToggle.checked && currentCustomerData) {
+        pointsDiscount = Math.min(currentCheckoutTotal, currentCustomerData.points || 0);
+      }
+
+      const netBill = Math.max(0, currentCheckoutTotal - pointsDiscount);
+      document.getElementById('checkout-total-bill').textContent = `${netBill} ج.م ${pointsDiscount > 0 ? `(خصم ${pointsDiscount} ج.م نقاط)` : ''}`;
+
+      const totalPaid = cash + instapay + visa + wallet;
+      const remaining = netBill - totalPaid;
+      
+      const remEl = document.getElementById('checkout-remaining');
+      if (remaining < 0) {
+        const changeOwed = Math.abs(remaining);
+        remEl.innerHTML = `<span class="text-emerald-400 font-black">الباقي كاش للعميل: ${changeOwed} ج.م 💵</span>`;
+      } else if (remaining === 0) {
+        remEl.textContent = 'تم سداد المبلغ بالكامل 🎯';
+        remEl.className = 'font-black font-mono text-emerald-400 text-sm';
+      } else {
+        remEl.textContent = `${remaining} ج.م`;
+        remEl.className = 'font-black font-mono text-amber-400 text-sm';
+      }
+    }
+
+    function autofillPayment(method) {
+      const redeemToggle = document.getElementById('redeem-points-toggle');
+      let pointsDiscount = 0;
+      if (redeemToggle && redeemToggle.checked && currentCustomerData) {
+        pointsDiscount = Math.min(currentCheckoutTotal, currentCustomerData.points || 0);
+      }
+      const netBill = Math.max(0, currentCheckoutTotal - pointsDiscount);
+
+      document.getElementById('pay-cash').value = '';
+      document.getElementById('pay-instapay').value = '';
+      document.getElementById('pay-visa').value = '';
+      document.getElementById('pay-wallet').value = '';
+
+      if (method === 'CASH') document.getElementById('pay-cash').value = netBill;
+      if (method === 'INSTAPAY') document.getElementById('pay-instapay').value = netBill;
+      
+      updateCheckoutRemaining();
+    }
+
+    async function submitCheckout(event) {
+      event.preventDefault();
+      if (!confirm(`هل أنت متاكد من إغلاق الحساب وتحصيل الدفع للطاولة رقم ${selectedTableNumber || 'سفري'}؟`)) return;
+
+      const cash = Number(document.getElementById('pay-cash').value) || 0;
+      const instapay = Number(document.getElementById('pay-instapay').value) || 0;
+      const visa = Number(document.getElementById('pay-visa').value) || 0;
+      const wallet = Number(document.getElementById('pay-wallet').value) || 0;
+
+      const payments = [];
+      if (cash > 0) payments.push({ method: 'CASH', amount: cash });
+      if (instapay > 0) payments.push({ method: 'INSTAPAY', amount: instapay });
+      if (visa > 0) payments.push({ method: 'VISA', amount: visa });
+      if (wallet > 0) payments.push({ method: 'WALLET', amount: wallet });
+
+      const customerPhone = document.getElementById('customer-phone').value.trim();
+      const tipAmount = Number(document.getElementById('pay-tip').value) || 0;
+      const redeemToggle = document.getElementById('redeem-points-toggle');
+      let pointsRedeemed = 0;
+      if (redeemToggle && redeemToggle.checked && currentCustomerData) {
+        pointsRedeemed = Math.min(currentCheckoutTotal, currentCustomerData.points || 0);
+      }
+
+      try {
+        const response = await fetch('/api/checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            table_number: selectedTableNumber,
+            payments,
+            customer_phone: customerPhone || null,
+            points_redeemed: pointsRedeemed,
+            tip_amount: tipAmount
+          })
+        });
+
+        const data = await response.json();
+        if (response.ok && data.success) {
+          showToast('تم إغلاق الفاتورة وتسجيل الدفع ونقاط الولاء بنجاح!', true);
+          closeCheckoutModal();
+          cart = [];
+          renderCartUI();
+          if (selectedTableNumber > 0) {
+            fetchTableSessions();
+            selectTable(0);
+          }
+        } else {
+          showToast(data.error || 'حدث خطأ أثناء الدفع', false);
+        }
+      } catch (err) {
+        console.error('Error submitting checkout:', err);
+        showToast('خطأ في الاتصال بالخادم', false);
+      }
+    }
+
+    // Initial Load & Network Monitor
+    function initNetworkMonitor() {
+      const dot = document.getElementById('net-status-dot');
+      const text = document.getElementById('net-status-text');
+      const actionBtns = document.querySelectorAll('#send-order-btn, button[type="submit"]');
+
+      function updateStatus(online) {
+        if (dot && text) {
+          if (online) {
+            dot.className = "w-2.5 h-2.5 rounded-full bg-emerald-500";
+            text.className = "text-emerald-400 font-bold";
+            text.textContent = "متصل";
+          } else {
+            dot.className = "w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping";
+            text.className = "text-rose-400 font-bold";
+            text.textContent = "منقطع";
+          }
+        }
+        actionBtns.forEach(btn => {
+          if (btn) btn.disabled = !online;
+        });
+      }
+
+      window.addEventListener('online', () => updateStatus(true));
+      window.addEventListener('offline', () => updateStatus(false));
+      updateStatus(navigator.onLine);
+    }
+    initNetworkMonitor();
+    fetchMenu();
+  </script>
+  <!-- Modifier Selection Modal -->
+  <div id="modifier-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 max-w-sm w-full space-y-4 shadow-2xl text-right">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+        <h3 id="modifier-item-title" class="text-base font-bold text-amber-400">تخصيص المشروب</h3>
+        <button onclick="closeModifierModal()" class="text-slate-400 hover:text-white font-bold text-lg">✕</button>
+      </div>
+
+      <!-- Sugar Selection -->
+      <div class="space-y-1.5">
+        <label class="text-xs font-extrabold text-slate-300 block">درجة السكر (Sugar Level):</label>
+        <div class="grid grid-cols-2 gap-1.5 text-xs font-bold">
+          <button type="button" onclick="selectSugar('مظبوط')" class="sugar-btn p-2 bg-amber-500/20 border border-amber-500 text-amber-300 rounded-lg">مظبوط</button>
+          <button type="button" onclick="selectSugar('سادة')" class="sugar-btn p-2 bg-slate-800 border border-slate-700 text-slate-300 rounded-lg">سادة</button>
+          <button type="button" onclick="selectSugar('زيادة')" class="sugar-btn p-2 bg-slate-800 border border-slate-700 text-slate-300 rounded-lg">زيادة</button>
+          <button type="button" onclick="selectSugar('سكر خارجي')" class="sugar-btn p-2 bg-slate-800 border border-slate-700 text-slate-300 rounded-lg">سكر خارجي</button>
+        </div>
+      </div>
+
+      <!-- Roast Selection -->
+      <div class="space-y-1.5">
+        <label class="text-xs font-extrabold text-slate-300 block">درجة التحويجة / البن (Roast Type):</label>
+        <div class="grid grid-cols-3 gap-1.5 text-xs font-bold">
+          <button type="button" onclick="selectRoast('افتراضي')" class="roast-btn p-1.5 bg-amber-500/20 border border-amber-500 text-amber-300 rounded-lg">افتراضي</button>
+          <button type="button" onclick="selectRoast('فاتح')" class="roast-btn p-1.5 bg-slate-800 border border-slate-700 text-slate-300 rounded-lg">فاتح</button>
+          <button type="button" onclick="selectRoast('وسط')" class="roast-btn p-1.5 bg-slate-800 border border-slate-700 text-slate-300 rounded-lg">وسط</button>
+          <button type="button" onclick="selectRoast('غامق')" class="roast-btn p-1.5 bg-slate-800 border border-slate-700 text-slate-300 rounded-lg">غامق</button>
+          <button type="button" onclick="selectRoast('محوج')" class="roast-btn p-1.5 bg-slate-800 border border-slate-700 text-slate-300 rounded-lg">محوج</button>
+        </div>
+      </div>
+
+      <div class="pt-2 flex gap-2">
+        <button onclick="confirmItemWithModifiers()" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm rounded-xl border border-emerald-400/30">
+          تأكيد وإضافة للطلب 🛒
+        </button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
