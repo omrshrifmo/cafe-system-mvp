@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>إدارة العملاء - كافيه مزاج</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: 'Tajawal', sans-serif; background: #0f172a; color: #f8fafc; }
+    .glass { background: rgba(30,41,59,0.8); backdrop-filter: blur(12px); }
+    .stat-card { background: linear-gradient(135deg, #1e293b, #0f172a); border: 1px solid #334155; border-radius: 16px; padding: 20px; }
+    .rating-star { color: #f59e0b; }
+    .scrollbar-thin::-webkit-scrollbar { width: 4px; }
+    .scrollbar-thin::-webkit-scrollbar-track { background: #1e293b; }
+    .scrollbar-thin::-webkit-scrollbar-thumb { background: #334155; border-radius: 2px; }
+    .modal-bg { background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); }
+    .customer-row:hover { background: rgba(245,158,11,0.08); }
+    .tier-GOLD { background: linear-gradient(135deg, #f59e0b22, #d9770622); border-color: #f59e0b55; }
+    .tier-SILVER { background: linear-gradient(135deg, #64748b22, #47556922); border-color: #64748b55; }
+    .tier-BRONZE { background: linear-gradient(135deg, #92400e22, #78350f22); border-color: #92400e55; }
+  </style>
+</head>
+<body class="min-h-screen p-0">
+
+  <!-- Header -->
+  <header class="bg-slate-900 border-b border-slate-800 px-6 py-4 flex items-center justify-between sticky top-0 z-50">
+    <div class="flex items-center gap-3">
+      <a href="portal.html" class="text-slate-400 hover:text-amber-400 text-2xl transition-colors">←</a>
+      <div>
+        <h1 class="text-xl font-bold text-white">👥 إدارة العملاء</h1>
+        <p class="text-xs text-slate-400">CRM — ولاء، تاريخ، تقييمات</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-3">
+      <button onclick="openFeedbackModal()" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-xl text-sm font-bold transition-colors">
+        ➕ تقييم جديد
+      </button>
+      <div class="relative">
+        <input id="searchInput" type="text" placeholder="ابحث باسم أو هاتف..." oninput="searchCustomers()"
+          class="bg-slate-800 border border-slate-700 text-white rounded-xl px-4 py-2 pr-10 text-sm w-56 focus:outline-none focus:border-amber-500">
+        <span class="absolute left-3 top-2.5 text-slate-400 text-sm">🔍</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Stats Row -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 p-6 pb-0">
+    <div class="stat-card">
+      <p class="text-slate-400 text-xs mb-1">إجمالي العملاء</p>
+      <p class="text-3xl font-black text-amber-400" id="statTotal">—</p>
+    </div>
+    <div class="stat-card">
+      <p class="text-slate-400 text-xs mb-1">إجمالي الإنفاق</p>
+      <p class="text-3xl font-black text-emerald-400" id="statRevenue">—</p>
+    </div>
+    <div class="stat-card">
+      <p class="text-slate-400 text-xs mb-1">متوسط الإنفاق</p>
+      <p class="text-3xl font-black text-sky-400" id="statAvg">—</p>
+    </div>
+    <div class="stat-card">
+      <p class="text-slate-400 text-xs mb-1">نقاط الولاء الكلية</p>
+      <p class="text-3xl font-black text-purple-400" id="statPoints">—</p>
+    </div>
+  </div>
+
+  <!-- Main Grid -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 p-6">
+    
+    <!-- Customers Table -->
+    <div class="lg:col-span-2">
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
+        <div class="p-4 border-b border-slate-800 flex items-center justify-between">
+          <h2 class="font-bold text-lg text-white">قائمة العملاء</h2>
+          <span id="customerCount" class="text-slate-400 text-sm">...</span>
+        </div>
+        <div class="overflow-y-auto scrollbar-thin" style="max-height: calc(100vh - 320px);">
+          <table class="w-full">
+            <thead class="bg-slate-800/50 sticky top-0">
+              <tr class="text-slate-400 text-xs">
+                <th class="text-right py-3 px-4 font-semibold">العميل</th>
+                <th class="text-right py-3 px-3 font-semibold">الهاتف</th>
+                <th class="text-right py-3 px-3 font-semibold">إجمالي الإنفاق</th>
+                <th class="text-right py-3 px-3 font-semibold">النقاط</th>
+                <th class="text-right py-3 px-3 font-semibold">الزيارات</th>
+                <th class="text-right py-3 px-3 font-semibold">المستوى</th>
+              </tr>
+            </thead>
+            <tbody id="customersTableBody">
+              <tr><td colspan="6" class="text-center py-12 text-slate-500">جاري التحميل...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Panel -->
+    <div class="space-y-6">
+      
+      <!-- Selected Customer Detail -->
+      <div id="customerDetail" class="bg-slate-900 border border-slate-800 rounded-2xl p-5 hidden">
+        <h3 class="font-bold text-lg text-amber-400 mb-4">تفاصيل العميل</h3>
+        <div id="customerDetailContent"></div>
+      </div>
+
+      <!-- Recent Feedback -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
+        <div class="p-4 border-b border-slate-800">
+          <h3 class="font-bold text-white">⭐ أحدث التقييمات</h3>
+        </div>
+        <div class="overflow-y-auto scrollbar-thin" style="max-height: 400px;">
+          <div id="feedbackList" class="p-4 space-y-3">
+            <p class="text-slate-500 text-sm text-center py-8">جاري التحميل...</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Top Customers -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
+        <div class="p-4 border-b border-slate-800">
+          <h3 class="font-bold text-white">🏆 أفضل العملاء</h3>
+        </div>
+        <div id="topCustomersList" class="p-4 space-y-2">
+          <p class="text-slate-500 text-sm text-center py-4">جاري التحميل...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Feedback Modal -->
+  <div id="feedbackModal" class="hidden fixed inset-0 z-50 flex items-center justify-center modal-bg p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md p-6">
+      <h3 class="text-lg font-bold text-white mb-5">➕ إضافة تقييم عميل</h3>
+      <div class="space-y-4">
+        <div>
+          <label class="text-slate-400 text-sm mb-1 block">رقم الهاتف</label>
+          <input id="fbPhone" type="tel" placeholder="01xxxxxxxxx" class="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500">
+        </div>
+        <div>
+          <label class="text-slate-400 text-sm mb-2 block">التقييم</label>
+          <div class="flex gap-2" id="ratingStars">
+            <button onclick="setRating(1)" class="rating-btn text-3xl text-slate-600 hover:text-amber-400 transition-colors" data-rating="1">⭐</button>
+            <button onclick="setRating(2)" class="rating-btn text-3xl text-slate-600 hover:text-amber-400 transition-colors" data-rating="2">⭐</button>
+            <button onclick="setRating(3)" class="rating-btn text-3xl text-slate-600 hover:text-amber-400 transition-colors" data-rating="3">⭐</button>
+            <button onclick="setRating(4)" class="rating-btn text-3xl text-slate-600 hover:text-amber-400 transition-colors" data-rating="4">⭐</button>
+            <button onclick="setRating(5)" class="rating-btn text-3xl text-slate-600 hover:text-amber-400 transition-colors" data-rating="5">⭐</button>
+          </div>
+        </div>
+        <div>
+          <label class="text-slate-400 text-sm mb-1 block">الفئة</label>
+          <select id="fbCategory" class="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500">
+            <option value="GENERAL">عام</option>
+            <option value="FOOD">الطعام</option>
+            <option value="SERVICE">الخدمة</option>
+            <option value="AMBIANCE">الجو والديكور</option>
+            <option value="DELIVERY">التوصيل</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-slate-400 text-sm mb-1 block">التعليق</label>
+          <textarea id="fbComment" rows="3" placeholder="تعليق العميل..." class="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500 resize-none"></textarea>
+        </div>
+      </div>
+      <div class="flex gap-3 mt-5">
+        <button onclick="submitFeedback()" class="flex-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3 rounded-xl transition-colors">حفظ التقييم</button>
+        <button onclick="closeFeedbackModal()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 rounded-xl transition-colors">إلغاء</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+    let allCustomers = [];
+    let selectedRating = 5;
+
+    function tierColor(spent) {
+      if (spent >= 2000) return { tier: 'GOLD', label: '🥇 ذهبي', color: 'text-amber-400' };
+      if (spent >= 500) return { tier: 'SILVER', label: '🥈 فضي', color: 'text-slate-300' };
+      return { tier: 'BRONZE', label: '🥉 برونزي', color: 'text-orange-600' };
+    }
+
+    async function loadCustomers(search = '') {
+      try {
+        const url = '/api/customers' + (search ? `?search=${encodeURIComponent(search)}` : '');
+        const res = await fetch(url);
+        const data = await res.json();
+        if (data.success) {
+          allCustomers = data.customers;
+          renderCustomers(data.customers);
+          renderStats(data.customers);
+          renderTopCustomers(data.customers);
+        }
+      } catch(e) {
+        console.error(e);
+      }
+    }
+
+    function renderStats(customers) {
+      const total = customers.length;
+      const revenue = customers.reduce((s, c) => s + (c.total_spent || 0), 0);
+      const avg = total > 0 ? revenue / total : 0;
+      const points = customers.reduce((s, c) => s + (c.points || 0), 0);
+      document.getElementById('statTotal').textContent = total;
+      document.getElementById('statRevenue').textContent = revenue.toFixed(0) + ' ج';
+      document.getElementById('statAvg').textContent = avg.toFixed(0) + ' ج';
+      document.getElementById('statPoints').textContent = points.toLocaleString();
+      document.getElementById('customerCount').textContent = `${total} عميل`;
+    }
+
+    function renderCustomers(customers) {
+      const tbody = document.getElementById('customersTableBody');
+      if (!customers.length) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center py-12 text-slate-500">لا يوجد عملاء</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = customers.map(c => {
+        const { label, color } = tierColor(c.total_spent || 0);
+        const visits = c.visit_count || '—';
+        return `
+          <tr class="customer-row border-b border-slate-800/50 cursor-pointer transition-colors" onclick="showCustomerDetail(${JSON.stringify(c).replace(/"/g,'&quot;')})">
+            <td class="py-3 px-4">
+              <div class="font-semibold text-white text-sm">${c.name || 'عميل'}</div>
+              ${c.email ? `<div class="text-slate-500 text-xs">${c.email}</div>` : ''}
+            </td>
+            <td class="py-3 px-3 text-slate-300 text-sm font-mono">${c.phone}</td>
+            <td class="py-3 px-3 text-emerald-400 font-bold text-sm">${(c.total_spent || 0).toFixed(0)} ج</td>
+            <td class="py-3 px-3">
+              <span class="bg-amber-500/20 text-amber-300 text-xs font-bold px-2 py-1 rounded-full">${c.points || 0} نقطة</span>
+            </td>
+            <td class="py-3 px-3 text-slate-400 text-sm">${visits}</td>
+            <td class="py-3 px-3 ${color} text-xs font-bold">${label}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderTopCustomers(customers) {
+      const top = [...customers].sort((a, b) => (b.total_spent || 0) - (a.total_spent || 0)).slice(0, 5);
+      const el = document.getElementById('topCustomersList');
+      if (!top.length) { el.innerHTML = `<p class="text-slate-500 text-sm text-center py-4">لا يوجد بيانات</p>`; return; }
+      el.innerHTML = top.map((c, i) => {
+        const medals = ['🥇','🥈','🥉','4️⃣','5️⃣'];
+        return `
+          <div class="flex items-center justify-between py-2 border-b border-slate-800/50">
+            <div class="flex items-center gap-2">
+              <span class="text-lg">${medals[i]}</span>
+              <div>
+                <div class="font-semibold text-white text-sm">${c.name || 'عميل'}</div>
+                <div class="text-slate-500 text-xs">${c.phone}</div>
+              </div>
+            </div>
+            <div class="text-emerald-400 font-bold text-sm">${(c.total_spent || 0).toFixed(0)} ج</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function showCustomerDetail(c) {
+      const { label, color } = tierColor(c.total_spent || 0);
+      const el = document.getElementById('customerDetailContent');
+      el.innerHTML = `
+        <div class="space-y-3">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-12 h-12 rounded-full bg-amber-500/20 flex items-center justify-center text-2xl">👤</div>
+            <div>
+              <div class="font-bold text-white text-lg">${c.name || 'عميل'}</div>
+              <div class="${color} text-sm font-bold">${label}</div>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div class="bg-slate-800 rounded-xl p-3 text-center">
+              <div class="text-emerald-400 text-xl font-black">${(c.total_spent || 0).toFixed(0)} ج</div>
+              <div class="text-slate-400 text-xs mt-1">إجمالي الإنفاق</div>
+            </div>
+            <div class="bg-slate-800 rounded-xl p-3 text-center">
+              <div class="text-amber-400 text-xl font-black">${c.points || 0}</div>
+              <div class="text-slate-400 text-xs mt-1">نقاط الولاء</div>
+            </div>
+            <div class="bg-slate-800 rounded-xl p-3 text-center">
+              <div class="text-sky-400 text-xl font-black">${c.visit_count || 0}</div>
+              <div class="text-slate-400 text-xs mt-1">زيارة</div>
+            </div>
+            <div class="bg-slate-800 rounded-xl p-3 text-center">
+              <div class="text-purple-400 text-xl font-black">${c.last_visit ? new Date(c.last_visit).toLocaleDateString('ar-EG') : '—'}</div>
+              <div class="text-slate-400 text-xs mt-1">آخر زيارة</div>
+            </div>
+          </div>
+          ${c.phone ? `<div class="text-slate-400 text-sm">📱 ${c.phone}</div>` : ''}
+          ${c.email ? `<div class="text-slate-400 text-sm">📧 ${c.email}</div>` : ''}
+          ${c.preferences ? `<div class="bg-slate-800/50 rounded-xl p-3 mt-2"><div class="text-slate-400 text-xs mb-1">التفضيلات</div><div class="text-white text-sm">${c.preferences}</div></div>` : ''}
+          <button onclick="openFeedbackModal('${c.phone}')" class="w-full bg-purple-600/30 hover:bg-purple-600/50 border border-purple-600/50 text-purple-300 font-bold py-2 rounded-xl transition-colors text-sm mt-2">
+            ⭐ إضافة تقييم لهذا العميل
+          </button>
+        </div>
+      `;
+      document.getElementById('customerDetail').classList.remove('hidden');
+    }
+
+    async function loadFeedback() {
+      try {
+        const res = await fetch('/api/customers/feedback');
+        const data = await res.json();
+        if (data.success) renderFeedback(data.feedback);
+      } catch(e) {}
+    }
+
+    function renderFeedback(feedback) {
+      const el = document.getElementById('feedbackList');
+      if (!feedback.length) { el.innerHTML = `<p class="text-slate-500 text-sm text-center py-8">لا توجد تقييمات بعد</p>`; return; }
+      const catLabels = { GENERAL: 'عام', FOOD: 'الطعام', SERVICE: 'الخدمة', AMBIANCE: 'الجو', DELIVERY: 'التوصيل' };
+      el.innerHTML = feedback.slice(0, 20).map(fb => `
+        <div class="bg-slate-800/50 rounded-xl p-3 border border-slate-700/50">
+          <div class="flex items-center justify-between mb-1">
+            <div class="text-amber-400 text-sm">${'⭐'.repeat(fb.rating || 5)}</div>
+            <div class="text-slate-500 text-xs">${catLabels[fb.category] || fb.category || 'عام'}</div>
+          </div>
+          ${fb.comment ? `<div class="text-white text-sm mb-1">"${fb.comment}"</div>` : ''}
+          <div class="text-slate-500 text-xs">${fb.customer_phone || 'مجهول'} · ${new Date(fb.created_at).toLocaleDateString('ar-EG')}</div>
+        </div>
+      `).join('');
+    }
+
+    function searchCustomers() {
+      const q = document.getElementById('searchInput').value.trim();
+      if (q.length >= 2) {
+        loadCustomers(q);
+      } else if (q.length === 0) {
+        loadCustomers();
+      }
+    }
+
+    // Feedback modal
+    let feedbackPhone = '';
+    function openFeedbackModal(phone = '') {
+      feedbackPhone = phone;
+      if (phone) document.getElementById('fbPhone').value = phone;
+      setRating(5);
+      document.getElementById('feedbackModal').classList.remove('hidden');
+    }
+    function closeFeedbackModal() {
+      document.getElementById('feedbackModal').classList.add('hidden');
+      document.getElementById('fbPhone').value = '';
+      document.getElementById('fbComment').value = '';
+    }
+    function setRating(r) {
+      selectedRating = r;
+      document.querySelectorAll('.rating-btn').forEach((btn, i) => {
+        btn.style.color = i < r ? '#f59e0b' : '#475569';
+      });
+    }
+    async function submitFeedback() {
+      const phone = document.getElementById('fbPhone').value.trim();
+      const comment = document.getElementById('fbComment').value.trim();
+      const category = document.getElementById('fbCategory').value;
+      try {
+        const res = await fetch('/api/customers/feedback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ customer_phone: phone || null, rating: selectedRating, comment, category })
+        });
+        const data = await res.json();
+        if (data.success) {
+          closeFeedbackModal();
+          loadFeedback();
+          alert('تم حفظ التقييم ✅');
+        }
+      } catch(e) { alert('حدث خطأ'); }
+    }
+
+    // Init
+    loadCustomers();
+    loadFeedback();
+    setInterval(loadFeedback, 30000);
+  </script>
+</body>
+</html>

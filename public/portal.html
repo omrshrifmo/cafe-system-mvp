@@ -71,6 +71,38 @@
       </button>
     </div>
 
+    <!-- Live KPI Stats Strip -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 flex items-center gap-3">
+        <div class="w-10 h-10 bg-emerald-500/20 rounded-xl flex items-center justify-center text-xl">💰</div>
+        <div>
+          <div class="text-xs text-slate-400">إيرادات اليوم</div>
+          <div id="kpiRevenue" class="text-lg font-black text-emerald-400">...</div>
+        </div>
+      </div>
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 flex items-center gap-3">
+        <div class="w-10 h-10 bg-amber-500/20 rounded-xl flex items-center justify-center text-xl">🪑</div>
+        <div>
+          <div class="text-xs text-slate-400">طاولات مفتوحة</div>
+          <div id="kpiTables" class="text-lg font-black text-amber-400">...</div>
+        </div>
+      </div>
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 flex items-center gap-3">
+        <div class="w-10 h-10 bg-red-500/20 rounded-xl flex items-center justify-center text-xl">⚠️</div>
+        <div>
+          <div class="text-xs text-slate-400">تنبيهات المخزون</div>
+          <div id="kpiLowStock" class="text-lg font-black text-red-400">...</div>
+        </div>
+      </div>
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 flex items-center gap-3">
+        <div class="w-10 h-10 bg-sky-500/20 rounded-xl flex items-center justify-center text-xl">👤</div>
+        <div>
+          <div class="text-xs text-slate-400">موظفون نشطون</div>
+          <div id="kpiStaff" class="text-lg font-black text-sky-400">...</div>
+        </div>
+      </div>
+    </div>
+
     <!-- Authorized Tools Grid Section -->
     <div>
       <div class="flex items-center justify-between mb-4">
@@ -87,6 +119,7 @@
       </div>
     </div>
   </main>
+
 
   <footer class="bg-slate-900 border-t border-slate-800 text-center py-3 text-xs text-slate-500">
     كافيه مزاج Enterprise ERP &copy; 2026 - جميع الحقوق محفوظة
@@ -218,7 +251,66 @@
       window.location.href = 'index.html';
     }
 
-    window.addEventListener('DOMContentLoaded', initPortal);
+    async function loadKPIs() {
+      try {
+        // Today's revenue
+        const salesRes = await fetch('/api/sales/summary');
+        if (salesRes.ok) {
+          const d = await salesRes.json();
+          const revenue = d.today_revenue || d.total_revenue || 0;
+          document.getElementById('kpiRevenue').textContent = revenue.toFixed(0) + ' ج';
+        }
+      } catch(e) {}
+      try {
+        // Open tables
+        const tabRes = await fetch('/api/tables/status');
+        if (tabRes.ok) {
+          const d = await tabRes.json();
+          const open = (d.tables || []).filter(t => t.status === 'OCCUPIED').length;
+          document.getElementById('kpiTables').textContent = open + ' طاولة';
+        }
+      } catch(e) { document.getElementById('kpiTables').textContent = '—'; }
+      try {
+        // Low stock alerts
+        const invRes = await fetch('/api/reports/low-stock');
+        if (invRes.ok) {
+          const d = await invRes.json();
+          const count = (d.items || []).length;
+          document.getElementById('kpiLowStock').textContent = count > 0 ? count + ' صنف' : '✅ لا تنبيهات';
+          document.getElementById('kpiLowStock').className = `text-lg font-black ${count > 0 ? 'text-red-400' : 'text-emerald-400'}`;
+        }
+      } catch(e) { document.getElementById('kpiLowStock').textContent = '—'; }
+      try {
+        // Active staff (users on active shifts)
+        const shiftRes = await fetch('/api/shifts/active');
+        if (shiftRes.ok) {
+          const d = await shiftRes.json();
+          document.getElementById('kpiStaff').textContent = (d.active_count || 0) + ' موظف';
+        }
+      } catch(e) { document.getElementById('kpiStaff').textContent = '—'; }
+    }
+
+    function initPortalKPIs() {
+      // Only load KPIs for managers/owners/admins
+      const elevated = ['MANAGER','OP_MANAGER','OWNER','ADMIN'];
+      if (currentUser && elevated.includes(currentUser.role)) {
+        loadKPIs();
+        setInterval(loadKPIs, 60000);
+      } else {
+        ['kpiRevenue','kpiTables','kpiLowStock','kpiStaff'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.closest('.bg-slate-900').style.display = 'none';
+        });
+        const strip = document.querySelector('.grid.grid-cols-2.md\\:grid-cols-4');
+        if (strip) strip.style.display = 'none';
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      initPortal();
+      initPortalKPIs();
+    });
   </script>
+
 </body>
 </html>

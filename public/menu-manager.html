@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>مدير القائمة - كافيه مزاج</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: 'Tajawal', sans-serif; background: #0f172a; color: #f8fafc; }
+    .modal-bg { background: rgba(0,0,0,0.75); backdrop-filter: blur(4px); }
+    .item-card { transition: all 0.2s; }
+    .item-card:hover { border-color: #f59e0b66; transform: translateY(-1px); }
+    .tab-btn.active { background: #f59e0b; color: #0f172a; }
+    .cat-tag { cursor: pointer; }
+    .cat-tag.selected { background: rgba(245,158,11,0.2); border-color: #f59e0b; }
+    .unavailable-overlay { opacity: 0.5; }
+    .scrollbar-thin::-webkit-scrollbar { width: 4px; }
+    .scrollbar-thin::-webkit-scrollbar-thumb { background: #334155; border-radius: 2px; }
+    input[type="color"] { cursor: pointer; border-radius: 8px; padding: 2px; }
+  </style>
+</head>
+<body class="min-h-screen">
+
+  <!-- Header -->
+  <header class="bg-slate-900 border-b border-slate-800 px-6 py-4 flex items-center justify-between sticky top-0 z-50">
+    <div class="flex items-center gap-3">
+      <a href="portal.html" class="text-slate-400 hover:text-amber-400 text-2xl transition-colors">←</a>
+      <div>
+        <h1 class="text-xl font-bold text-white">🍽️ مدير القائمة</h1>
+        <p class="text-xs text-slate-400">تصنيفات · أصناف · متغيرات · إضافات</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-3">
+      <!-- Tab switcher -->
+      <div class="flex bg-slate-800 rounded-xl p-1 gap-1">
+        <button id="tabCategories" class="tab-btn active text-sm font-bold px-4 py-2 rounded-lg transition-all" onclick="switchTab('categories')">📂 التصنيفات</button>
+        <button id="tabItems" class="tab-btn text-sm font-bold px-4 py-2 rounded-lg text-slate-400 hover:text-white transition-all" onclick="switchTab('items')">🍳 الأصناف</button>
+      </div>
+      <button id="addBtn" onclick="openAddCategoryModal()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-5 py-2.5 rounded-xl transition-colors">➕ إضافة</button>
+    </div>
+  </header>
+
+  <!-- Categories Panel -->
+  <div id="categoriesPanel" class="p-6">
+    <div class="flex items-center justify-between mb-5">
+      <h2 class="text-lg font-bold text-white">التصنيفات</h2>
+      <p class="text-sm text-slate-400" id="catCount">...</p>
+    </div>
+    <div id="categoriesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      <p class="col-span-4 text-center text-slate-500 py-12">جاري التحميل...</p>
+    </div>
+  </div>
+
+  <!-- Items Panel -->
+  <div id="itemsPanel" class="hidden p-6">
+    <!-- Category filter pills -->
+    <div class="flex items-center gap-3 mb-5 flex-wrap">
+      <button class="cat-tag selected bg-slate-800 border border-slate-700 rounded-xl px-4 py-2 text-sm font-bold" data-cat-id="all" onclick="filterByCategory('all',this)">🌟 الكل</button>
+      <div id="catFilterPills" class="flex gap-2 flex-wrap"></div>
+      <input id="itemSearch" type="text" placeholder="بحث بالاسم..." oninput="filterItems()"
+        class="mr-auto bg-slate-800 border border-slate-700 text-white rounded-xl px-4 py-2 text-sm w-48 focus:outline-none focus:border-amber-500">
+    </div>
+    <div id="itemsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      <p class="col-span-4 text-center text-slate-500 py-12">جاري التحميل...</p>
+    </div>
+  </div>
+
+  <!-- Add/Edit Category Modal -->
+  <div id="categoryModal" class="hidden fixed inset-0 z-50 flex items-center justify-center modal-bg p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md p-6">
+      <h3 id="catModalTitle" class="text-lg font-bold text-white mb-5">📂 تصنيف جديد</h3>
+      <input type="hidden" id="catEditId">
+      <div class="space-y-4">
+        <div>
+          <label class="text-slate-400 text-sm mb-1 block">اسم التصنيف بالعربية *</label>
+          <input id="catName" type="text" placeholder="مشروبات ساخنة" class="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500">
+        </div>
+        <div>
+          <label class="text-slate-400 text-sm mb-1 block">الاسم بالإنجليزية</label>
+          <input id="catNameEn" type="text" placeholder="Hot Drinks" class="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500">
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-slate-400 text-sm mb-1 block">الأيقونة (emoji)</label>
+            <input id="catIcon" type="text" placeholder="☕" maxlength="2" class="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-4 py-3 text-2xl focus:outline-none focus:border-amber-500">
+          </div>
+          <div>
+            <label class="text-slate-400 text-sm mb-1 block">اللون</label>
+            <div class="flex items-center gap-2">
+              <input id="catColor" type="color" value="#f59e0b" class="h-11 w-16 bg-slate-800 border border-slate-700 rounded-xl">
+              <span id="catColorHex" class="text-slate-400 text-sm">#f59e0b</span>
+            </div>
+          </div>
+        </div>
+        <div>
+          <label class="text-slate-400 text-sm mb-1 block">ترتيب الظهور</label>
+          <input id="catSortOrder" type="number" value="0" class="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500">
+        </div>
+      </div>
+      <div class="flex gap-3 mt-5">
+        <button onclick="saveCategory()" class="flex-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3 rounded-xl transition-colors">💾 حفظ</button>
+        <button onclick="closeCategoryModal()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 rounded-xl transition-colors">إلغاء</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add/Edit Item Modal -->
+  <div id="itemModal" class="hidden fixed inset-0 z-50 flex items-start justify-center modal-bg p-4 overflow-y-auto">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg p-6 my-4">
+      <h3 id="itemModalTitle" class="text-lg font-bold text-white mb-5">🍳 صنف جديد</h3>
+      <input type="hidden" id="itemEditId">
+      <div class="space-y-4">
+        <div>
+          <label class="text-slate-400 text-sm mb-1 block">اسم الصنف *</label>
+          <input id="itemName" type="text" placeholder="قهوة تركي" class="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500">
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-slate-400 text-sm mb-1 block">الاسم بالإنجليزية</label>
+            <input id="itemNameEn" type="text" placeholder="Turkish Coffee" class="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500">
+          </div>
+          <div>
+            <label class="text-slate-400 text-sm mb-1 block">السعر (ج.م)</label>
+            <input id="itemPrice" type="number" min="0" step="0.5" placeholder="0" class="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500">
+          </div>
+        </div>
+        <div>
+          <label class="text-slate-400 text-sm mb-1 block">الوصف</label>
+          <textarea id="itemDescription" rows="2" placeholder="وصف الصنف..." class="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500 resize-none"></textarea>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-slate-400 text-sm mb-1 block">التصنيف</label>
+            <select id="itemCategory" class="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500">
+              <option value="">— بدون تصنيف —</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-slate-400 text-sm mb-1 block">القسم</label>
+            <select id="itemDepartment" class="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500">
+              <option value="BARISTA">☕ باريستا</option>
+              <option value="KITCHEN">🍳 مطبخ</option>
+              <option value="SHISHA">💨 شيشة</option>
+            </select>
+          </div>
+        </div>
+        <div class="flex items-center gap-6">
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input id="itemAvailable" type="checkbox" checked class="w-4 h-4 accent-amber-500">
+            <span class="text-white text-sm">متاح للبيع</span>
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input id="itemFeatured" type="checkbox" class="w-4 h-4 accent-amber-500">
+            <span class="text-white text-sm">مميز ⭐</span>
+          </label>
+        </div>
+
+        <!-- Variants Section -->
+        <div class="border-t border-slate-800 pt-4">
+          <div class="flex items-center justify-between mb-2">
+            <label class="text-slate-300 text-sm font-bold">📐 المتغيرات (أحجام، حرارة...)</label>
+            <button onclick="addVariantRow()" class="text-amber-400 hover:text-amber-300 text-sm font-bold">➕ إضافة</button>
+          </div>
+          <div id="variantsContainer" class="space-y-2"></div>
+        </div>
+
+        <!-- Addons Section -->
+        <div class="border-t border-slate-800 pt-4">
+          <div class="flex items-center justify-between mb-2">
+            <label class="text-slate-300 text-sm font-bold">🧩 الإضافات</label>
+            <button onclick="addAddonRow()" class="text-amber-400 hover:text-amber-300 text-sm font-bold">➕ إضافة</button>
+          </div>
+          <div id="addonsContainer" class="space-y-2"></div>
+        </div>
+      </div>
+      <div class="flex gap-3 mt-5">
+        <button onclick="saveItem()" class="flex-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3 rounded-xl transition-colors">💾 حفظ الصنف</button>
+        <button onclick="closeItemModal()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 rounded-xl transition-colors">إلغاء</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let allCategories = [];
+    let allItems = [];
+    let currentTab = 'categories';
+    let catFilterId = 'all';
+    let variantRows = [];
+    let addonRows = [];
+
+    // ========== TAB MANAGEMENT ==========
+    function switchTab(tab) {
+      currentTab = tab;
+      document.getElementById('categoriesPanel').classList.toggle('hidden', tab !== 'categories');
+      document.getElementById('itemsPanel').classList.toggle('hidden', tab !== 'items');
+      document.getElementById('tabCategories').classList.toggle('active', tab === 'categories');
+      document.getElementById('tabCategories').classList.toggle('text-slate-400', tab !== 'categories');
+      document.getElementById('tabItems').classList.toggle('active', tab === 'items');
+      document.getElementById('tabItems').classList.toggle('text-slate-400', tab !== 'items');
+      document.getElementById('addBtn').onclick = tab === 'categories' ? openAddCategoryModal : openAddItemModal;
+      document.getElementById('addBtn').textContent = tab === 'categories' ? '➕ تصنيف جديد' : '➕ صنف جديد';
+      if (tab === 'items') { loadItems(); populateCatFilter(); }
+    }
+
+    // ========== CATEGORIES ==========
+    async function loadCategories() {
+      try {
+        const res = await fetch('/api/menu/categories');
+        const data = await res.json();
+        if (data.success) {
+          allCategories = data.categories;
+          renderCategories(data.categories);
+        }
+      } catch(e) { console.error(e); }
+    }
+
+    function renderCategories(cats) {
+      const grid = document.getElementById('categoriesGrid');
+      document.getElementById('catCount').textContent = `${cats.length} تصنيف`;
+      if (!cats.length) {
+        grid.innerHTML = `<div class="col-span-4 text-center py-16 text-slate-500"><div class="text-5xl mb-4">📂</div><p>لا توجد تصنيفات بعد. أضف تصنيفاً أولاً.</p></div>`;
+        return;
+      }
+      grid.innerHTML = cats.map(c => `
+        <div class="bg-slate-900 border rounded-2xl p-5 transition-all hover:-translate-y-0.5" 
+             style="border-color: ${c.is_active ? (c.color || '#334155') + '55' : '#334155'}; ${!c.is_active ? 'opacity:0.5' : ''}">
+          <div class="flex items-start justify-between mb-3">
+            <div class="w-12 h-12 rounded-xl flex items-center justify-center text-3xl" style="background: ${c.color || '#f59e0b'}22">${c.icon || '☕'}</div>
+            <div class="flex gap-2">
+              <button onclick="editCategory(${JSON.stringify(c).replace(/"/g,'&quot;')})" class="text-slate-400 hover:text-amber-400 text-sm transition-colors p-1.5 rounded-lg hover:bg-amber-500/10">✏️</button>
+              <button onclick="toggleCategory(${c.id}, ${c.is_active})" class="text-slate-400 text-sm transition-colors p-1.5 rounded-lg hover:bg-slate-800 ${c.is_active ? 'hover:text-red-400' : 'hover:text-emerald-400'}">${c.is_active ? '🔴' : '🟢'}</button>
+            </div>
+          </div>
+          <h3 class="font-bold text-white text-lg">${c.name}</h3>
+          ${c.name_en ? `<p class="text-slate-500 text-xs">${c.name_en}</p>` : ''}
+          <div class="mt-3 flex items-center gap-2">
+            <div class="w-3 h-3 rounded-full" style="background: ${c.color || '#f59e0b'}"></div>
+            <span class="text-slate-400 text-xs font-mono">${c.color || '#f59e0b'}</span>
+            <span class="mr-auto text-slate-500 text-xs">ترتيب: ${c.sort_order || 0}</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function openAddCategoryModal() {
+      document.getElementById('catEditId').value = '';
+      document.getElementById('catModalTitle').textContent = '📂 تصنيف جديد';
+      document.getElementById('catName').value = '';
+      document.getElementById('catNameEn').value = '';
+      document.getElementById('catIcon').value = '☕';
+      document.getElementById('catColor').value = '#f59e0b';
+      document.getElementById('catColorHex').textContent = '#f59e0b';
+      document.getElementById('catSortOrder').value = '0';
+      document.getElementById('categoryModal').classList.remove('hidden');
+    }
+
+    function editCategory(c) {
+      document.getElementById('catEditId').value = c.id;
+      document.getElementById('catModalTitle').textContent = '✏️ تعديل التصنيف';
+      document.getElementById('catName').value = c.name || '';
+      document.getElementById('catNameEn').value = c.name_en || '';
+      document.getElementById('catIcon').value = c.icon || '☕';
+      document.getElementById('catColor').value = c.color || '#f59e0b';
+      document.getElementById('catColorHex').textContent = c.color || '#f59e0b';
+      document.getElementById('catSortOrder').value = c.sort_order || 0;
+      document.getElementById('categoryModal').classList.remove('hidden');
+    }
+
+    document.getElementById('catColor').addEventListener('input', function() {
+      document.getElementById('catColorHex').textContent = this.value;
+    });
+
+    function closeCategoryModal() {
+      document.getElementById('categoryModal').classList.add('hidden');
+    }
+
+    async function saveCategory() {
+      const name = document.getElementById('catName').value.trim();
+      if (!name) { alert('اسم التصنيف مطلوب'); return; }
+      const id = document.getElementById('catEditId').value;
+      const body = {
+        name,
+        name_en: document.getElementById('catNameEn').value.trim(),
+        icon: document.getElementById('catIcon').value.trim() || '☕',
+        color: document.getElementById('catColor').value,
+        sort_order: parseInt(document.getElementById('catSortOrder').value) || 0
+      };
+      try {
+        const url = id ? `/api/menu/categories/${id}` : '/api/menu/categories';
+        const res = await fetch(url, { method: id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        const data = await res.json();
+        if (data.success) { closeCategoryModal(); loadCategories(); }
+        else alert('خطأ: ' + (data.error || 'حدث خطأ'));
+      } catch(e) { alert('خطأ في الاتصال'); }
+    }
+
+    async function toggleCategory(id, isActive) {
+      try {
+        await fetch(`/api/menu/categories/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ is_active: isActive ? 0 : 1 })
+        });
+        loadCategories();
+      } catch(e) {}
+    }
+
+    // ========== ITEMS ==========
+    async function loadItems() {
+      try {
+        const res = await fetch('/api/menu/items');
+        const data = await res.json();
+        if (data.success) {
+          allItems = data.items;
+          renderItems(filterItemsList());
+        }
+      } catch(e) { console.error(e); }
+    }
+
+    function populateCatFilter() {
+      const pills = document.getElementById('catFilterPills');
+      const select = document.getElementById('itemCategory');
+      pills.innerHTML = allCategories.map(c => `
+        <button class="cat-tag bg-slate-800 border border-slate-700 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-400 transition-all" 
+                data-cat-id="${c.id}" onclick="filterByCategory(${c.id}, this)">
+          ${c.icon} ${c.name}
+        </button>
+      `).join('');
+      select.innerHTML = `<option value="">— بدون تصنيف —</option>` +
+        allCategories.map(c => `<option value="${c.id}">${c.icon} ${c.name}</option>`).join('');
+    }
+
+    function filterByCategory(id, btn) {
+      catFilterId = id;
+      document.querySelectorAll('.cat-tag').forEach(b => b.classList.remove('selected'));
+      if (btn) btn.classList.add('selected');
+      renderItems(filterItemsList());
+    }
+
+    function filterItemsList() {
+      const q = (document.getElementById('itemSearch')?.value || '').toLowerCase();
+      return allItems.filter(i => {
+        const matchCat = catFilterId === 'all' || i.category_id === catFilterId;
+        const matchQ = !q || i.name.toLowerCase().includes(q);
+        return matchCat && matchQ;
+      });
+    }
+
+    function filterItems() {
+      renderItems(filterItemsList());
+    }
+
+    function renderItems(items) {
+      const grid = document.getElementById('itemsGrid');
+      if (!items.length) {
+        grid.innerHTML = `<div class="col-span-4 text-center py-16 text-slate-500"><div class="text-5xl mb-4">🍳</div><p>لا توجد أصناف. أضف صنفاً جديداً.</p></div>`;
+        return;
+      }
+      grid.innerHTML = items.map(item => {
+        const deptEmoji = { BARISTA: '☕', KITCHEN: '🍳', SHISHA: '💨' }[item.department] || '☕';
+        const variantCount = (item.variants || []).length;
+        const addonCount = (item.addons || []).length;
+        return `
+          <div class="item-card bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden ${!item.is_available ? 'unavailable-overlay' : ''}">
+            <div class="h-24 bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center text-5xl">
+              ${deptEmoji}
+            </div>
+            <div class="p-4">
+              <div class="flex items-start justify-between mb-1">
+                <h3 class="font-bold text-white text-sm leading-tight">${item.name}</h3>
+                ${item.is_featured ? '<span class="text-amber-400 text-xs">⭐</span>' : ''}
+              </div>
+              ${item.name_en ? `<p class="text-slate-500 text-xs mb-1">${item.name_en}</p>` : ''}
+              ${item.description ? `<p class="text-slate-400 text-xs mb-2 line-clamp-1">${item.description}</p>` : ''}
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-amber-400 font-black text-lg">${(item.base_price || 0).toFixed(0)} <span class="text-xs text-slate-400 font-normal">ج</span></span>
+                <span class="text-xs ${item.is_available ? 'text-emerald-400' : 'text-red-400'} font-bold">${item.is_available ? '✅ متاح' : '🚫 غير متاح'}</span>
+              </div>
+              <div class="flex gap-1 flex-wrap mb-3">
+                <span class="bg-slate-800 text-slate-400 text-xs px-2 py-0.5 rounded-full">${item.category_name || 'بدون تصنيف'}</span>
+                ${variantCount > 0 ? `<span class="bg-sky-500/20 text-sky-400 text-xs px-2 py-0.5 rounded-full">${variantCount} متغير</span>` : ''}
+                ${addonCount > 0 ? `<span class="bg-purple-500/20 text-purple-400 text-xs px-2 py-0.5 rounded-full">${addonCount} إضافة</span>` : ''}
+              </div>
+              <div class="flex gap-2">
+                <button onclick="editItem(${JSON.stringify(item).replace(/"/g,'&quot;')})" class="flex-1 bg-slate-800 hover:bg-amber-500/20 hover:text-amber-400 text-slate-400 text-xs font-bold py-2 rounded-xl transition-all">✏️ تعديل</button>
+                <button onclick="toggleItem(${item.id}, ${item.is_available})" class="flex-1 ${item.is_available ? 'bg-red-500/10 text-red-400 hover:bg-red-500/20' : 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20'} text-xs font-bold py-2 rounded-xl transition-all">${item.is_available ? '🚫 إيقاف' : '✅ تفعيل'}</button>
+                <button onclick="deleteItem(${item.id},'${item.name.replace(/'/g,"\\'")}') " class="bg-slate-800 hover:bg-red-500/20 hover:text-red-400 text-slate-400 text-xs font-bold py-2 px-3 rounded-xl transition-all">🗑️</button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function openAddItemModal() {
+      variantRows = [];
+      addonRows = [];
+      document.getElementById('itemEditId').value = '';
+      document.getElementById('itemModalTitle').textContent = '🍳 صنف جديد';
+      document.getElementById('itemName').value = '';
+      document.getElementById('itemNameEn').value = '';
+      document.getElementById('itemPrice').value = '';
+      document.getElementById('itemDescription').value = '';
+      document.getElementById('itemCategory').value = '';
+      document.getElementById('itemDepartment').value = 'BARISTA';
+      document.getElementById('itemAvailable').checked = true;
+      document.getElementById('itemFeatured').checked = false;
+      renderVariantRows();
+      renderAddonRows();
+      document.getElementById('itemModal').classList.remove('hidden');
+    }
+
+    function editItem(item) {
+      variantRows = (item.variants || []).map(v => ({ id: v.id, name: v.name, price_delta: v.price_delta || 0, existing: true }));
+      addonRows = (item.addons || []).map(a => ({ id: a.id, name: a.name, price: a.price || 0, existing: true }));
+      document.getElementById('itemEditId').value = item.id;
+      document.getElementById('itemModalTitle').textContent = '✏️ تعديل الصنف';
+      document.getElementById('itemName').value = item.name || '';
+      document.getElementById('itemNameEn').value = item.name_en || '';
+      document.getElementById('itemPrice').value = item.base_price || 0;
+      document.getElementById('itemDescription').value = item.description || '';
+      document.getElementById('itemCategory').value = item.category_id || '';
+      document.getElementById('itemDepartment').value = item.department || 'BARISTA';
+      document.getElementById('itemAvailable').checked = !!item.is_available;
+      document.getElementById('itemFeatured').checked = !!item.is_featured;
+      renderVariantRows();
+      renderAddonRows();
+      document.getElementById('itemModal').classList.remove('hidden');
+    }
+
+    function closeItemModal() {
+      document.getElementById('itemModal').classList.add('hidden');
+    }
+
+    // Variant rows
+    function addVariantRow() {
+      variantRows.push({ name: '', price_delta: 0 });
+      renderVariantRows();
+    }
+    function removeVariantRow(idx) {
+      variantRows.splice(idx, 1);
+      renderVariantRows();
+    }
+    function renderVariantRows() {
+      const c = document.getElementById('variantsContainer');
+      c.innerHTML = variantRows.length === 0
+        ? '<p class="text-slate-600 text-xs text-center py-2">لا توجد متغيرات</p>'
+        : variantRows.map((v, i) => `
+            <div class="flex gap-2 items-center">
+              <input type="text" value="${v.name || ''}" placeholder="مثال: كبير" onchange="variantRows[${i}].name=this.value"
+                class="flex-1 bg-slate-800 border border-slate-700 text-white rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-amber-500">
+              <input type="number" value="${v.price_delta || 0}" placeholder="فرق السعر ج" onchange="variantRows[${i}].price_delta=parseFloat(this.value)||0"
+                class="w-24 bg-slate-800 border border-slate-700 text-white rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-amber-500">
+              <button onclick="removeVariantRow(${i})" class="text-red-400 hover:text-red-300 text-sm p-1">🗑️</button>
+            </div>
+          `).join('');
+    }
+
+    // Addon rows
+    function addAddonRow() {
+      addonRows.push({ name: '', price: 0 });
+      renderAddonRows();
+    }
+    function removeAddonRow(idx) {
+      addonRows.splice(idx, 1);
+      renderAddonRows();
+    }
+    function renderAddonRows() {
+      const c = document.getElementById('addonsContainer');
+      c.innerHTML = addonRows.length === 0
+        ? '<p class="text-slate-600 text-xs text-center py-2">لا توجد إضافات</p>'
+        : addonRows.map((a, i) => `
+            <div class="flex gap-2 items-center">
+              <input type="text" value="${a.name || ''}" placeholder="مثال: شراب كراميل" onchange="addonRows[${i}].name=this.value"
+                class="flex-1 bg-slate-800 border border-slate-700 text-white rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-amber-500">
+              <input type="number" value="${a.price || 0}" placeholder="السعر ج" onchange="addonRows[${i}].price=parseFloat(this.value)||0"
+                class="w-24 bg-slate-800 border border-slate-700 text-white rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-amber-500">
+              <button onclick="removeAddonRow(${i})" class="text-red-400 hover:text-red-300 text-sm p-1">🗑️</button>
+            </div>
+          `).join('');
+    }
+
+    async function saveItem() {
+      const name = document.getElementById('itemName').value.trim();
+      if (!name) { alert('اسم الصنف مطلوب'); return; }
+      const id = document.getElementById('itemEditId').value;
+      const body = {
+        name,
+        name_en: document.getElementById('itemNameEn').value.trim(),
+        description: document.getElementById('itemDescription').value.trim(),
+        base_price: parseFloat(document.getElementById('itemPrice').value) || 0,
+        category_id: parseInt(document.getElementById('itemCategory').value) || null,
+        department: document.getElementById('itemDepartment').value,
+        is_available: document.getElementById('itemAvailable').checked ? 1 : 0,
+        is_featured: document.getElementById('itemFeatured').checked ? 1 : 0
+      };
+      try {
+        let itemId = id;
+        if (id) {
+          const res = await fetch(`/api/menu/items/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+          const data = await res.json();
+          if (!data.success) { alert('خطأ: ' + data.error); return; }
+        } else {
+          const res = await fetch('/api/menu/items', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+          const data = await res.json();
+          if (!data.success) { alert('خطأ: ' + data.error); return; }
+          itemId = data.item?.id;
+        }
+        // Save new variants
+        for (const v of variantRows) {
+          if (!v.existing && v.name) {
+            await fetch(`/api/menu/items/${itemId}/variants`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: v.name, price_delta: v.price_delta }) });
+          }
+        }
+        // Save new addons
+        for (const a of addonRows) {
+          if (!a.existing && a.name) {
+            await fetch(`/api/menu/items/${itemId}/addons`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: a.name, price: a.price }) });
+          }
+        }
+        closeItemModal();
+        loadItems();
+      } catch(e) { alert('خطأ في الاتصال'); }
+    }
+
+    async function toggleItem(id, isAvailable) {
+      try {
+        await fetch(`/api/menu/items/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ is_available: isAvailable ? 0 : 1 }) });
+        loadItems();
+      } catch(e) {}
+    }
+
+    async function deleteItem(id, name) {
+      if (!confirm(`هل تريد حذف الصنف "${name}"؟ سيتم حذف المتغيرات والإضافات أيضاً.`)) return;
+      try {
+        const res = await fetch(`/api/menu/items/${id}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (data.success) loadItems();
+      } catch(e) { alert('حدث خطأ'); }
+    }
+
+    // Init
+    loadCategories();
+  </script>
+</body>
+</html>

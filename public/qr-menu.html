@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>قائمة كافيه مزاج</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --amber: #f59e0b;
+      --amber-dark: #d97706;
+      --amber-light: #fde68a;
+      --bg: #0f172a;
+      --bg2: #1e293b;
+      --bg3: #334155;
+      --text: #f8fafc;
+      --text-dim: #94a3b8;
+      --green: #10b981;
+      --red: #ef4444;
+    }
+    body {
+      font-family: 'Tajawal', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding-bottom: 120px;
+    }
+
+    /* Header */
+    .header {
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      border-bottom: 1px solid rgba(245,158,11,0.3);
+      padding: 16px 20px 12px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(12px);
+    }
+    .header-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .logo { font-size: 28px; font-weight: 900; color: var(--amber); letter-spacing: -0.5px; }
+    .table-badge {
+      background: rgba(245,158,11,0.15);
+      border: 1px solid rgba(245,158,11,0.4);
+      color: var(--amber);
+      padding: 6px 14px;
+      border-radius: 50px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    /* Category pills */
+    .cat-scroll {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+      scrollbar-width: none;
+    }
+    .cat-scroll::-webkit-scrollbar { display: none; }
+    .cat-pill {
+      flex-shrink: 0;
+      padding: 7px 18px;
+      border-radius: 50px;
+      border: 1px solid var(--bg3);
+      background: var(--bg2);
+      color: var(--text-dim);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .cat-pill.active {
+      background: var(--amber);
+      border-color: var(--amber);
+      color: #0f172a;
+    }
+
+    /* Menu items */
+    .section { padding: 20px 16px 8px; }
+    .section-title {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--amber);
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .items-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 12px;
+    }
+
+    .item-card {
+      background: var(--bg2);
+      border: 1px solid var(--bg3);
+      border-radius: 16px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+    }
+    .item-card:active { transform: scale(0.97); }
+    .item-card.in-cart { border-color: var(--amber); }
+
+    .item-img {
+      width: 100%;
+      aspect-ratio: 1;
+      object-fit: cover;
+      background: linear-gradient(135deg, #1e293b, #334155);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 42px;
+    }
+    .item-img-placeholder {
+      width: 100%;
+      aspect-ratio: 1;
+      background: linear-gradient(135deg, #1e293b, #334155);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 42px;
+    }
+    .item-body { padding: 10px 12px; }
+    .item-name { font-size: 13px; font-weight: 700; margin-bottom: 4px; line-height: 1.3; }
+    .item-price { font-size: 14px; font-weight: 800; color: var(--amber); }
+    .item-price span { font-size: 10px; font-weight: 500; color: var(--text-dim); }
+
+    .item-qty-control {
+      position: absolute;
+      bottom: 8px;
+      left: 8px;
+      display: flex;
+      align-items: center;
+      gap: 0;
+      background: var(--bg);
+      border: 1px solid var(--amber);
+      border-radius: 50px;
+      overflow: hidden;
+    }
+    .qty-btn {
+      background: none;
+      border: none;
+      color: var(--amber);
+      font-size: 18px;
+      font-weight: 700;
+      padding: 2px 10px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .qty-btn:active { background: rgba(245,158,11,0.2); }
+    .qty-num { font-size: 13px; font-weight: 800; color: var(--text); min-width: 16px; text-align: center; }
+
+    .unavailable-badge {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: rgba(239,68,68,0.9);
+      color: white;
+      padding: 3px 8px;
+      border-radius: 50px;
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+    /* Cart footer */
+    .cart-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 200;
+      padding: 12px 16px;
+      background: var(--bg2);
+      border-top: 1px solid rgba(245,158,11,0.3);
+      transform: translateY(100%);
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .cart-bar.visible { transform: translateY(0); }
+    .cart-bar-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--amber);
+      border-radius: 14px;
+      padding: 14px 18px;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .cart-bar-inner:active { opacity: 0.85; }
+    .cart-info { color: #0f172a; }
+    .cart-count { font-size: 20px; font-weight: 900; }
+    .cart-label { font-size: 13px; font-weight: 600; }
+    .cart-total { font-size: 20px; font-weight: 900; color: #0f172a; }
+
+    /* Cart modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 300;
+      display: none;
+      align-items: flex-end;
+    }
+    .modal-overlay.open { display: flex; }
+    .cart-modal {
+      width: 100%;
+      max-height: 85vh;
+      background: var(--bg2);
+      border-radius: 24px 24px 0 0;
+      overflow-y: auto;
+      padding: 20px 16px;
+      animation: slideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    .modal-handle {
+      width: 40px;
+      height: 4px;
+      background: var(--bg3);
+      border-radius: 2px;
+      margin: 0 auto 16px;
+    }
+    .cart-item-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--bg3);
+    }
+    .cart-item-info { flex: 1; }
+    .cart-item-name { font-size: 14px; font-weight: 700; }
+    .cart-item-price { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+    .cart-item-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg3);
+      border-radius: 50px;
+      padding: 4px 10px;
+    }
+    .cart-notes {
+      margin-top: 16px;
+    }
+    .cart-notes textarea {
+      width: 100%;
+      background: var(--bg3);
+      border: 1px solid var(--bg3);
+      border-radius: 12px;
+      color: var(--text);
+      padding: 12px;
+      font-family: 'Tajawal', sans-serif;
+      font-size: 14px;
+      resize: none;
+      height: 70px;
+    }
+    .cart-notes textarea:focus { outline: none; border-color: var(--amber); }
+    .cart-summary {
+      margin-top: 14px;
+      background: var(--bg3);
+      border-radius: 14px;
+      padding: 14px;
+    }
+    .cart-summary-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 14px;
+      margin-bottom: 6px;
+      color: var(--text-dim);
+    }
+    .cart-summary-row.total { color: var(--text); font-size: 16px; font-weight: 800; margin-bottom: 0; }
+    .place-order-btn {
+      width: 100%;
+      background: var(--amber);
+      border: none;
+      border-radius: 14px;
+      color: #0f172a;
+      font-family: 'Tajawal', sans-serif;
+      font-size: 17px;
+      font-weight: 900;
+      padding: 16px;
+      margin-top: 16px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .place-order-btn:active { opacity: 0.85; transform: scale(0.99); }
+    .place-order-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Success overlay */
+    .success-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      z-index: 500;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      text-align: center;
+      padding: 40px;
+    }
+    .success-overlay.open { display: flex; animation: fadeIn 0.3s ease; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .success-icon { font-size: 80px; margin-bottom: 16px; animation: bounceIn 0.5s ease; }
+    @keyframes bounceIn {
+      0% { transform: scale(0); }
+      60% { transform: scale(1.2); }
+      100% { transform: scale(1); }
+    }
+    .success-title { font-size: 26px; font-weight: 900; color: var(--green); margin-bottom: 8px; }
+    .success-sub { font-size: 15px; color: var(--text-dim); line-height: 1.6; }
+    .order-ref { font-size: 20px; font-weight: 800; color: var(--amber); margin-top: 12px; }
+
+    /* Loading */
+    .spinner {
+      width: 40px; height: 40px;
+      border: 3px solid var(--bg3);
+      border-top-color: var(--amber);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 40px auto;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-dim);
+    }
+    .empty-icon { font-size: 60px; margin-bottom: 16px; }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="header">
+    <div class="header-top">
+      <div class="logo">☕ مزاج</div>
+      <div class="table-badge" id="tableBadge">جاري التحميل...</div>
+    </div>
+    <div class="cat-scroll" id="catScroll">
+      <button class="cat-pill active" data-cat="all">الكل</button>
+    </div>
+  </header>
+
+  <!-- Menu Content -->
+  <main id="menuContent">
+    <div class="spinner"></div>
+  </main>
+
+  <!-- Cart Bar -->
+  <div class="cart-bar" id="cartBar">
+    <div class="cart-bar-inner" onclick="openCart()">
+      <div class="cart-info">
+        <div class="cart-count" id="cartCountBadge">0 عنصر</div>
+        <div class="cart-label">عرض طلبي</div>
+      </div>
+      <div class="cart-total" id="cartTotalBadge">0 ج</div>
+    </div>
+  </div>
+
+  <!-- Cart Modal -->
+  <div class="modal-overlay" id="cartModal" onclick="closeCartIfOutside(event)">
+    <div class="cart-modal" id="cartModalInner">
+      <div class="modal-handle"></div>
+      <h2 style="font-size:18px;font-weight:800;margin-bottom:16px;">🛒 طلبي</h2>
+      <div id="cartItemsList"></div>
+      <div class="cart-notes">
+        <textarea id="orderNotes" placeholder="ملاحظات إضافية (اختياري)..."></textarea>
+      </div>
+      <div class="cart-summary" id="cartSummary"></div>
+      <button class="place-order-btn" id="placeOrderBtn" onclick="placeOrder()">
+        إرسال الطلب للمطبخ 🚀
+      </button>
+    </div>
+  </div>
+
+  <!-- Success Overlay -->
+  <div class="success-overlay" id="successOverlay">
+    <div class="success-icon">✅</div>
+    <div class="success-title">تم استلام طلبك!</div>
+    <div class="success-sub">فريقنا يعمل على تحضير طلبك الآن.<br>سيصلك قريباً إلى طاولتك.</div>
+    <div class="order-ref" id="successRef"></div>
+    <button onclick="resetAll()" style="margin-top:24px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:white;border-radius:12px;padding:12px 32px;font-size:15px;font-weight:700;cursor:pointer;font-family:'Tajawal',sans-serif;">
+      طلب جديد
+    </button>
+  </div>
+
+  <script>
+    // Get table from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const tableNumber = parseInt(urlParams.get('table') || urlParams.get('t') || '0', 10);
+    
+    document.getElementById('tableBadge').textContent = tableNumber > 0 ? `طاولة ${tableNumber}` : 'طلب خارجي';
+
+    let menuData = { grouped: [], legacy_menu: [] };
+    let cart = []; // { item_name, price, quantity, department, emoji }
+    let currentCategory = 'all';
+
+    const DEPT_EMOJI = { BARISTA: '☕', KITCHEN: '🍳', SHISHA: '💨' };
+
+    async function loadMenu() {
+      try {
+        const res = await fetch('/api/public/menu');
+        const data = await res.json();
+        if (data.success) {
+          menuData = data;
+          renderCategories();
+          renderMenu('all');
+        }
+      } catch (e) {
+        document.getElementById('menuContent').innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><p>تعذر تحميل القائمة. حاول مرة أخرى.</p></div>`;
+      }
+    }
+
+    function renderCategories() {
+      const scroll = document.getElementById('catScroll');
+      scroll.innerHTML = `<button class="cat-pill active" data-cat="all" onclick="filterCat('all',this)">🌟 الكل</button>`;
+      
+      // New categories
+      menuData.grouped.forEach(cat => {
+        if (cat.items && cat.items.length > 0) {
+          const btn = document.createElement('button');
+          btn.className = 'cat-pill';
+          btn.setAttribute('data-cat', 'cat_' + cat.id);
+          btn.innerHTML = `${cat.icon || '☕'} ${cat.name}`;
+          btn.onclick = () => filterCat('cat_' + cat.id, btn);
+          scroll.appendChild(btn);
+        }
+      });
+
+      // Legacy departments
+      const depts = [...new Set((menuData.legacy_menu || []).map(i => i.category || 'BARISTA'))];
+      depts.forEach(dept => {
+        const btn = document.createElement('button');
+        btn.className = 'cat-pill';
+        btn.setAttribute('data-cat', 'dept_' + dept);
+        btn.innerHTML = `${DEPT_EMOJI[dept] || '☕'} ${deptLabel(dept)}`;
+        btn.onclick = () => filterCat('dept_' + dept, btn);
+        scroll.appendChild(btn);
+      });
+    }
+
+    function deptLabel(d) {
+      return { BARISTA: 'مشروبات', KITCHEN: 'مطبخ', SHISHA: 'شيشة' }[d] || d;
+    }
+
+    function filterCat(cat, btn) {
+      currentCategory = cat;
+      document.querySelectorAll('.cat-pill').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      renderMenu(cat);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function getCartQty(itemName) {
+      const ci = cart.find(c => c.item_name === itemName);
+      return ci ? ci.quantity : 0;
+    }
+
+    function renderMenu(catFilter) {
+      const content = document.getElementById('menuContent');
+      content.innerHTML = '';
+
+      // New structured items
+      const cats = catFilter === 'all' 
+        ? menuData.grouped 
+        : menuData.grouped.filter(c => catFilter === 'cat_' + c.id);
+      
+      let hasContent = false;
+      cats.forEach(cat => {
+        const visibleItems = cat.items || [];
+        if (visibleItems.length === 0) return;
+        hasContent = true;
+        const section = document.createElement('section');
+        section.className = 'section';
+        section.setAttribute('data-section', 'cat_' + cat.id);
+        section.innerHTML = `<div class="section-title">${cat.icon || '☕'} ${cat.name}</div>`;
+        const grid = document.createElement('div');
+        grid.className = 'items-grid';
+        visibleItems.forEach(item => {
+          grid.appendChild(makeItemCard(item.name, item.base_price, cat.icon || '☕', item.department, !item.is_available));
+        });
+        section.appendChild(grid);
+        content.appendChild(section);
+      });
+
+      // Legacy items
+      let legacyItems = menuData.legacy_menu || [];
+      if (catFilter !== 'all') {
+        if (catFilter.startsWith('dept_')) {
+          const dept = catFilter.replace('dept_', '');
+          legacyItems = legacyItems.filter(i => (i.category || 'BARISTA') === dept);
+        } else {
+          legacyItems = [];
+        }
+      }
+      
+      // Deduplicate against new items
+      const newItemNames = new Set(menuData.grouped.flatMap(c => (c.items || []).map(i => i.name)));
+      legacyItems = legacyItems.filter(i => !newItemNames.has(i.item_name || i.menu_item_name));
+      
+      if (legacyItems.length > 0) {
+        hasContent = true;
+        const byDept = {};
+        legacyItems.forEach(item => {
+          const dept = item.category || 'BARISTA';
+          if (!byDept[dept]) byDept[dept] = [];
+          byDept[dept].push(item);
+        });
+        Object.entries(byDept).forEach(([dept, items]) => {
+          if (catFilter.startsWith('dept_') && catFilter !== 'dept_' + dept) return;
+          const section = document.createElement('section');
+          section.className = 'section';
+          section.innerHTML = `<div class="section-title">${DEPT_EMOJI[dept] || '☕'} ${deptLabel(dept)}</div>`;
+          const grid = document.createElement('div');
+          grid.className = 'items-grid';
+          [...new Map(items.map(i => [i.item_name || i.menu_item_name, i])).values()].forEach(item => {
+            const name = item.item_name || item.menu_item_name;
+            const price = item.price || 0;
+            grid.appendChild(makeItemCard(name, price, DEPT_EMOJI[dept] || '☕', dept, false));
+          });
+          section.appendChild(grid);
+          content.appendChild(section);
+        });
+      }
+
+      if (!hasContent) {
+        content.innerHTML = `<div class="empty-state"><div class="empty-icon">🔍</div><p>لا توجد أصناف في هذا التصنيف</p></div>`;
+      }
+    }
+
+    function makeItemCard(name, price, emoji, dept, unavailable) {
+      const card = document.createElement('div');
+      card.className = 'item-card' + (getCartQty(name) > 0 ? ' in-cart' : '');
+      card.setAttribute('data-name', name);
+      
+      const priceStr = price > 0 ? `${price.toFixed(0)} <span>ج.م</span>` : `<span>السعر يختلف</span>`;
+      
+      card.innerHTML = `
+        <div class="item-img-placeholder">${emoji}</div>
+        <div class="item-body">
+          <div class="item-name">${name}</div>
+          <div class="item-price">${priceStr}</div>
+        </div>
+        ${unavailable ? '<div class="unavailable-badge">غير متاح</div>' : ''}
+      `;
+      
+      if (!unavailable) {
+        const qty = getCartQty(name);
+        if (qty > 0) {
+          const qtyCtrl = document.createElement('div');
+          qtyCtrl.className = 'item-qty-control';
+          qtyCtrl.innerHTML = `
+            <button class="qty-btn" onclick="event.stopPropagation();changeQty('${name}',${price},'${dept}',-1)">−</button>
+            <span class="qty-num">${qty}</span>
+            <button class="qty-btn" onclick="event.stopPropagation();changeQty('${name}',${price},'${dept}',1)">+</button>
+          `;
+          card.appendChild(qtyCtrl);
+        }
+        card.onclick = () => { if (getCartQty(name) === 0) changeQty(name, price, dept, 1); };
+      }
+      
+      return card;
+    }
+
+    function changeQty(name, price, dept, delta) {
+      const idx = cart.findIndex(c => c.item_name === name);
+      if (idx === -1) {
+        if (delta > 0) cart.push({ item_name: name, price: price || 0, quantity: 1, department: dept });
+      } else {
+        cart[idx].quantity += delta;
+        if (cart[idx].quantity <= 0) cart.splice(idx, 1);
+      }
+      renderMenu(currentCategory);
+      updateCartBar();
+    }
+
+    function updateCartBar() {
+      const total = cart.reduce((s, i) => s + i.price * i.quantity, 0);
+      const count = cart.reduce((s, i) => s + i.quantity, 0);
+      const bar = document.getElementById('cartBar');
+      document.getElementById('cartCountBadge').textContent = `${count} ${count === 1 ? 'عنصر' : 'عناصر'}`;
+      document.getElementById('cartTotalBadge').textContent = `${total.toFixed(0)} ج`;
+      bar.classList.toggle('visible', cart.length > 0);
+    }
+
+    function openCart() {
+      const list = document.getElementById('cartItemsList');
+      list.innerHTML = cart.map(item => `
+        <div class="cart-item-row">
+          <div class="cart-item-info">
+            <div class="cart-item-name">${item.item_name}</div>
+            <div class="cart-item-price">${item.price.toFixed(0)} ج × ${item.quantity} = ${(item.price * item.quantity).toFixed(0)} ج</div>
+          </div>
+          <div class="cart-item-controls">
+            <button onclick="changeQty('${item.item_name}',${item.price},'${item.department}',-1)" style="background:none;border:none;color:#ef4444;font-size:18px;font-weight:700;cursor:pointer;">−</button>
+            <span style="font-weight:800;min-width:20px;text-align:center;">${item.quantity}</span>
+            <button onclick="changeQty('${item.item_name}',${item.price},'${item.department}',1)" style="background:none;border:none;color:#10b981;font-size:18px;font-weight:700;cursor:pointer;">+</button>
+          </div>
+        </div>
+      `).join('');
+
+      const total = cart.reduce((s, i) => s + i.price * i.quantity, 0);
+      const count = cart.reduce((s, i) => s + i.quantity, 0);
+      document.getElementById('cartSummary').innerHTML = `
+        <div class="cart-summary-row"><span>عدد الأصناف</span><span>${count} عنصر</span></div>
+        <div class="cart-summary-row total"><span>الإجمالي</span><span>${total.toFixed(2)} ج.م</span></div>
+      `;
+
+      document.getElementById('cartModal').classList.add('open');
+    }
+
+    function closeCartIfOutside(e) {
+      if (e.target === document.getElementById('cartModal')) {
+        document.getElementById('cartModal').classList.remove('open');
+      }
+    }
+
+    async function placeOrder() {
+      if (cart.length === 0) return;
+      const btn = document.getElementById('placeOrderBtn');
+      btn.disabled = true;
+      btn.textContent = '⏳ جاري الإرسال...';
+      const notes = document.getElementById('orderNotes').value;
+
+      try {
+        let lastOrderId = null;
+        for (const item of cart) {
+          const res = await fetch('/api/public/order', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              item_name: item.item_name,
+              quantity: item.quantity,
+              price: item.price,
+              table_number: tableNumber,
+              item_notes: notes,
+              order_type: tableNumber > 0 ? 'QR' : 'TAKEAWAY'
+            })
+          });
+          const data = await res.json();
+          if (!data.success) throw new Error(data.error || 'خطأ في الإرسال');
+          lastOrderId = data.order?.id;
+        }
+
+        // Show success
+        document.getElementById('cartModal').classList.remove('open');
+        document.getElementById('successRef').textContent = lastOrderId ? `رقم الطلب: #${lastOrderId}` : '';
+        document.getElementById('successOverlay').classList.add('open');
+        cart = [];
+        updateCartBar();
+
+      } catch (err) {
+        btn.disabled = false;
+        btn.textContent = 'إرسال الطلب للمطبخ 🚀';
+        alert('حدث خطأ: ' + err.message);
+      }
+    }
+
+    function resetAll() {
+      document.getElementById('successOverlay').classList.remove('open');
+      document.getElementById('orderNotes').value = '';
+      loadMenu();
+    }
+
+    loadMenu();
+  </script>
+</body>
+</html>

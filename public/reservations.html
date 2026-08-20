@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>الحجوزات - كافيه مزاج</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: 'Tajawal', sans-serif; background: #0f172a; color: #f8fafc; }
+    .modal-bg { background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); }
+    .status-CONFIRMED { background: rgba(59,130,246,0.2); color: #60a5fa; border-color: #3b82f655; }
+    .status-SEATED { background: rgba(16,185,129,0.2); color: #34d399; border-color: #10b98155; }
+    .status-CANCELLED { background: rgba(239,68,68,0.15); color: #f87171; border-color: #ef444455; }
+    .status-NO_SHOW { background: rgba(245,158,11,0.15); color: #fbbf24; border-color: #f59e0b55; }
+    .status-COMPLETED { background: rgba(100,116,139,0.2); color: #94a3b8; border-color: #64748b55; }
+    .res-card { transition: all 0.2s; }
+    .res-card:hover { border-color: #f59e0b55; transform: translateY(-1px); }
+  </style>
+</head>
+<body class="min-h-screen">
+
+  <!-- Header -->
+  <header class="bg-slate-900 border-b border-slate-800 px-6 py-4 flex items-center justify-between sticky top-0 z-50">
+    <div class="flex items-center gap-3">
+      <a href="portal.html" class="text-slate-400 hover:text-amber-400 text-2xl transition-colors">←</a>
+      <div>
+        <h1 class="text-xl font-bold text-white">📅 الحجوزات</h1>
+        <p class="text-xs text-slate-400">إدارة حجوزات الطاولات والمجموعات</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-3">
+      <input id="dateFilter" type="date" onchange="loadReservations()" 
+        class="bg-slate-800 border border-slate-700 text-white rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-amber-500">
+      <button onclick="openAddModal()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-5 py-2.5 rounded-xl transition-colors">
+        ➕ حجز جديد
+      </button>
+    </div>
+  </header>
+
+  <!-- Stats -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 p-6 pb-0">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+      <p class="text-slate-400 text-xs mb-1">مؤكد</p>
+      <p class="text-2xl font-black text-blue-400" id="statConfirmed">0</p>
+    </div>
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+      <p class="text-slate-400 text-xs mb-1">جالس الآن</p>
+      <p class="text-2xl font-black text-emerald-400" id="statSeated">0</p>
+    </div>
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+      <p class="text-slate-400 text-xs mb-1">لم يحضر</p>
+      <p class="text-2xl font-black text-amber-400" id="statNoShow">0</p>
+    </div>
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+      <p class="text-slate-400 text-xs mb-1">إجمالي أشخاص</p>
+      <p class="text-2xl font-black text-purple-400" id="statPax">0</p>
+    </div>
+  </div>
+
+  <!-- Reservations Grid -->
+  <div class="p-6">
+    <div id="reservationsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <p class="col-span-3 text-center text-slate-500 py-16">جاري التحميل...</p>
+    </div>
+  </div>
+
+  <!-- Add Modal -->
+  <div id="addModal" class="hidden fixed inset-0 z-50 flex items-center justify-center modal-bg p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md p-6">
+      <h3 class="text-lg font-bold text-white mb-5">📅 حجز جديد</h3>
+      <div class="space-y-4">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-slate-400 text-sm mb-1 block">اسم العميل *</label>
+            <input id="resName" type="text" placeholder="محمد أحمد" class="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500">
+          </div>
+          <div>
+            <label class="text-slate-400 text-sm mb-1 block">رقم الهاتف</label>
+            <input id="resPhone" type="tel" placeholder="01xxxxxxxxx" class="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500">
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-slate-400 text-sm mb-1 block">موعد الحجز *</label>
+            <input id="resDatetime" type="datetime-local" class="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500">
+          </div>
+          <div>
+            <label class="text-slate-400 text-sm mb-1 block">عدد الأشخاص</label>
+            <input id="resPartySize" type="number" value="2" min="1" max="50" class="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500">
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-slate-400 text-sm mb-1 block">رقم الطاولة</label>
+            <input id="resTable" type="number" min="1" max="50" placeholder="اختياري" class="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500">
+          </div>
+          <div>
+            <label class="text-slate-400 text-sm mb-1 block">المدة (دقائق)</label>
+            <input id="resDuration" type="number" value="90" min="30" step="15" class="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500">
+          </div>
+        </div>
+        <div>
+          <label class="text-slate-400 text-sm mb-1 block">ملاحظات</label>
+          <textarea id="resNotes" rows="2" placeholder="مناسبة خاصة، طلبات خاصة..." class="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500 resize-none"></textarea>
+        </div>
+      </div>
+      <div class="flex gap-3 mt-5">
+        <button onclick="saveReservation()" class="flex-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3 rounded-xl transition-colors">💾 حفظ الحجز</button>
+        <button onclick="closeModal()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 rounded-xl transition-colors">إلغاء</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const statusLabels = {
+      CONFIRMED: 'مؤكد', SEATED: 'جالس الآن', CANCELLED: 'ملغي', NO_SHOW: 'لم يحضر', COMPLETED: 'منتهي'
+    };
+    const statusActions = {
+      CONFIRMED: [
+        { label: '✅ أجلسه', status: 'SEATED', color: 'emerald' },
+        { label: '🚫 لم يحضر', status: 'NO_SHOW', color: 'amber' },
+        { label: '❌ إلغاء', status: 'CANCELLED', color: 'red' }
+      ],
+      SEATED: [
+        { label: '✅ أكمل الزيارة', status: 'COMPLETED', color: 'slate' }
+      ],
+      NO_SHOW: [],
+      CANCELLED: [],
+      COMPLETED: []
+    };
+
+    // Set default datetime to now + 1 hour
+    const now = new Date();
+    now.setHours(now.getHours() + 1, 0, 0, 0);
+    document.getElementById('resDatetime').value = now.toISOString().slice(0,16);
+    document.getElementById('dateFilter').value = new Date().toISOString().slice(0,10);
+
+    async function loadReservations() {
+      const date = document.getElementById('dateFilter').value;
+      try {
+        const res = await fetch('/api/reservations' + (date ? `?date=${date}` : ''));
+        const data = await res.json();
+        if (data.success) {
+          renderStats(data.reservations);
+          renderReservations(data.reservations);
+        }
+      } catch(e) { console.error(e); }
+    }
+
+    function renderStats(reservations) {
+      document.getElementById('statConfirmed').textContent = reservations.filter(r => r.status === 'CONFIRMED').length;
+      document.getElementById('statSeated').textContent = reservations.filter(r => r.status === 'SEATED').length;
+      document.getElementById('statNoShow').textContent = reservations.filter(r => r.status === 'NO_SHOW').length;
+      document.getElementById('statPax').textContent = reservations.reduce((s, r) => s + (r.party_size || 0), 0);
+    }
+
+    function renderReservations(reservations) {
+      const grid = document.getElementById('reservationsGrid');
+      if (!reservations.length) {
+        grid.innerHTML = `<div class="col-span-3 text-center py-20 text-slate-500"><div class="text-6xl mb-4">📅</div><p>لا توجد حجوزات في هذا اليوم</p></div>`;
+        return;
+      }
+      grid.innerHTML = reservations.map(r => {
+        const dt = new Date(r.reserved_at);
+        const timeStr = dt.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+        const dateStr = dt.toLocaleDateString('ar-EG', { weekday: 'long', month: 'long', day: 'numeric' });
+        const actions = statusActions[r.status] || [];
+        return `
+          <div class="res-card bg-slate-900 border border-slate-800 rounded-2xl p-5">
+            <div class="flex items-start justify-between mb-3">
+              <div>
+                <h3 class="font-bold text-white text-lg">${r.customer_name}</h3>
+                ${r.customer_phone ? `<p class="text-slate-400 text-sm font-mono">${r.customer_phone}</p>` : ''}
+              </div>
+              <span class="status-${r.status} border text-xs font-bold px-3 py-1 rounded-full">${statusLabels[r.status] || r.status}</span>
+            </div>
+            <div class="grid grid-cols-3 gap-3 mb-3">
+              <div class="bg-slate-800 rounded-xl p-2.5 text-center">
+                <div class="text-amber-400 text-lg font-black">${timeStr}</div>
+                <div class="text-slate-500 text-xs">الموعد</div>
+              </div>
+              <div class="bg-slate-800 rounded-xl p-2.5 text-center">
+                <div class="text-sky-400 text-lg font-black">${r.party_size || 2}</div>
+                <div class="text-slate-500 text-xs">أشخاص</div>
+              </div>
+              <div class="bg-slate-800 rounded-xl p-2.5 text-center">
+                <div class="text-purple-400 text-lg font-black">${r.table_number ? `#${r.table_number}` : '—'}</div>
+                <div class="text-slate-500 text-xs">طاولة</div>
+              </div>
+            </div>
+            <p class="text-slate-500 text-xs mb-3">${dateStr} · ${r.duration_minutes || 90} دقيقة</p>
+            ${r.notes ? `<div class="bg-slate-800/50 rounded-lg p-2 text-xs text-slate-400 mb-3">${r.notes}</div>` : ''}
+            ${actions.length > 0 ? `
+              <div class="flex gap-2 flex-wrap">
+                ${actions.map(a => `
+                  <button onclick="updateStatus(${r.id}, '${a.status}')" 
+                    class="flex-1 bg-${a.color}-500/10 hover:bg-${a.color}-500/20 border border-${a.color}-500/30 text-${a.color}-400 text-xs font-bold py-2 px-3 rounded-xl transition-all">
+                    ${a.label}
+                  </button>
+                `).join('')}
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function updateStatus(id, status) {
+      try {
+        const res = await fetch(`/api/reservations/${id}/status`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status })
+        });
+        const data = await res.json();
+        if (data.success) loadReservations();
+      } catch(e) { alert('حدث خطأ'); }
+    }
+
+    function openAddModal() {
+      document.getElementById('addModal').classList.remove('hidden');
+    }
+    function closeModal() {
+      document.getElementById('addModal').classList.add('hidden');
+    }
+
+    async function saveReservation() {
+      const name = document.getElementById('resName').value.trim();
+      const datetime = document.getElementById('resDatetime').value;
+      if (!name || !datetime) { alert('الاسم والموعد مطلوبان'); return; }
+      const body = {
+        customer_name: name,
+        customer_phone: document.getElementById('resPhone').value.trim(),
+        table_number: parseInt(document.getElementById('resTable').value) || null,
+        party_size: parseInt(document.getElementById('resPartySize').value) || 2,
+        reserved_at: datetime,
+        duration_minutes: parseInt(document.getElementById('resDuration').value) || 90,
+        notes: document.getElementById('resNotes').value.trim()
+      };
+      try {
+        const res = await fetch('/api/reservations', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        const data = await res.json();
+        if (data.success) {
+          closeModal();
+          document.getElementById('resName').value = '';
+          document.getElementById('resPhone').value = '';
+          document.getElementById('resNotes').value = '';
+          loadReservations();
+        } else {
+          alert('خطأ: ' + (data.error || 'حدث خطأ'));
+        }
+      } catch(e) { alert('خطأ في الاتصال'); }
+    }
+
+    loadReservations();
+    setInterval(loadReservations, 30000);
+  </script>
+</body>
+</html>

@@ -42,6 +42,11 @@ db.serialize(() => {
   db.run(`ALTER TABLE orders ADD COLUMN roast_type TEXT`, () => {});
   db.run(`ALTER TABLE orders ADD COLUMN kds_status TEXT DEFAULT 'PENDING'`, () => {});
   db.run(`ALTER TABLE orders ADD COLUMN edit_request TEXT DEFAULT NULL`, () => {});
+  db.run(`ALTER TABLE orders ADD COLUMN session_id INTEGER`, () => {});
+  db.run(`ALTER TABLE orders ADD COLUMN order_type TEXT DEFAULT 'DINE_IN'`, () => {});
+  db.run(`ALTER TABLE orders ADD COLUMN item_notes TEXT`, () => {});
+  db.run(`ALTER TABLE orders ADD COLUMN addons TEXT`, () => {});
+  db.run(`ALTER TABLE orders ADD COLUMN variant TEXT`, () => {});
 
   // Universal Audit Logs Table
   db.run(`
@@ -144,6 +149,129 @@ db.serialize(() => {
       FOREIGN KEY(inventory_id) REFERENCES inventory(id) ON DELETE SET NULL
     )
   `);
+  db.run(`ALTER TABLE purchases ADD COLUMN supplier_id INTEGER`, () => {});
+  db.run(`ALTER TABLE purchases ADD COLUMN invoice_ref TEXT`, () => {});
+  db.run(`ALTER TABLE purchases ADD COLUMN notes TEXT`, () => {});
+
+  // Suppliers Table (موردين)
+  db.run(`
+    CREATE TABLE IF NOT EXISTS suppliers (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      contact_name TEXT,
+      phone TEXT,
+      email TEXT,
+      address TEXT,
+      notes TEXT,
+      is_active INTEGER DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // Order Sessions Table (parent ticket grouping)
+  db.run(`
+    CREATE TABLE IF NOT EXISTS order_sessions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      session_ref TEXT,
+      order_type TEXT DEFAULT 'DINE_IN',
+      table_number INTEGER DEFAULT 0,
+      customer_phone TEXT,
+      delivery_address TEXT,
+      delivery_fee REAL DEFAULT 0,
+      discount_amount REAL DEFAULT 0,
+      discount_reason TEXT,
+      tax_rate REAL DEFAULT 0,
+      service_charge REAL DEFAULT 0,
+      status TEXT DEFAULT 'OPEN',
+      notes TEXT,
+      created_by INTEGER,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      closed_at DATETIME
+    )
+  `);
+
+  // Menu Categories Table
+  db.run(`
+    CREATE TABLE IF NOT EXISTS menu_categories (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT UNIQUE NOT NULL,
+      name_en TEXT,
+      icon TEXT DEFAULT '☕',
+      color TEXT DEFAULT '#f59e0b',
+      sort_order INTEGER DEFAULT 0,
+      is_active INTEGER DEFAULT 1
+    )
+  `);
+
+  // Menu Items Table (proper structured menu)
+  db.run(`
+    CREATE TABLE IF NOT EXISTS menu_items (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      category_id INTEGER,
+      name TEXT NOT NULL,
+      name_en TEXT,
+      description TEXT,
+      base_price REAL DEFAULT 0,
+      image_url TEXT,
+      is_available INTEGER DEFAULT 1,
+      is_featured INTEGER DEFAULT 0,
+      department TEXT DEFAULT 'BARISTA',
+      sort_order INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(category_id) REFERENCES menu_categories(id) ON DELETE SET NULL
+    )
+  `);
+
+  // Item Variants Table (sizes, temperatures, etc.)
+  db.run(`
+    CREATE TABLE IF NOT EXISTS item_variants (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      menu_item_id INTEGER NOT NULL,
+      name TEXT NOT NULL,
+      price_delta REAL DEFAULT 0,
+      FOREIGN KEY(menu_item_id) REFERENCES menu_items(id) ON DELETE CASCADE
+    )
+  `);
+
+  // Item Addons Table (extras, modifiers)
+  db.run(`
+    CREATE TABLE IF NOT EXISTS item_addons (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      menu_item_id INTEGER NOT NULL,
+      name TEXT NOT NULL,
+      price REAL DEFAULT 0,
+      FOREIGN KEY(menu_item_id) REFERENCES menu_items(id) ON DELETE CASCADE
+    )
+  `);
+
+  // Customer Feedback Table
+  db.run(`
+    CREATE TABLE IF NOT EXISTS customer_feedback (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      customer_phone TEXT,
+      session_id INTEGER,
+      rating INTEGER DEFAULT 5,
+      comment TEXT,
+      category TEXT DEFAULT 'GENERAL',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // Reservations Table
+  db.run(`
+    CREATE TABLE IF NOT EXISTS reservations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      customer_name TEXT NOT NULL,
+      customer_phone TEXT,
+      table_number INTEGER,
+      party_size INTEGER DEFAULT 2,
+      reserved_at DATETIME NOT NULL,
+      duration_minutes INTEGER DEFAULT 90,
+      status TEXT DEFAULT 'CONFIRMED',
+      notes TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
 
   // Shifts Table (Clock In / Clock Out)
   db.run(`
@@ -203,6 +331,11 @@ db.serialize(() => {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
+  db.run(`ALTER TABLE customers ADD COLUMN visit_count INTEGER DEFAULT 0`, () => {});
+  db.run(`ALTER TABLE customers ADD COLUMN last_visit DATETIME`, () => {});
+  db.run(`ALTER TABLE customers ADD COLUMN preferences TEXT`, () => {});
+  db.run(`ALTER TABLE customers ADD COLUMN marketing_opt_in INTEGER DEFAULT 1`, () => {});
+  db.run(`ALTER TABLE customers ADD COLUMN email TEXT`, () => {});
 
   // Shareholder Ledger Table (جاري الشركاء وحساب الأرباح)
   db.run(`
@@ -250,6 +383,9 @@ db.serialize(() => {
       department TEXT DEFAULT 'BARISTA'
     )
   `);
+  db.run(`ALTER TABLE inventory ADD COLUMN min_stock_level REAL DEFAULT 0`, () => {});
+  db.run(`ALTER TABLE inventory ADD COLUMN unit_cost REAL DEFAULT 0`, () => {});
+  db.run(`ALTER TABLE inventory ADD COLUMN supplier_id INTEGER`, () => {});
 
   // Recipes Table (BOM Relationships)
   db.run(`
@@ -599,6 +735,19 @@ function logWaste(inventoryId, itemName, quantity, reason = '', department = 'BA
           });
         });
       });
+    });
+  });
+}
+
+/**
+ * Fetch Waste Logs
+ */
+function getWasteLogs(limit = 100) {
+  return new Promise((resolve, reject) => {
+    const sql = `SELECT * FROM waste_log ORDER BY created_at DESC LIMIT ?`;
+    db.all(sql, [limit], (err, rows) => {
+      if (err) return reject(err);
+      resolve(rows || []);
     });
   });
 }
@@ -2046,6 +2195,463 @@ function updateTableStatusOnCheckout(table_number) {
   });
 }
 
+// ============================================================
+// SUPPLIERS CRUD
+// ============================================================
+function getSuppliers() {
+  return new Promise((resolve, reject) => {
+    db.all(`SELECT * FROM suppliers ORDER BY name ASC`, [], (err, rows) => {
+      if (err) return reject(err);
+      resolve(rows || []);
+    });
+  });
+}
+
+function addSupplier(name, contactName, phone, email, address, notes) {
+  return new Promise((resolve, reject) => {
+    const sql = `INSERT INTO suppliers (name, contact_name, phone, email, address, notes) VALUES (?, ?, ?, ?, ?, ?)`;
+    db.run(sql, [name, contactName || null, phone || null, email || null, address || null, notes || null], function(err) {
+      if (err) return reject(err);
+      resolve({ id: this.lastID, name, contact_name: contactName, phone, email, address, notes });
+    });
+  });
+}
+
+function updateSupplier(id, fields) {
+  return new Promise((resolve, reject) => {
+    const { name, contact_name, phone, email, address, notes, is_active } = fields;
+    const sql = `UPDATE suppliers SET name=COALESCE(?,name), contact_name=COALESCE(?,contact_name), phone=COALESCE(?,phone), email=COALESCE(?,email), address=COALESCE(?,address), notes=COALESCE(?,notes), is_active=COALESCE(?,is_active) WHERE id=?`;
+    db.run(sql, [name||null, contact_name||null, phone||null, email||null, address||null, notes||null, is_active!==undefined?is_active:null, id], function(err) {
+      if (err) return reject(err);
+      resolve({ success: true, id });
+    });
+  });
+}
+
+function deleteSupplier(id) {
+  return new Promise((resolve, reject) => {
+    db.run(`UPDATE suppliers SET is_active = 0 WHERE id = ?`, [id], function(err) {
+      if (err) return reject(err);
+      resolve({ success: true, id });
+    });
+  });
+}
+
+// ============================================================
+// MENU CATEGORIES CRUD
+// ============================================================
+function getMenuCategories() {
+  return new Promise((resolve, reject) => {
+    db.all(`SELECT * FROM menu_categories ORDER BY sort_order ASC, id ASC`, [], (err, rows) => {
+      if (err) return reject(err);
+      resolve(rows || []);
+    });
+  });
+}
+
+function addMenuCategory(name, nameEn, icon, color, sortOrder) {
+  return new Promise((resolve, reject) => {
+    const sql = `INSERT INTO menu_categories (name, name_en, icon, color, sort_order) VALUES (?, ?, ?, ?, ?)`;
+    db.run(sql, [name, nameEn||null, icon||'☕', color||'#f59e0b', sortOrder||0], function(err) {
+      if (err) return reject(err);
+      resolve({ id: this.lastID, name, name_en: nameEn, icon, color, sort_order: sortOrder });
+    });
+  });
+}
+
+function updateMenuCategory(id, fields) {
+  return new Promise((resolve, reject) => {
+    const { name, name_en, icon, color, sort_order, is_active } = fields;
+    const sql = `UPDATE menu_categories SET name=COALESCE(?,name), name_en=COALESCE(?,name_en), icon=COALESCE(?,icon), color=COALESCE(?,color), sort_order=COALESCE(?,sort_order), is_active=COALESCE(?,is_active) WHERE id=?`;
+    db.run(sql, [name||null, name_en||null, icon||null, color||null, sort_order!=null?sort_order:null, is_active!=null?is_active:null, id], function(err) {
+      if (err) return reject(err);
+      resolve({ success: true, id });
+    });
+  });
+}
+
+function deleteMenuCategory(id) {
+  return new Promise((resolve, reject) => {
+    db.run(`UPDATE menu_categories SET is_active = 0 WHERE id = ?`, [id], function(err) {
+      if (err) return reject(err);
+      resolve({ success: true, id });
+    });
+  });
+}
+
+// ============================================================
+// MENU ITEMS CRUD (new structured table)
+// ============================================================
+function getMenuItems(categoryId = null) {
+  return new Promise((resolve, reject) => {
+    let sql = `
+      SELECT mi.*, mc.name as category_name, mc.icon as category_icon, mc.color as category_color
+      FROM menu_items mi
+      LEFT JOIN menu_categories mc ON mi.category_id = mc.id
+      WHERE 1=1
+    `;
+    const params = [];
+    if (categoryId) { sql += ` AND mi.category_id = ?`; params.push(categoryId); }
+    sql += ` ORDER BY mi.sort_order ASC, mi.id ASC`;
+    db.all(sql, params, async (err, items) => {
+      if (err) return reject(err);
+      // Fetch variants and addons for each item
+      const result = [];
+      for (const item of (items || [])) {
+        const variants = await new Promise((res, rej) => {
+          db.all(`SELECT * FROM item_variants WHERE menu_item_id = ?`, [item.id], (e, rows) => e ? rej(e) : res(rows || []));
+        });
+        const addons = await new Promise((res, rej) => {
+          db.all(`SELECT * FROM item_addons WHERE menu_item_id = ?`, [item.id], (e, rows) => e ? rej(e) : res(rows || []));
+        });
+        result.push({ ...item, variants, addons });
+      }
+      resolve(result);
+    });
+  });
+}
+
+function addMenuItemNew(categoryId, name, nameEn, description, basePrice, department, isAvailable, isFeatured, sortOrder) {
+  return new Promise((resolve, reject) => {
+    const sql = `INSERT INTO menu_items (category_id, name, name_en, description, base_price, department, is_available, is_featured, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+    db.run(sql, [categoryId||null, name, nameEn||null, description||null, Number(basePrice)||0, department||'BARISTA', isAvailable!=null?isAvailable:1, isFeatured||0, sortOrder||0], function(err) {
+      if (err) return reject(err);
+      const itemId = this.lastID;
+      // Also sync to legacy recipes table for backward compat
+      db.run(`INSERT OR IGNORE INTO recipes (menu_item_name, inventory_id, quantity_required, category, price) VALUES (?, NULL, 0, ?, ?)`,
+        [name, (department||'BARISTA').toUpperCase(), Number(basePrice)||0], () => {});
+      resolve({ id: itemId, name, base_price: Number(basePrice)||0 });
+    });
+  });
+}
+
+function updateMenuItem(id, fields) {
+  return new Promise((resolve, reject) => {
+    const { name, name_en, description, base_price, category_id, department, is_available, is_featured, sort_order } = fields;
+    const sql = `UPDATE menu_items SET 
+      name=COALESCE(?,name), name_en=COALESCE(?,name_en), description=COALESCE(?,description),
+      base_price=COALESCE(?,base_price), category_id=COALESCE(?,category_id),
+      department=COALESCE(?,department), is_available=COALESCE(?,is_available),
+      is_featured=COALESCE(?,is_featured), sort_order=COALESCE(?,sort_order)
+      WHERE id=?`;
+    db.run(sql, [name||null, name_en||null, description||null, base_price!=null?base_price:null,
+      category_id||null, department||null, is_available!=null?is_available:null,
+      is_featured!=null?is_featured:null, sort_order!=null?sort_order:null, id], function(err) {
+      if (err) return reject(err);
+      // Sync price to recipes for backward compat
+      if (name && base_price != null) {
+        db.run(`UPDATE recipes SET price=?, category=? WHERE menu_item_name=?`, [base_price, department||'BARISTA', name], () => {});
+      }
+      resolve({ success: true, id });
+    });
+  });
+}
+
+function deleteMenuItem(id) {
+  return new Promise((resolve, reject) => {
+    db.get(`SELECT name FROM menu_items WHERE id=?`, [id], (err, row) => {
+      if (err) return reject(err);
+      db.run(`DELETE FROM menu_items WHERE id = ?`, [id], function(err2) {
+        if (err2) return reject(err2);
+        resolve({ success: true, id });
+      });
+    });
+  });
+}
+
+// Variant and addon management
+function addItemVariant(menuItemId, name, priceDelta) {
+  return new Promise((resolve, reject) => {
+    db.run(`INSERT INTO item_variants (menu_item_id, name, price_delta) VALUES (?, ?, ?)`,
+      [menuItemId, name, Number(priceDelta)||0], function(err) {
+        if (err) return reject(err);
+        resolve({ id: this.lastID, menu_item_id: menuItemId, name, price_delta: Number(priceDelta)||0 });
+      });
+  });
+}
+
+function deleteItemVariant(id) {
+  return new Promise((resolve, reject) => {
+    db.run(`DELETE FROM item_variants WHERE id = ?`, [id], function(err) {
+      if (err) return reject(err);
+      resolve({ success: true, id });
+    });
+  });
+}
+
+function addItemAddon(menuItemId, name, price) {
+  return new Promise((resolve, reject) => {
+    db.run(`INSERT INTO item_addons (menu_item_id, name, price) VALUES (?, ?, ?)`,
+      [menuItemId, name, Number(price)||0], function(err) {
+        if (err) return reject(err);
+        resolve({ id: this.lastID, menu_item_id: menuItemId, name, price: Number(price)||0 });
+      });
+  });
+}
+
+function deleteItemAddon(id) {
+  return new Promise((resolve, reject) => {
+    db.run(`DELETE FROM item_addons WHERE id = ?`, [id], function(err) {
+      if (err) return reject(err);
+      resolve({ success: true, id });
+    });
+  });
+}
+
+// ============================================================
+// ORDER SESSIONS
+// ============================================================
+function createOrderSession(orderType, tableNumber, customerPhone, notes, createdBy, deliveryAddress, deliveryFee) {
+  return new Promise((resolve, reject) => {
+    const type = (orderType || 'DINE_IN').toUpperCase();
+    const tNum = parseInt(tableNumber, 10) || 0;
+    const now = new Date();
+    const ref = `${type.charAt(0)}${tNum > 0 ? tNum : '0'}-${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}-${String(this ? this.lastID : Math.floor(Math.random()*9999)).padStart(4,'0')}`;
+    const sql = `INSERT INTO order_sessions (session_ref, order_type, table_number, customer_phone, notes, created_by, delivery_address, delivery_fee) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
+    db.run(sql, [ref, type, tNum, customerPhone||null, notes||null, createdBy||null, deliveryAddress||null, Number(deliveryFee)||0], function(err) {
+      if (err) return reject(err);
+      const sessionId = this.lastID;
+      const finalRef = `${type.charAt(0)}${tNum > 0 ? tNum : '0'}-${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}-${String(sessionId).padStart(4,'0')}`;
+      db.run(`UPDATE order_sessions SET session_ref=? WHERE id=?`, [finalRef, sessionId], () => {});
+      resolve({ id: sessionId, session_ref: finalRef, order_type: type, table_number: tNum });
+    });
+  });
+}
+
+function getOrderSession(sessionId) {
+  return new Promise((resolve, reject) => {
+    db.get(`SELECT * FROM order_sessions WHERE id=?`, [sessionId], (err, row) => {
+      if (err) return reject(err);
+      resolve(row || null);
+    });
+  });
+}
+
+function closeOrderSession(sessionId) {
+  return new Promise((resolve, reject) => {
+    db.run(`UPDATE order_sessions SET status='CLOSED', closed_at=CURRENT_TIMESTAMP WHERE id=?`, [sessionId], function(err) {
+      if (err) return reject(err);
+      resolve({ success: true, id: sessionId });
+    });
+  });
+}
+
+function getOpenSessionsForTable(tableNumber) {
+  return new Promise((resolve, reject) => {
+    db.all(`SELECT * FROM order_sessions WHERE table_number=? AND status='OPEN' ORDER BY id DESC`, [tableNumber], (err, rows) => {
+      if (err) return reject(err);
+      resolve(rows || []);
+    });
+  });
+}
+
+// ============================================================
+// RESERVATIONS
+// ============================================================
+function getReservations(date) {
+  return new Promise((resolve, reject) => {
+    let sql = `SELECT * FROM reservations WHERE status != 'CANCELLED' ORDER BY reserved_at ASC`;
+    const params = [];
+    if (date) {
+      sql = `SELECT * FROM reservations WHERE date(reserved_at) = date(?) AND status != 'CANCELLED' ORDER BY reserved_at ASC`;
+      params.push(date);
+    }
+    db.all(sql, params, (err, rows) => {
+      if (err) return reject(err);
+      resolve(rows || []);
+    });
+  });
+}
+
+function createReservation(customerName, customerPhone, tableNumber, partySize, reservedAt, durationMinutes, notes) {
+  return new Promise((resolve, reject) => {
+    const sql = `INSERT INTO reservations (customer_name, customer_phone, table_number, party_size, reserved_at, duration_minutes, notes) VALUES (?, ?, ?, ?, ?, ?, ?)`;
+    db.run(sql, [customerName, customerPhone||null, tableNumber||null, partySize||2, reservedAt, durationMinutes||90, notes||null], function(err) {
+      if (err) return reject(err);
+      resolve({ id: this.lastID, customer_name: customerName, reserved_at: reservedAt });
+    });
+  });
+}
+
+function updateReservationStatus(id, status) {
+  return new Promise((resolve, reject) => {
+    const validStatuses = ['CONFIRMED', 'SEATED', 'CANCELLED', 'NO_SHOW', 'COMPLETED'];
+    const s = String(status).toUpperCase();
+    if (!validStatuses.includes(s)) return reject(new Error('حالة الحجز غير صالحة'));
+    db.run(`UPDATE reservations SET status=? WHERE id=?`, [s, id], function(err) {
+      if (err) return reject(err);
+      resolve({ success: true, id, status: s });
+    });
+  });
+}
+
+// ============================================================
+// CUSTOMER CRM
+// ============================================================
+function getAllCustomers(search) {
+  return new Promise((resolve, reject) => {
+    let sql = `SELECT * FROM customers ORDER BY total_spent DESC`;
+    const params = [];
+    if (search) {
+      sql = `SELECT * FROM customers WHERE phone LIKE ? OR name LIKE ? ORDER BY total_spent DESC`;
+      params.push(`%${search}%`, `%${search}%`);
+    }
+    db.all(sql, params, (err, rows) => {
+      if (err) return reject(err);
+      resolve(rows || []);
+    });
+  });
+}
+
+function addCustomerFeedback(customerPhone, sessionId, rating, comment, category) {
+  return new Promise((resolve, reject) => {
+    const sql = `INSERT INTO customer_feedback (customer_phone, session_id, rating, comment, category) VALUES (?, ?, ?, ?, ?)`;
+    const r = Math.min(5, Math.max(1, parseInt(rating, 10) || 5));
+    db.run(sql, [customerPhone||null, sessionId||null, r, comment||null, (category||'GENERAL').toUpperCase()], function(err) {
+      if (err) return reject(err);
+      resolve({ id: this.lastID, customer_phone: customerPhone, rating: r, comment });
+    });
+  });
+}
+
+function getCustomerFeedback(customerPhone) {
+  return new Promise((resolve, reject) => {
+    const sql = customerPhone
+      ? `SELECT * FROM customer_feedback WHERE customer_phone=? ORDER BY id DESC`
+      : `SELECT * FROM customer_feedback ORDER BY id DESC LIMIT 100`;
+    const params = customerPhone ? [customerPhone] : [];
+    db.all(sql, params, (err, rows) => {
+      if (err) return reject(err);
+      resolve(rows || []);
+    });
+  });
+}
+
+// ============================================================
+// PROFITABILITY REPORT (COGS per item)
+// ============================================================
+function getProfitabilityReport(dateRange = 'today') {
+  return new Promise((resolve, reject) => {
+    let dateWhere = `date(o.created_at) = date('now', 'localtime')`;
+    if (dateRange === 'week') dateWhere = `date(o.created_at) >= date('now', 'localtime', '-7 days')`;
+    else if (dateRange === 'month') dateWhere = `date(o.created_at) >= date('now', 'localtime', '-30 days')`;
+
+    // Revenue per item
+    const revSql = `
+      SELECT o.item_name, SUM(o.quantity) as total_qty, SUM(o.quantity * o.price) as total_revenue
+      FROM orders o
+      WHERE ${dateWhere} AND o.status != 'VOIDED'
+      GROUP BY o.item_name
+      ORDER BY total_revenue DESC
+    `;
+
+    db.all(revSql, [], async (err, revenueRows) => {
+      if (err) return reject(err);
+
+      // For each item, compute COGS from recipes × inventory unit_cost
+      const result = [];
+      for (const item of (revenueRows || [])) {
+        const cogsSql = `
+          SELECT SUM(r.quantity_required * COALESCE(i.unit_cost, 0)) as unit_cogs
+          FROM recipes r
+          LEFT JOIN inventory i ON r.inventory_id = i.id
+          WHERE r.menu_item_name = ? AND r.inventory_id IS NOT NULL
+        `;
+        const cogsRow = await new Promise((res, rej) => {
+          db.get(cogsSql, [item.item_name], (e, row) => e ? rej(e) : res(row || { unit_cogs: 0 }));
+        });
+        const unitCogs = parseFloat(cogsRow.unit_cogs) || 0;
+        const totalCogs = unitCogs * item.total_qty;
+        const grossProfit = item.total_revenue - totalCogs;
+        const margin = item.total_revenue > 0 ? Math.round((grossProfit / item.total_revenue) * 100) : 0;
+        result.push({
+          item_name: item.item_name,
+          total_qty: item.total_qty,
+          total_revenue: Math.round(item.total_revenue * 100) / 100,
+          unit_cogs: Math.round(unitCogs * 100) / 100,
+          total_cogs: Math.round(totalCogs * 100) / 100,
+          gross_profit: Math.round(grossProfit * 100) / 100,
+          margin_pct: margin
+        });
+      }
+      resolve(result);
+    });
+  });
+}
+
+// ============================================================
+// LOW STOCK ALERTS
+// ============================================================
+function getLowStockItems() {
+  return new Promise((resolve, reject) => {
+    const sql = `
+      SELECT id, name, current_stock, min_stock_level, unit, department, unit_cost
+      FROM inventory
+      WHERE min_stock_level > 0 AND current_stock <= min_stock_level
+      ORDER BY (current_stock / min_stock_level) ASC
+    `;
+    db.all(sql, [], (err, rows) => {
+      if (err) return reject(err);
+      resolve(rows || []);
+    });
+  });
+}
+
+function updateInventorySettings(id, minStockLevel, unitCost, supplierId) {
+  return new Promise((resolve, reject) => {
+    const sql = `UPDATE inventory SET min_stock_level=COALESCE(?,min_stock_level), unit_cost=COALESCE(?,unit_cost), supplier_id=COALESCE(?,supplier_id) WHERE id=?`;
+    db.run(sql, [minStockLevel!=null?minStockLevel:null, unitCost!=null?unitCost:null, supplierId||null, id], function(err) {
+      if (err) return reject(err);
+      resolve({ success: true, id });
+    });
+  });
+}
+
+// ============================================================
+// USER MANAGEMENT CRUD
+// ============================================================
+function getAllUsers() {
+  return new Promise((resolve, reject) => {
+    db.all(`SELECT id, name, role, hourly_rate FROM users ORDER BY name ASC`, [], (err, rows) => {
+      if (err) return reject(err);
+      resolve(rows || []);
+    });
+  });
+}
+
+function createUser(name, role, pinCode, hourlyRate) {
+  return new Promise((resolve, reject) => {
+    const sql = `INSERT INTO users (name, role, pin_code, hourly_rate) VALUES (?, ?, ?, ?)`;
+    db.run(sql, [name, role, pinCode, Number(hourlyRate)||0], function(err) {
+      if (err) return reject(err);
+      logAudit(null, 'CREATE_USER', 'users', this.lastID, null, { name, role });
+      resolve({ id: this.lastID, name, role });
+    });
+  });
+}
+
+function updateUser(id, fields) {
+  return new Promise((resolve, reject) => {
+    const { name, role, pin_code, hourly_rate } = fields;
+    const sql = `UPDATE users SET name=COALESCE(?,name), role=COALESCE(?,role), pin_code=COALESCE(?,pin_code), hourly_rate=COALESCE(?,hourly_rate) WHERE id=?`;
+    db.run(sql, [name||null, role||null, pin_code||null, hourly_rate!=null?hourly_rate:null, id], function(err) {
+      if (err) return reject(err);
+      logAudit(null, 'UPDATE_USER', 'users', id, null, { name, role });
+      resolve({ success: true, id });
+    });
+  });
+}
+
+function deleteUser(id) {
+  return new Promise((resolve, reject) => {
+    db.run(`DELETE FROM users WHERE id = ?`, [id], function(err) {
+      if (err) return reject(err);
+      logAudit(null, 'DELETE_USER', 'users', id, null, null);
+      resolve({ success: true, id });
+    });
+  });
+}
+
 module.exports = {
   db,
   getMenu,
@@ -2102,8 +2708,20 @@ module.exports = {
   requestTableCheck,
   vacateTable,
   updateTableTimestampsOnOrder,
-  updateTableStatusOnCheckout
+  updateTableStatusOnCheckout,
+  // New exports
+  getWasteLogs,
+  getSuppliers, addSupplier, updateSupplier, deleteSupplier,
+  getMenuCategories, addMenuCategory, updateMenuCategory, deleteMenuCategory,
+  getMenuItems, addMenuItemNew, updateMenuItem, deleteMenuItem,
+  addItemVariant, deleteItemVariant, addItemAddon, deleteItemAddon,
+  createOrderSession, getOrderSession, closeOrderSession, getOpenSessionsForTable,
+  getReservations, createReservation, updateReservationStatus,
+  getAllCustomers, addCustomerFeedback, getCustomerFeedback,
+  getProfitabilityReport, getLowStockItems, updateInventorySettings,
+  getAllUsers, createUser, updateUser, deleteUser
 };
+
 
 
 

@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>إدارة الموردين - كافيه مزاج</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: 'Tajawal', sans-serif; background: #0f172a; color: #f8fafc; }
+    .modal-bg { background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); }
+    .supplier-card:hover { border-color: #f59e0b66; background: rgba(30,41,59,0.9); }
+    .scrollbar-thin::-webkit-scrollbar { width: 4px; }
+    .scrollbar-thin::-webkit-scrollbar-thumb { background: #334155; border-radius: 2px; }
+  </style>
+</head>
+<body class="min-h-screen">
+
+  <!-- Header -->
+  <header class="bg-slate-900 border-b border-slate-800 px-6 py-4 flex items-center justify-between sticky top-0 z-50">
+    <div class="flex items-center gap-3">
+      <a href="portal.html" class="text-slate-400 hover:text-amber-400 text-2xl transition-colors">←</a>
+      <div>
+        <h1 class="text-xl font-bold text-white">🚚 إدارة الموردين</h1>
+        <p class="text-xs text-slate-400">تتبع الموردين وتاريخ المشتريات</p>
+      </div>
+    </div>
+    <button onclick="openAddModal()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-5 py-2.5 rounded-xl flex items-center gap-2 transition-colors">
+      ➕ مورد جديد
+    </button>
+  </header>
+
+  <!-- Stats -->
+  <div class="grid grid-cols-2 md:grid-cols-3 gap-4 p-6 pb-0">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+      <p class="text-slate-400 text-xs mb-1">إجمالي الموردين</p>
+      <p class="text-3xl font-black text-amber-400" id="statCount">—</p>
+    </div>
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+      <p class="text-slate-400 text-xs mb-1">مورد نشط</p>
+      <p class="text-3xl font-black text-emerald-400" id="statActive">—</p>
+    </div>
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 col-span-2 md:col-span-1">
+      <p class="text-slate-400 text-xs mb-1">آخر إضافة</p>
+      <p class="text-xl font-black text-sky-400" id="statLatest">—</p>
+    </div>
+  </div>
+
+  <!-- Supplier Grid -->
+  <div class="p-6">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-lg font-bold text-white">الموردين</h2>
+      <input id="searchInput" type="text" placeholder="بحث..." oninput="filterSuppliers()"
+        class="bg-slate-800 border border-slate-700 text-white rounded-xl px-4 py-2 text-sm w-48 focus:outline-none focus:border-amber-500">
+    </div>
+    <div id="suppliersGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <p class="col-span-3 text-center text-slate-500 py-12">جاري التحميل...</p>
+    </div>
+  </div>
+
+  <!-- Purchases History -->
+  <div class="px-6 pb-6">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
+      <div class="p-4 border-b border-slate-800 flex items-center justify-between">
+        <h2 class="font-bold text-white">📦 تاريخ المشتريات المرتبطة بالموردين</h2>
+        <button onclick="loadPurchases()" class="text-slate-400 hover:text-amber-400 text-sm transition-colors">🔄 تحديث</button>
+      </div>
+      <div class="overflow-x-auto scrollbar-thin">
+        <table class="w-full">
+          <thead class="bg-slate-800/50">
+            <tr class="text-slate-400 text-xs">
+              <th class="text-right py-3 px-4 font-semibold">الصنف</th>
+              <th class="text-right py-3 px-4 font-semibold">المورد</th>
+              <th class="text-right py-3 px-4 font-semibold">الكمية</th>
+              <th class="text-right py-3 px-4 font-semibold">التكلفة</th>
+              <th class="text-right py-3 px-4 font-semibold">المرجع</th>
+              <th class="text-right py-3 px-4 font-semibold">التاريخ</th>
+            </tr>
+          </thead>
+          <tbody id="purchasesBody">
+            <tr><td colspan="6" class="text-center py-8 text-slate-500">جاري التحميل...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add/Edit Modal -->
+  <div id="supplierModal" class="hidden fixed inset-0 z-50 flex items-center justify-center modal-bg p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
+      <h3 id="modalTitle" class="text-lg font-bold text-white mb-5">➕ مورد جديد</h3>
+      <input type="hidden" id="editId">
+      <div class="space-y-4">
+        <div>
+          <label class="text-slate-400 text-sm mb-1 block">اسم المورد *</label>
+          <input id="supplierName" type="text" placeholder="مثال: شركة النيل للمستلزمات" class="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500">
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-slate-400 text-sm mb-1 block">اسم المسؤول</label>
+            <input id="contactName" type="text" placeholder="محمد أحمد" class="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500">
+          </div>
+          <div>
+            <label class="text-slate-400 text-sm mb-1 block">رقم الهاتف</label>
+            <input id="supplierPhone" type="tel" placeholder="01xxxxxxxxx" class="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500">
+          </div>
+        </div>
+        <div>
+          <label class="text-slate-400 text-sm mb-1 block">البريد الإلكتروني</label>
+          <input id="supplierEmail" type="email" placeholder="supplier@example.com" class="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500">
+        </div>
+        <div>
+          <label class="text-slate-400 text-sm mb-1 block">العنوان</label>
+          <input id="supplierAddress" type="text" placeholder="القاهرة، مصر" class="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500">
+        </div>
+        <div>
+          <label class="text-slate-400 text-sm mb-1 block">ملاحظات</label>
+          <textarea id="supplierNotes" rows="2" placeholder="ملاحظات خاصة بالمورد..." class="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500 resize-none"></textarea>
+        </div>
+      </div>
+      <div class="flex gap-3 mt-5">
+        <button onclick="saveSupplier()" class="flex-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3 rounded-xl transition-colors">💾 حفظ</button>
+        <button onclick="closeModal()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 rounded-xl transition-colors">إلغاء</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let allSuppliers = [];
+
+    async function loadSuppliers() {
+      try {
+        const res = await fetch('/api/suppliers');
+        const data = await res.json();
+        if (data.success) {
+          allSuppliers = data.suppliers;
+          renderStats(data.suppliers);
+          renderSuppliers(data.suppliers);
+        }
+      } catch(e) { console.error(e); }
+    }
+
+    function renderStats(suppliers) {
+      const active = suppliers.filter(s => s.is_active !== 0).length;
+      document.getElementById('statCount').textContent = suppliers.length;
+      document.getElementById('statActive').textContent = active;
+      if (suppliers.length > 0) {
+        const latest = suppliers[suppliers.length - 1];
+        document.getElementById('statLatest').textContent = latest.name.substring(0, 20);
+      } else {
+        document.getElementById('statLatest').textContent = '—';
+      }
+    }
+
+    function filterSuppliers() {
+      const q = document.getElementById('searchInput').value.toLowerCase();
+      const filtered = q ? allSuppliers.filter(s => 
+        s.name.toLowerCase().includes(q) || 
+        (s.phone && s.phone.includes(q)) ||
+        (s.contact_name && s.contact_name.toLowerCase().includes(q))
+      ) : allSuppliers;
+      renderSuppliers(filtered);
+    }
+
+    function renderSuppliers(suppliers) {
+      const grid = document.getElementById('suppliersGrid');
+      const active = suppliers.filter(s => s.is_active !== 0);
+      if (!active.length) {
+        grid.innerHTML = `<div class="col-span-3 text-center py-16 text-slate-500"><div class="text-5xl mb-4">🚚</div><p>لا يوجد موردين بعد</p></div>`;
+        return;
+      }
+      grid.innerHTML = active.map(s => `
+        <div class="supplier-card bg-slate-900 border border-slate-800 rounded-2xl p-5 transition-all">
+          <div class="flex items-start justify-between mb-3">
+            <div class="w-12 h-12 rounded-xl bg-amber-500/20 flex items-center justify-center text-2xl">🏭</div>
+            <div class="flex gap-2">
+              <button onclick="editSupplier(${JSON.stringify(s).replace(/"/g,'&quot;')})" class="text-slate-400 hover:text-amber-400 text-lg transition-colors" title="تعديل">✏️</button>
+              <button onclick="deleteSupplier(${s.id},'${s.name.replace(/'/g,"\\'")}')" class="text-slate-400 hover:text-red-400 text-lg transition-colors" title="حذف">🗑️</button>
+            </div>
+          </div>
+          <h3 class="font-bold text-white text-lg mb-1">${s.name}</h3>
+          ${s.contact_name ? `<p class="text-slate-400 text-sm mb-0.5">👤 ${s.contact_name}</p>` : ''}
+          ${s.phone ? `<p class="text-slate-400 text-sm mb-0.5 font-mono">📱 ${s.phone}</p>` : ''}
+          ${s.email ? `<p class="text-slate-400 text-sm mb-0.5">📧 ${s.email}</p>` : ''}
+          ${s.address ? `<p class="text-slate-400 text-sm mb-2">📍 ${s.address}</p>` : ''}
+          ${s.notes ? `<div class="bg-slate-800/60 rounded-lg px-3 py-2 text-xs text-slate-400 mt-2">${s.notes}</div>` : ''}
+          <div class="mt-3 pt-3 border-t border-slate-800 text-xs text-slate-500">
+            أُضيف: ${new Date(s.created_at).toLocaleDateString('ar-EG')}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function loadPurchases() {
+      try {
+        const res = await fetch('/api/purchases/history');
+        const data = await res.json();
+        if (data.success) renderPurchases(data.purchases || []);
+      } catch(e) {}
+    }
+
+    function renderPurchases(purchases) {
+      const tbody = document.getElementById('purchasesBody');
+      if (!purchases.length) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-slate-500">لا توجد مشتريات مسجلة</td></tr>`;
+        return;
+      }
+      // Show only purchases linked to suppliers or most recent
+      tbody.innerHTML = purchases.slice(0, 30).map(p => {
+        const supplier = allSuppliers.find(s => s.id === p.supplier_id);
+        return `
+          <tr class="border-b border-slate-800/50 hover:bg-slate-800/30 transition-colors">
+            <td class="py-3 px-4 text-white text-sm font-semibold">${p.item_name || '—'}</td>
+            <td class="py-3 px-4">
+              ${supplier ? `<span class="bg-amber-500/20 text-amber-300 text-xs px-2 py-1 rounded-full">${supplier.name}</span>` : '<span class="text-slate-500 text-xs">غير مرتبط</span>'}
+            </td>
+            <td class="py-3 px-4 text-sky-400 font-bold text-sm">${p.qty_added} ${p.unit || ''}</td>
+            <td class="py-3 px-4 text-emerald-400 font-bold text-sm">${(p.total_cost || 0).toFixed(2)} ج</td>
+            <td class="py-3 px-4 text-slate-400 text-xs font-mono">${p.invoice_ref || '—'}</td>
+            <td class="py-3 px-4 text-slate-400 text-xs">${new Date(p.created_at).toLocaleDateString('ar-EG')}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // Modal
+    function openAddModal() {
+      document.getElementById('editId').value = '';
+      document.getElementById('modalTitle').textContent = '➕ مورد جديد';
+      ['supplierName','contactName','supplierPhone','supplierEmail','supplierAddress','supplierNotes'].forEach(id => {
+        document.getElementById(id).value = '';
+      });
+      document.getElementById('supplierModal').classList.remove('hidden');
+    }
+
+    function editSupplier(s) {
+      document.getElementById('editId').value = s.id;
+      document.getElementById('modalTitle').textContent = '✏️ تعديل بيانات المورد';
+      document.getElementById('supplierName').value = s.name || '';
+      document.getElementById('contactName').value = s.contact_name || '';
+      document.getElementById('supplierPhone').value = s.phone || '';
+      document.getElementById('supplierEmail').value = s.email || '';
+      document.getElementById('supplierAddress').value = s.address || '';
+      document.getElementById('supplierNotes').value = s.notes || '';
+      document.getElementById('supplierModal').classList.remove('hidden');
+    }
+
+    function closeModal() {
+      document.getElementById('supplierModal').classList.add('hidden');
+    }
+
+    async function saveSupplier() {
+      const name = document.getElementById('supplierName').value.trim();
+      if (!name) { alert('اسم المورد مطلوب'); return; }
+      const id = document.getElementById('editId').value;
+      const body = {
+        name,
+        contact_name: document.getElementById('contactName').value.trim(),
+        phone: document.getElementById('supplierPhone').value.trim(),
+        email: document.getElementById('supplierEmail').value.trim(),
+        address: document.getElementById('supplierAddress').value.trim(),
+        notes: document.getElementById('supplierNotes').value.trim()
+      };
+      try {
+        const url = id ? `/api/suppliers/${id}` : '/api/suppliers';
+        const method = id ? 'PUT' : 'POST';
+        const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        const data = await res.json();
+        if (data.success) {
+          closeModal();
+          loadSuppliers();
+        } else {
+          alert('خطأ: ' + (data.error || 'حدث خطأ'));
+        }
+      } catch(e) { alert('حدث خطأ في الاتصال'); }
+    }
+
+    async function deleteSupplier(id, name) {
+      if (!confirm(`هل تريد حذف المورد "${name}"؟`)) return;
+      try {
+        const res = await fetch(`/api/suppliers/${id}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (data.success) loadSuppliers();
+      } catch(e) { alert('حدث خطأ'); }
+    }
+
+    loadSuppliers();
+    loadPurchases();
+  </script>
+</body>
+</html>

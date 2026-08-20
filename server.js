@@ -63,8 +63,20 @@ const {
   vacateTable,
   updateTableTimestampsOnOrder,
   updateTableStatusOnCheckout,
+  // New imports
+  getWasteLogs,
+  getSuppliers, addSupplier, updateSupplier, deleteSupplier,
+  getMenuCategories, addMenuCategory, updateMenuCategory, deleteMenuCategory,
+  getMenuItems, addMenuItemNew, updateMenuItem, deleteMenuItem,
+  addItemVariant, deleteItemVariant, addItemAddon, deleteItemAddon,
+  createOrderSession, getOrderSession, closeOrderSession, getOpenSessionsForTable,
+  getReservations, createReservation, updateReservationStatus,
+  getAllCustomers, addCustomerFeedback, getCustomerFeedback,
+  getProfitabilityReport, getLowStockItems, updateInventorySettings,
+  getAllUsers, createUser, updateUser, deleteUser,
   db 
 } = require('./database');
+
 
 const upload = multer({ dest: path.join(__dirname, 'uploads/') });
 
@@ -216,7 +228,10 @@ app.post('/api/auth/login', async (req, res) => {
         { name: 'إدارة الموارد البشرية والرواتب', url: 'hr.html', icon: '👥' },
         { name: 'إدارة الجودة والشكاوى', url: 'qa.html', icon: '🛡️' },
         { name: 'مخزون الخامات (BOM)', url: 'inventory.html', icon: '📦' },
-        { name: 'تعديل المنيو الأسعار', url: 'admin-menu.html', icon: '📋' }
+        { name: 'مدير القائمة الكامل', url: 'menu-manager.html', icon: '🍽️' },
+        { name: 'إدارة العملاء (CRM)', url: 'crm.html', icon: '👥' },
+        { name: 'إدارة الموردين', url: 'suppliers.html', icon: '🚚' },
+        { name: 'الحجوزات', url: 'reservations.html', icon: '📅' }
       ],
       MANAGER: [
         { name: 'نقطة البيع (POS)', url: 'pos.html', icon: '💳' },
@@ -226,7 +241,10 @@ app.post('/api/auth/login', async (req, res) => {
         { name: 'إدارة الموارد البشرية والرواتب', url: 'hr.html', icon: '👥' },
         { name: 'إدارة الجودة والشكاوى', url: 'qa.html', icon: '🛡️' },
         { name: 'مخزون الخامات (BOM)', url: 'inventory.html', icon: '📦' },
-        { name: 'تعديل المنيو الأسعار', url: 'admin-menu.html', icon: '📋' }
+        { name: 'مدير القائمة الكامل', url: 'menu-manager.html', icon: '🍽️' },
+        { name: 'إدارة العملاء (CRM)', url: 'crm.html', icon: '👥' },
+        { name: 'إدارة الموردين', url: 'suppliers.html', icon: '🚚' },
+        { name: 'الحجوزات', url: 'reservations.html', icon: '📅' }
       ],
       OWNER: [
         { name: 'نقطة البيع (POS)', url: 'pos.html', icon: '💳' },
@@ -236,8 +254,11 @@ app.post('/api/auth/login', async (req, res) => {
         { name: 'إدارة الموارد البشرية والرواتب', url: 'hr.html', icon: '👥' },
         { name: 'إدارة الجودة والشكاوى', url: 'qa.html', icon: '🛡️' },
         { name: 'مخزون الخامات (BOM)', url: 'inventory.html', icon: '📦' },
-        { name: 'تعديل المنيو والأسعار', url: 'admin-menu.html', icon: '📋' },
+        { name: 'مدير القائمة الكامل', url: 'menu-manager.html', icon: '🍽️' },
         { name: 'حسابات الشركاء', url: 'shareholders.html', icon: '🏛️' },
+        { name: 'إدارة العملاء (CRM)', url: 'crm.html', icon: '👥' },
+        { name: 'إدارة الموردين', url: 'suppliers.html', icon: '🚚' },
+        { name: 'الحجوزات', url: 'reservations.html', icon: '📅' },
         { name: 'شاشة البارستا', url: 'kds.html', icon: '☕' },
         { name: 'شاشة الشيشة', url: 'shisha.html', icon: '💨' },
         { name: 'شاشة المطبخ', url: 'kitchen.html', icon: '🍳' },
@@ -251,8 +272,11 @@ app.post('/api/auth/login', async (req, res) => {
         { name: 'إدارة الموارد البشرية والرواتب', url: 'hr.html', icon: '👥' },
         { name: 'إدارة الجودة والشكاوى', url: 'qa.html', icon: '🛡️' },
         { name: 'مخزون الخامات (BOM)', url: 'inventory.html', icon: '📦' },
-        { name: 'تعديل المنيو والأسعار', url: 'admin-menu.html', icon: '📋' },
+        { name: 'مدير القائمة الكامل', url: 'menu-manager.html', icon: '🍽️' },
         { name: 'حسابات الشركاء', url: 'shareholders.html', icon: '🏛️' },
+        { name: 'إدارة العملاء (CRM)', url: 'crm.html', icon: '👥' },
+        { name: 'إدارة الموردين', url: 'suppliers.html', icon: '🚚' },
+        { name: 'الحجوزات', url: 'reservations.html', icon: '📅' },
         { name: 'شاشة البارستا', url: 'kds.html', icon: '☕' },
         { name: 'شاشة الشيشة', url: 'shisha.html', icon: '💨' },
         { name: 'شاشة المطبخ', url: 'kitchen.html', icon: '🍳' },
@@ -1101,22 +1125,384 @@ app.post('/api/qa/complaints/resolve', async (req, res) => {
   }
 });
 
+// ============================================================
+// SUPPLIERS API
+// ============================================================
+app.get('/api/suppliers', async (req, res) => {
+  try { res.json({ success: true, suppliers: await getSuppliers() }); }
+  catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+app.post('/api/suppliers', async (req, res) => {
+  try {
+    const { name, contact_name, phone, email, address, notes } = req.body;
+    if (!name) return res.status(400).json({ success: false, error: 'اسم المورد مطلوب' });
+    const supplier = await addSupplier(name, contact_name, phone, email, address, notes);
+    broadcast({ type: 'SUPPLIER_ADDED', supplier });
+    res.status(201).json({ success: true, supplier });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+app.put('/api/suppliers/:id', async (req, res) => {
+  try {
+    const result = await updateSupplier(req.params.id, req.body);
+    res.json({ success: true, result });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+app.delete('/api/suppliers/:id', async (req, res) => {
+  try {
+    const result = await deleteSupplier(req.params.id);
+    res.json({ success: true, result });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+// ============================================================
+// MENU CATEGORIES API
+// ============================================================
+app.get('/api/menu/categories', async (req, res) => {
+  try { res.json({ success: true, categories: await getMenuCategories() }); }
+  catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+app.post('/api/menu/categories', async (req, res) => {
+  try {
+    const { name, name_en, icon, color, sort_order } = req.body;
+    if (!name) return res.status(400).json({ success: false, error: 'اسم التصنيف مطلوب' });
+    const cat = await addMenuCategory(name, name_en, icon, color, sort_order);
+    res.status(201).json({ success: true, category: cat });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+app.put('/api/menu/categories/:id', async (req, res) => {
+  try {
+    const result = await updateMenuCategory(req.params.id, req.body);
+    res.json({ success: true, result });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+app.delete('/api/menu/categories/:id', async (req, res) => {
+  try {
+    const result = await deleteMenuCategory(req.params.id);
+    res.json({ success: true, result });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+// ============================================================
+// MENU ITEMS (new structured) API
+// ============================================================
+app.get('/api/menu/items', async (req, res) => {
+  try {
+    const items = await getMenuItems(req.query.category_id || null);
+    res.json({ success: true, items });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+app.post('/api/menu/items', async (req, res) => {
+  try {
+    const { category_id, name, name_en, description, base_price, department, is_available, is_featured, sort_order } = req.body;
+    if (!name) return res.status(400).json({ success: false, error: 'اسم الصنف مطلوب' });
+    const item = await addMenuItemNew(category_id, name, name_en, description, base_price, department, is_available, is_featured, sort_order);
+    res.status(201).json({ success: true, item });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+app.put('/api/menu/items/:id', async (req, res) => {
+  try {
+    const result = await updateMenuItem(req.params.id, req.body);
+    res.json({ success: true, result });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+app.delete('/api/menu/items/:id', async (req, res) => {
+  try {
+    const result = await deleteMenuItem(req.params.id);
+    res.json({ success: true, result });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+// Variants
+app.post('/api/menu/items/:id/variants', async (req, res) => {
+  try {
+    const { name, price_delta } = req.body;
+    if (!name) return res.status(400).json({ success: false, error: 'اسم المتغير مطلوب' });
+    const variant = await addItemVariant(req.params.id, name, price_delta || 0);
+    res.status(201).json({ success: true, variant });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+app.delete('/api/menu/variants/:id', async (req, res) => {
+  try { res.json({ success: true, result: await deleteItemVariant(req.params.id) }); }
+  catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+// Addons
+app.post('/api/menu/items/:id/addons', async (req, res) => {
+  try {
+    const { name, price } = req.body;
+    if (!name) return res.status(400).json({ success: false, error: 'اسم الإضافة مطلوب' });
+    const addon = await addItemAddon(req.params.id, name, price || 0);
+    res.status(201).json({ success: true, addon });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+app.delete('/api/menu/addons/:id', async (req, res) => {
+  try { res.json({ success: true, result: await deleteItemAddon(req.params.id) }); }
+  catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+// ============================================================
+// ORDER SESSIONS API
+// ============================================================
+app.post('/api/sessions', async (req, res) => {
+  try {
+    const { order_type, table_number, customer_phone, notes, created_by, delivery_address, delivery_fee } = req.body;
+    const session = await createOrderSession(order_type, table_number, customer_phone, notes, created_by, delivery_address, delivery_fee);
+    broadcast({ type: 'SESSION_CREATED', session });
+    res.status(201).json({ success: true, session });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+app.get('/api/sessions/:id', async (req, res) => {
+  try {
+    const session = await getOrderSession(req.params.id);
+    if (!session) return res.status(404).json({ success: false, error: 'الجلسة غير موجودة' });
+    res.json({ success: true, session });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+app.post('/api/sessions/:id/close', async (req, res) => {
+  try {
+    const result = await closeOrderSession(req.params.id);
+    res.json({ success: true, result });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+app.get('/api/tables/:table_number/sessions', async (req, res) => {
+  try {
+    const sessions = await getOpenSessionsForTable(req.params.table_number);
+    res.json({ success: true, sessions });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+// ============================================================
+// RESERVATIONS API
+// ============================================================
+app.get('/api/reservations', async (req, res) => {
+  try {
+    const reservations = await getReservations(req.query.date || null);
+    res.json({ success: true, reservations });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+app.post('/api/reservations', async (req, res) => {
+  try {
+    const { customer_name, customer_phone, table_number, party_size, reserved_at, duration_minutes, notes } = req.body;
+    if (!customer_name || !reserved_at) return res.status(400).json({ success: false, error: 'اسم العميل وموعد الحجز مطلوبان' });
+    const reservation = await createReservation(customer_name, customer_phone, table_number, party_size, reserved_at, duration_minutes, notes);
+    broadcast({ type: 'RESERVATION_CREATED', reservation });
+    res.status(201).json({ success: true, reservation });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+app.put('/api/reservations/:id/status', async (req, res) => {
+  try {
+    const { status } = req.body;
+    if (!status) return res.status(400).json({ success: false, error: 'الحالة مطلوبة' });
+    const result = await updateReservationStatus(req.params.id, status);
+    broadcast({ type: 'RESERVATION_UPDATED', id: req.params.id, status });
+    res.json({ success: true, result });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+// ============================================================
+// CUSTOMER CRM API
+// ============================================================
+app.get('/api/customers', async (req, res) => {
+  try {
+    const customers = await getAllCustomers(req.query.search || null);
+    res.json({ success: true, customers });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+app.post('/api/customers/feedback', async (req, res) => {
+  try {
+    const { customer_phone, session_id, rating, comment, category } = req.body;
+    const fb = await addCustomerFeedback(customer_phone, session_id, rating, comment, category);
+    res.status(201).json({ success: true, feedback: fb });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+app.get('/api/customers/feedback', async (req, res) => {
+  try {
+    const feedback = await getCustomerFeedback(req.query.phone || null);
+    res.json({ success: true, feedback });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+// ============================================================
+// PROFITABILITY & LOW-STOCK REPORTS
+// ============================================================
+app.get('/api/reports/profitability', async (req, res) => {
+  try {
+    const role = req.headers['x-user-role'] || req.query.role;
+    if (role && !['OWNER', 'OP_MANAGER', 'ADMIN', 'MANAGER'].includes(String(role).toUpperCase())) {
+      return res.status(403).json({ success: false, error: 'غير مصرح' });
+    }
+    const data = await getProfitabilityReport(req.query.range || 'today');
+    res.json({ success: true, data });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+app.get('/api/reports/low-stock', async (req, res) => {
+  try {
+    const items = await getLowStockItems();
+    res.json({ success: true, items });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+app.put('/api/inventory/:id/settings', async (req, res) => {
+  try {
+    const { min_stock_level, unit_cost, supplier_id } = req.body;
+    const result = await updateInventorySettings(req.params.id, min_stock_level, unit_cost, supplier_id);
+    res.json({ success: true, result });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+// ============================================================
+// USER MANAGEMENT API
+// ============================================================
+app.get('/api/users', async (req, res) => {
+  try {
+    const role = req.headers['x-user-role'] || req.query.role;
+    if (role && !['OWNER', 'OP_MANAGER', 'ADMIN', 'MANAGER'].includes(String(role).toUpperCase())) {
+      return res.status(403).json({ success: false, error: 'غير مصرح' });
+    }
+    const users = await getAllUsers();
+    res.json({ success: true, users });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+app.post('/api/users', async (req, res) => {
+  try {
+    const { name, role, pin_code, hourly_rate } = req.body;
+    if (!name || !role || !pin_code) return res.status(400).json({ success: false, error: 'الاسم والصلاحية ورمز PIN مطلوبان' });
+    const user = await createUser(name, role, pin_code, hourly_rate);
+    res.status(201).json({ success: true, user });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+app.put('/api/users/:id', async (req, res) => {
+  try {
+    const result = await updateUser(req.params.id, req.body);
+    res.json({ success: true, result });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+app.delete('/api/users/:id', async (req, res) => {
+  try {
+    const result = await deleteUser(req.params.id);
+    res.json({ success: true, result });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+// ============================================================
+// QR MENU PUBLIC ENDPOINT (no auth required)
+// ============================================================
+app.get('/api/public/menu', async (req, res) => {
+  try {
+    // Return menu items grouped by category for public display
+    const categories = await getMenuCategories();
+    const items = await getMenuItems();
+    const grouped = categories
+      .filter(c => c.is_active)
+      .map(cat => ({
+        ...cat,
+        items: items.filter(i => i.category_id === cat.id && i.is_available)
+      }));
+    // Also include legacy items (from recipes) not yet in menu_items
+    const legacyMenu = await getMenu();
+    res.json({ success: true, grouped, legacy_menu: legacyMenu });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+// QR self-order endpoint (no auth, places order directly)
+app.post('/api/public/order', async (req, res) => {
+  try {
+    const { item_name, quantity, price, table_number, sugar_level, roast_type, item_notes, addons, variant } = req.body;
+    if (!item_name) return res.status(400).json({ success: false, error: 'اسم الصنف مطلوب' });
+    const qty = parseInt(quantity, 10) || 1;
+    const tNum = parseInt(table_number, 10) || 0;
+    const newOrder = await createOrderWithBOM(item_name.trim(), qty, price || null, tNum, null, sugar_level, roast_type);
+    if (tNum > 0) await updateTableTimestampsOnOrder(tNum);
+    console.log(`📱 [QR ORDER] #${newOrder.id} - ${newOrder.item_name} (x${qty}) [Table #${tNum}]`);
+    broadcast({ type: 'NEW_ORDER', order: { ...newOrder, order_source: 'QR', item_notes, addons, variant } });
+    res.status(201).json({ success: true, order: newOrder });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+// Alias & Helper Endpoints for Dashboard / Integrations
+app.get('/api/tables/status', async (req, res) => {
+  try {
+    const tables = await getAllTables();
+    res.json({ success: true, tables });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+app.get('/api/purchases/history', async (req, res) => {
+  try {
+    const purchases = await getPurchasesHistory();
+    res.json({ success: true, purchases });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+app.get('/api/waste', async (req, res) => {
+  try {
+    const waste = await getWasteLogs();
+    res.json({ success: true, waste });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+app.get('/api/sales/summary', async (req, res) => {
+  try {
+    const bi = await getBIData('today');
+    res.json({ 
+      success: true, 
+      today_revenue: bi.kpis?.total_revenue || 0,
+      today_orders: bi.kpis?.total_orders || 0,
+      total_revenue: bi.kpis?.total_revenue || 0
+    });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+app.get('/api/bi/summary', async (req, res) => {
+  try {
+    const bi = await getBIData('today');
+    res.json({ success: true, data: bi });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
 // Start Server
 server.listen(PORT, HOST, () => {
   const localIp = getLocalIpAddress();
   console.log(`\n==================================================`);
-  console.log(`🚀 Cafe POS, KDS & Inventory System Running!`);
+  console.log(`🚀 Cafe Management System Running!`);
   console.log(`🌐 Local Domain: http://mazaj.local:${PORT}`);
   console.log(`📡 Local IP: http://${localIp}:${PORT}`);
   console.log(`📱 Cashier POS UI: http://mazaj.local:${PORT}/pos.html`);
-  console.log(`🛠️ Menu Admin UI: http://mazaj.local:${PORT}/admin-menu.html`);
+  console.log(`🛠️ Menu Manager UI: http://mazaj.local:${PORT}/admin-menu.html`);
   console.log(`🏃 Runner Pickup UI: http://mazaj.local:${PORT}/runner.html`);
   console.log(`☕ Barista KDS UI: http://mazaj.local:${PORT}/kds.html`);
   console.log(`💨 Shisha KDS UI: http://mazaj.local:${PORT}/shisha.html`);
   console.log(`🍳 Kitchen KDS UI: http://mazaj.local:${PORT}/kitchen.html`);
   console.log(`📦 Inventory UI: http://mazaj.local:${PORT}/inventory.html`);
+  console.log(`📋 Menu Manager: http://mazaj.local:${PORT}/menu-manager.html`);
+  console.log(`📱 QR Menu: http://mazaj.local:${PORT}/qr-menu.html?table=1`);
+  console.log(`👥 CRM: http://mazaj.local:${PORT}/crm.html`);
+  console.log(`🚚 Suppliers: http://mazaj.local:${PORT}/suppliers.html`);
   console.log(`==================================================\n`);
 });
+
 
 
 
