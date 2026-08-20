@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;900&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/nav.js"></script>
   <style>
     body { font-family: 'Tajawal', sans-serif; background: #0f172a; color: #f8fafc; }
     .modal-bg { background: rgba(0,0,0,0.75); backdrop-filter: blur(4px); }
@@ -23,24 +24,30 @@
 </head>
 <body class="min-h-screen">
 
-  <!-- Header -->
-  <header class="bg-slate-900 border-b border-slate-800 px-6 py-4 flex items-center justify-between sticky top-0 z-50">
+  <!-- Page Action Header -->
+  <div class="bg-slate-900/90 border-b border-slate-800 px-6 py-3.5 flex items-center justify-between sticky top-0 z-30 shadow-md">
     <div class="flex items-center gap-3">
-      <a href="portal.html" class="text-slate-400 hover:text-amber-400 text-2xl transition-colors">←</a>
+      <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 text-xl shadow-inner">
+        🍽️
+      </div>
       <div>
-        <h1 class="text-xl font-bold text-white">🍽️ مدير القائمة</h1>
-        <p class="text-xs text-slate-400">تصنيفات · أصناف · متغيرات · إضافات</p>
+        <h1 class="text-lg font-black text-white flex items-center gap-2">
+          <span>مدير قائمة الطعام والأسعار</span>
+        </h1>
+        <p class="text-xs text-slate-400">تصنيفات · أصناف · خيارات · أسعار · توفر الصنف</p>
       </div>
     </div>
     <div class="flex items-center gap-3">
       <!-- Tab switcher -->
-      <div class="flex bg-slate-800 rounded-xl p-1 gap-1">
-        <button id="tabCategories" class="tab-btn active text-sm font-bold px-4 py-2 rounded-lg transition-all" onclick="switchTab('categories')">📂 التصنيفات</button>
-        <button id="tabItems" class="tab-btn text-sm font-bold px-4 py-2 rounded-lg text-slate-400 hover:text-white transition-all" onclick="switchTab('items')">🍳 الأصناف</button>
+      <div class="flex bg-slate-800 rounded-xl p-1 gap-1 border border-slate-700">
+        <button id="tabCategories" class="tab-btn active text-xs font-black px-4 py-2 rounded-lg transition-all" onclick="switchTab('categories')">📂 التصنيفات</button>
+        <button id="tabItems" class="tab-btn text-xs font-bold px-4 py-2 rounded-lg text-slate-400 hover:text-white transition-all" onclick="switchTab('items')">🍳 الأصناف</button>
       </div>
-      <button id="addBtn" onclick="openAddCategoryModal()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-5 py-2.5 rounded-xl transition-colors">➕ إضافة</button>
+      <button id="addBtn" onclick="openAddCategoryModal()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs px-4 py-2.5 rounded-xl transition-colors shadow-lg cursor-pointer flex items-center gap-1.5">
+        <span>➕</span><span>إضافة جديدة</span>
+      </button>
     </div>
-  </header>
+  </div>
 
   <!-- Categories Panel -->
   <div id="categoriesPanel" class="p-6">

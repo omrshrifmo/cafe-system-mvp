@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-08-17T21:42:03.644Z",
+  "generatedAt": "2026-08-19T11:24:12.775Z",
   "workspacePath": "/home/omrshrifmo/cafe-system-mvp",
   "branch": "main",
   "skills": [
@@ -92,8 +92,10 @@
         "**/*.test.ts",
         "**/*.test.js"
       ],
-      "isRelevant": false,
-      "matchedGlobs": [],
+      "isRelevant": true,
+      "matchedGlobs": [
+        "**/.github/**/*.md"
+      ],
       "installedInWorkspace": false,
       "availableInGlobal": false,
       "inLibrary": true,
@@ -194,7 +196,7 @@
       ],
       "isRelevant": false,
       "matchedGlobs": [],
-      "installedInWorkspace": false,
+      "installedInWorkspace": true,
       "availableInGlobal": false,
       "inLibrary": true,
       "requiredForProfileInit": true
@@ -239,7 +241,7 @@
       ],
       "isRelevant": false,
       "matchedGlobs": [],
-      "installedInWorkspace": false,
+      "installedInWorkspace": true,
       "availableInGlobal": false,
       "inLibrary": true,
       "requiredForProfileInit": true
@@ -251,9 +253,11 @@
         "**/.claude/learning/runs.jsonl",
         "**/.claude/skills/**"
       ],
-      "isRelevant": false,
-      "matchedGlobs": [],
-      "installedInWorkspace": false,
+      "isRelevant": true,
+      "matchedGlobs": [
+        "**/.claude/skills/**"
+      ],
+      "installedInWorkspace": true,
       "availableInGlobal": false,
       "inLibrary": true,
       "requiredForProfileInit": true
@@ -267,8 +271,11 @@
         "**/.claude/learning/skill-adoption.jsonl",
         "**/.claude/learning/runs.jsonl"
       ],
-      "isRelevant": false,
-      "matchedGlobs": [],
+      "isRelevant": true,
+      "matchedGlobs": [
+        "**/.claude/learning/task-skill-proposals.json",
+        "**/.claude/learning/skill-adoption.jsonl"
+      ],
       "installedInWorkspace": false,
       "availableInGlobal": false,
       "inLibrary": true,
@@ -284,9 +291,10 @@
       ],
       "isRelevant": true,
       "matchedGlobs": [
+        "**/.claude/learning/task-skill-proposals.json",
         "**/.claude/learning/**"
       ],
-      "installedInWorkspace": false,
+      "installedInWorkspace": true,
       "availableInGlobal": false,
       "inLibrary": true,
       "requiredForProfileInit": true
@@ -351,7 +359,7 @@
       ],
       "isRelevant": false,
       "matchedGlobs": [],
-      "installedInWorkspace": false,
+      "installedInWorkspace": true,
       "availableInGlobal": false,
       "inLibrary": true,
       "requiredForProfileInit": true
@@ -515,7 +523,7 @@
       ],
       "isRelevant": false,
       "matchedGlobs": [],
-      "installedInWorkspace": false,
+      "installedInWorkspace": true,
       "availableInGlobal": false,
       "inLibrary": true,
       "requiredForProfileInit": true

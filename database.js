@@ -47,6 +47,10 @@ db.serialize(() => {
   db.run(`ALTER TABLE orders ADD COLUMN item_notes TEXT`, () => {});
   db.run(`ALTER TABLE orders ADD COLUMN addons TEXT`, () => {});
   db.run(`ALTER TABLE orders ADD COLUMN variant TEXT`, () => {});
+  db.run(`ALTER TABLE orders ADD COLUMN staff_user_id INTEGER`, () => {});
+  db.run(`ALTER TABLE orders ADD COLUMN user_id INTEGER`, () => {});
+  db.run(`ALTER TABLE orders ADD COLUMN user_name TEXT`, () => {});
+  db.run(`ALTER TABLE orders ADD COLUMN shift_type TEXT DEFAULT 'MORNING'`, () => {});
 
   // Universal Audit Logs Table
   db.run(`
@@ -132,10 +136,66 @@ db.serialize(() => {
       vacated_at DATETIME DEFAULT NULL
     )
   `, () => {
-    // Seed default tables 1 to 12 if not existing
+    // Seed default tables 1 to 12 if not existing with realistic zones
+    const defaultZones = ['INDOOR_1', 'INDOOR_1', 'INDOOR_2', 'INDOOR_2', 'INDOOR_3', 'INDOOR_3', 'OUTDOOR_RIGHT', 'OUTDOOR_RIGHT', 'OUTDOOR_LEFT', 'OUTDOOR_LEFT', 'OUTDOOR_GATE', 'OUTDOOR_GATE'];
     for (let i = 1; i <= 12; i++) {
+      const zone = defaultZones[i - 1] || 'INDOOR_1';
       db.run(`INSERT OR IGNORE INTO tables (table_number) VALUES (?)`, [i]);
+      db.run(`UPDATE tables SET zone = COALESCE(zone, ?) WHERE table_number = ?`, [zone, i]);
     }
+  });
+  db.run(`ALTER TABLE tables ADD COLUMN zone TEXT DEFAULT 'INDOOR_1'`, () => {});
+  db.run(`ALTER TABLE tables ADD COLUMN capacity INTEGER DEFAULT 4`, () => {});
+  db.run(`ALTER TABLE tables ADD COLUMN customer_id INTEGER`, () => {});
+  db.run(`ALTER TABLE tables ADD COLUMN waiter_approached_at DATETIME`, () => {});
+  db.run(`ALTER TABLE tables ADD COLUMN reapproached_at DATETIME`, () => {});
+  db.run(`ALTER TABLE tables ADD COLUMN reordered_at DATETIME`, () => {});
+  db.run(`ALTER TABLE tables ADD COLUMN opened_at DATETIME`, () => {});
+  db.run(`ALTER TABLE tables ADD COLUMN assigned_waiter_id INTEGER`, () => {});
+  db.run(`ALTER TABLE tables ADD COLUMN opened_by_user_id INTEGER`, () => {});
+
+  // Material Transfers (إعارة وتحويل خامات بين الأقسام)
+  db.run(`
+    CREATE TABLE IF NOT EXISTS material_transfers (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      inventory_id INTEGER,
+      item_name TEXT NOT NULL,
+      from_department TEXT NOT NULL,
+      to_department TEXT NOT NULL,
+      quantity REAL NOT NULL,
+      unit TEXT,
+      notes TEXT,
+      transferred_by_user_id INTEGER,
+      transferred_by_name TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // Staff Allowances & Quotas (وجبات ومشروبات الموظفين)
+  db.run(`
+    CREATE TABLE IF NOT EXISTS staff_allowances (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      role TEXT UNIQUE NOT NULL,
+      daily_drink_quota INTEGER DEFAULT 2,
+      daily_meal_quota INTEGER DEFAULT 1,
+      monthly_budget REAL DEFAULT 500
+    )
+  `, () => {
+    const roles = [
+      { role: 'BARISTA', drinks: 3, meals: 1 },
+      { role: 'SHIASH', drinks: 3, meals: 1 },
+      { role: 'CHEF', drinks: 2, meals: 2 },
+      { role: 'WAITER', drinks: 2, meals: 1 },
+      { role: 'OP_ASSISTANT_CASHIER', drinks: 2, meals: 1 },
+      { role: 'OP_MANAGER', drinks: 4, meals: 2 },
+      { role: 'HALL_MANAGER', drinks: 3, meals: 1 },
+      { role: 'MANAGER', drinks: 4, meals: 2 },
+      { role: 'OWNER', drinks: 10, meals: 5 },
+      { role: 'ADMIN', drinks: 10, meals: 5 }
+    ];
+    roles.forEach(r => {
+      db.run(`INSERT OR IGNORE INTO staff_allowances (role, daily_drink_quota, daily_meal_quota) VALUES (?, ?, ?)`, [r.role, r.drinks, r.meals]);
+    });
   });
 
   // Purchases Table (Inventory Restocking)
@@ -286,6 +346,7 @@ db.serialize(() => {
       FOREIGN KEY(user_id) REFERENCES users(id)
     )
   `);
+  db.run(`ALTER TABLE shifts ADD COLUMN shift_type TEXT DEFAULT 'MORNING'`, () => {});
 
   // Drawer Declarations Table (Blind Cash Declaration)
   db.run(`
@@ -299,6 +360,14 @@ db.serialize(() => {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
+  db.run(`ALTER TABLE drawer_declarations ADD COLUMN opening_float REAL DEFAULT 0`, () => {});
+  db.run(`ALTER TABLE drawer_declarations ADD COLUMN cash_sales REAL DEFAULT 0`, () => {});
+  db.run(`ALTER TABLE drawer_declarations ADD COLUMN cash_refunds REAL DEFAULT 0`, () => {});
+  db.run(`ALTER TABLE drawer_declarations ADD COLUMN cash_advances REAL DEFAULT 0`, () => {});
+  db.run(`ALTER TABLE drawer_declarations ADD COLUMN cash_expenses REAL DEFAULT 0`, () => {});
+  db.run(`ALTER TABLE drawer_declarations ADD COLUMN shift_type TEXT DEFAULT 'MORNING'`, () => {});
+  db.run(`ALTER TABLE drawer_declarations ADD COLUMN status TEXT DEFAULT 'CLOSED'`, () => {});
+  db.run(`ALTER TABLE drawer_declarations ADD COLUMN manager_approved_by INTEGER`, () => {});
 
   // Employee Advances Table (سُلف الموظفين)
   db.run(`
@@ -398,14 +467,11 @@ db.serialize(() => {
       price REAL DEFAULT 0,
       FOREIGN KEY(inventory_id) REFERENCES inventory(id) ON DELETE CASCADE
     )
-  `, (err) => {
-    if (err) {
-      console.error('❌ Error creating tables:', err.message);
-    } else {
-      console.log('✅ Database tables initialized (orders, table_sessions, waste_log, inventory, recipes).');
-      migrateDatabaseSchema();
-    }
+  `, () => {
+    migrateDatabaseSchema();
   });
+  db.run(`ALTER TABLE recipes ADD COLUMN instructions TEXT`, () => {});
+  db.run(`ALTER TABLE recipes ADD COLUMN tolerance_percent REAL DEFAULT 5.0`, () => {});
 });
 
 /**
@@ -590,9 +656,10 @@ function seedDatabaseIfEmpty() {
 
         db.get(`SELECT COUNT(*) as count FROM recipes WHERE menu_item_name = 'كلوب ساندوتش'`, [], (err, row) => {
           if (!err && (!row || row.count === 0)) {
-            const stmtRec = db.prepare(`INSERT INTO recipes (menu_item_name, inventory_id, quantity_required, category, price) VALUES (?, ?, ?, ?, ?)`);
-            if (itemMap['خبز']) stmtRec.run('كلوب ساندوتش', itemMap['خبز'], 2, 'KITCHEN', 120);
-            if (itemMap['دجاج']) stmtRec.run('كلوب ساندوتش', itemMap['دجاج'], 150, 'KITCHEN', 120);
+            const stmtRec = db.prepare(`INSERT INTO recipes (menu_item_name, inventory_id, quantity_required, category, price, instructions, tolerance_percent) VALUES (?, ?, ?, ?, ?, ?, 5.0)`);
+            const sandwichInstructions = '1. تحميص شرائح خبز التوست على الجريل حتى تكتسب لوناً ذهبياً مقرمشاً.\n2. شواء 150 جرام صدر دجاج متبل مع شريحة جبن شيدر.\n3. ترتيب الخس والطماطم مع المايونيز وتقطيع الساندوتش مثلثات وتثبيتها بالأعواد وتقديمها مع البطاطس.';
+            if (itemMap['خبز']) stmtRec.run('كلوب ساندوتش', itemMap['خبز'], 2, 'KITCHEN', 120, sandwichInstructions);
+            if (itemMap['دجاج']) stmtRec.run('كلوب ساندوتش', itemMap['دجاج'], 150, 'KITCHEN', 120, sandwichInstructions);
             stmtRec.finalize(() => {
               console.log('✅ Kitchen recipes seeded successfully.');
             });
@@ -601,19 +668,30 @@ function seedDatabaseIfEmpty() {
 
         db.get(`SELECT COUNT(*) as count FROM recipes WHERE menu_item_name = 'لاتيه'`, [], (err, row) => {
           if (!err && (!row || row.count === 0)) {
-            const stmtRec = db.prepare(`INSERT INTO recipes (menu_item_name, inventory_id, quantity_required, category, price) VALUES (?, ?, ?, ?, ?)`);
-            if (itemMap['حبوب قهوة']) stmtRec.run('لاتيه', itemMap['حبوب قهوة'], 18, 'BARISTA', 50);
-            if (itemMap['حليب']) stmtRec.run('لاتيه', itemMap['حليب'], 200, 'BARISTA', 50);
-            if (itemMap['أكواب']) stmtRec.run('لاتيه', itemMap['أكواب'], 1, 'BARISTA', 50);
+            const stmtRec = db.prepare(`INSERT INTO recipes (menu_item_name, inventory_id, quantity_required, category, price, instructions, tolerance_percent) VALUES (?, ?, ?, ?, ?, ?, 5.0)`);
+            const latteInstructions = '1. استخلاص 36 مل شوت اسبريسو دبل.\n2. تبخير 200 مل حليب طازج على حرارة 65 مئوية برغوة حريرية ميكروفوم.\n3. صب الحليب ببطء مع رسم لاتي آرت.';
+            const espressoInstructions = '1. طحن 18 جرام بن بدرجة نعومة متساوية.\n2. تسوية وكبس البن بقوة 15 كجم في البورتافلتر.\n3. استخلاص 36 مل خلال 25-30 ثانية على حرارة 92 مئوية وضغط 9 بار.';
+            const shishaInstructions = '1. غسل وتنظيف قلب الشيشة والتأكد من مستوى الماء النقي.\n2. تهوية 25 جرام معسل تفاحتين وتوزيعه بالتساوي في الحجر الفخاري دون ضغط شديد.\n3. تغطية الحجر بالسلوفان وتثقيبه بالتساوي مع وضع 3 قطع فحم متوهج.';
 
-            if (itemMap['حبوب قهوة']) stmtRec.run('اسبريسو', itemMap['حبوب قهوة'], 18, 'BARISTA', 35);
-            if (itemMap['أكواب']) stmtRec.run('اسبريسو', itemMap['أكواب'], 1, 'BARISTA', 35);
+            if (itemMap['حبوب قهوة']) stmtRec.run('لاتيه', itemMap['حبوب قهوة'], 18, 'BARISTA', 50, latteInstructions);
+            if (itemMap['حليب']) stmtRec.run('لاتيه', itemMap['حليب'], 200, 'BARISTA', 50, latteInstructions);
+            if (itemMap['أكواب']) stmtRec.run('لاتيه', itemMap['أكواب'], 1, 'BARISTA', 50, latteInstructions);
 
-            if (itemMap['معسل تفاحتين']) stmtRec.run('شيشة تفاحتين', itemMap['معسل تفاحتين'], 25, 'SHISHA', 100);
+            if (itemMap['حبوب قهوة']) stmtRec.run('اسبريسو', itemMap['حبوب قهوة'], 18, 'BARISTA', 35, espressoInstructions);
+            if (itemMap['أكواب']) stmtRec.run('اسبريسو', itemMap['أكواب'], 1, 'BARISTA', 35, espressoInstructions);
+
+            if (itemMap['معسل تفاحتين']) stmtRec.run('شيشة تفاحتين', itemMap['معسل تفاحتين'], 25, 'SHISHA', 100, shishaInstructions);
 
             stmtRec.finalize();
           }
         });
+
+        // Ensure instructions are updated for existing recipes
+        db.run(`UPDATE recipes SET instructions = '1. استخلاص 36 مل شوت اسبريسو دبل.\n2. تبخير 200 مل حليب طازج على حرارة 65 مئوية برغوة حريرية ميكروفوم.\n3. صب الحليب ببطء مع رسم لاتي آرت.' WHERE menu_item_name = 'لاتيه' AND instructions IS NULL`);
+        db.run(`UPDATE recipes SET instructions = '1. طحن 18 جرام بن بدرجة نعومة متساوية.\n2. تسوية وكبس البن بقوة 15 كجم في البورتافلتر.\n3. استخلاص 36 مل خلال 25-30 ثانية على حرارة 92 مئوية وضغط 9 بار.' WHERE menu_item_name = 'اسبريسو' AND instructions IS NULL`);
+        db.run(`UPDATE recipes SET instructions = '1. غسل وتنظيف قلب الشيشة والتأكد من مستوى الماء النقي.\n2. تهوية 25 جرام معسل تفاحتين وتوزيعه بالتساوي في الحجر الفخاري دون ضغط شديد.\n3. تغطية الحجر بالسلوفان وتثقيبه بالتساوي مع وضع 3 قطع فحم متوهج.' WHERE menu_item_name = 'شيشة تفاحتين' AND instructions IS NULL`);
+        db.run(`UPDATE recipes SET instructions = '1. تحميص شرائح خبز التوست على الجريل حتى تكتسب لوناً ذهبياً مقرمشاً.\n2. شواء 150 جرام صدر دجاج متبل مع شريحة جبن شيدر.\n3. ترتيب الخس والطماطم مع المايونيز وتقطيع الساندوتش مثلثات وتثبيتها بالأعواد وتقديمها مع البطاطس.' WHERE menu_item_name = 'كلوب ساندوتش' AND instructions IS NULL`);
+        db.run(`UPDATE recipes SET tolerance_percent = 5.0 WHERE tolerance_percent IS NULL`);
       });
     });
   });
@@ -856,9 +934,9 @@ function addMenuItem(menu_item_name, price = 0, category = 'BARISTA') {
 }
 
 /**
- * Create order with atomic BOM stock deduction transaction or custom item bypass
+ * Create order with atomic BOM stock deduction transaction, 5% production tolerance buffer, and user attribution
  */
-async function createOrderWithBOM(itemName, quantity = 1, inputPrice = null, tableNumber = 0, waiterId = null, sugarLevel = null, roastType = null) {
+async function createOrderWithBOM(itemName, quantity = 1, inputPrice = null, tableNumber = 0, waiterId = null, sugarLevel = null, roastType = null, extra = {}) {
   let orderPrice = inputPrice;
   if (orderPrice === null || orderPrice === undefined) {
     orderPrice = await getItemPrice(itemName);
@@ -870,74 +948,99 @@ async function createOrderWithBOM(itemName, quantity = 1, inputPrice = null, tab
   const sLevel = sugarLevel ? String(sugarLevel).trim() : null;
   const rType = roastType ? String(roastType).trim() : null;
 
+  const itemNotes = extra.item_notes || null;
+  const addons = extra.addons || null;
+  const variant = extra.variant || null;
+  const orderType = extra.order_type || (tNum > 0 ? 'DINE_IN' : 'TAKEAWAY');
+  const staffUserId = extra.staff_user_id || null;
+  const userId = extra.user_id || null;
+  const userName = extra.user_name || null;
+  const shiftType = extra.shift_type || 'MORNING';
+
   return new Promise((resolve, reject) => {
     db.serialize(() => {
-      db.run('BEGIN TRANSACTION', (err) => {
+      // 1. Insert into orders with all attribution & customization fields
+      const insertOrderSql = `
+        INSERT INTO orders (
+          item_name, quantity, price, table_number, waiter_id, 
+          sugar_level, roast_type, kds_status, order_type, 
+          item_notes, addons, variant, staff_user_id, user_id, user_name, shift_type
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, 'PENDING', ?, ?, ?, ?, ?, ?, ?, ?)
+      `;
+      db.run(insertOrderSql, [
+        itemName, quantity, orderPrice, tNum, wId, 
+        sLevel, rType, orderType, 
+        itemNotes, addons, variant, staffUserId, userId, userName, shiftType
+      ], function (err) {
         if (err) return reject(err);
 
-        // 1. Insert into orders
-        const insertOrderSql = `INSERT INTO orders (item_name, quantity, price, table_number, waiter_id, sugar_level, roast_type, kds_status) VALUES (?, ?, ?, ?, ?, ?, ?, 'PENDING')`;
-        db.run(insertOrderSql, [itemName, quantity, orderPrice, tNum, wId, sLevel, rType], function (err) {
-          if (err) {
-            db.run('ROLLBACK');
-            return reject(err);
+        const orderId = this.lastID;
+
+        // If table_number > 0, ensure table session is OPEN and update lifecycle
+        if (tNum > 0) {
+          db.run(`INSERT OR IGNORE INTO table_sessions (table_number, opened_at, status) VALUES (?, CURRENT_TIMESTAMP, 'OPEN')`, [tNum]);
+          db.run(`UPDATE table_sessions SET status = 'OPEN' WHERE table_number = ?`, [tNum]);
+          db.run(`
+            UPDATE tables 
+            SET status = CASE WHEN status = 'VACANT' THEN 'ORDERED' ELSE status END,
+                first_ordered_at = COALESCE(first_ordered_at, CURRENT_TIMESTAMP),
+                last_ordered_at = CURRENT_TIMESTAMP
+            WHERE table_number = ?
+          `, [tNum]);
+        }
+
+        // 2. Fetch recipe ingredients required for this menu item with tolerance buffer
+        const getRecipeSql = `
+          SELECT r.inventory_id, r.quantity_required, COALESCE(r.tolerance_percent, 5.0) as tolerance_percent, r.category, i.name as inv_name
+          FROM recipes r 
+          LEFT JOIN inventory i ON r.inventory_id = i.id
+          WHERE r.menu_item_name = ? AND r.inventory_id IS NOT NULL
+        `;
+        db.all(getRecipeSql, [itemName], (err, recipeRows) => {
+          if (err) return reject(err);
+
+          if (!recipeRows || recipeRows.length === 0) {
+            db.get(`SELECT * FROM orders WHERE id = ?`, [orderId], async (err, row) => {
+              if (err) return reject(err);
+              row.category = await getItemCategory(row.item_name);
+              resolve(row);
+            });
+            return;
           }
 
-          const orderId = this.lastID;
+          // 3. Deduct stock including accepted production tolerance buffer (e.g. 5%)
+          const updateStockSql = `UPDATE inventory SET current_stock = current_stock - ? WHERE id = ?`;
+          let pendingDeductions = recipeRows.length;
+          let deductionError = null;
 
-          // If table_number > 0, ensure table session is OPEN
-          if (tNum > 0) {
-            db.run(`INSERT OR IGNORE INTO table_sessions (table_number, opened_at, status) VALUES (?, CURRENT_TIMESTAMP, 'OPEN')`, [tNum]);
-            db.run(`UPDATE table_sessions SET status = 'OPEN' WHERE table_number = ?`, [tNum]);
-          }
+          recipeRows.forEach((ingredient) => {
+            const baseRequired = ingredient.quantity_required * quantity;
+            const bufferPct = parseFloat(ingredient.tolerance_percent) || 5.0;
+            const bufferQty = baseRequired * (bufferPct / 100.0);
+            const totalToDeduct = baseRequired + bufferQty;
 
-          // 2. Fetch recipe ingredients required for this menu item
-          const getRecipeSql = `SELECT inventory_id, quantity_required FROM recipes WHERE menu_item_name = ? AND inventory_id IS NOT NULL`;
-          db.all(getRecipeSql, [itemName], (err, recipeRows) => {
-            if (err) {
-              db.run('ROLLBACK');
-              return reject(err);
-            }
+            db.run(updateStockSql, [totalToDeduct, ingredient.inventory_id], (err) => {
+              if (err && !deductionError) deductionError = err;
 
-            if (!recipeRows || recipeRows.length === 0) {
-              db.run('COMMIT', (err) => {
-                if (err) return reject(err);
+              // Log production buffer to waste_log for transparency
+              if (bufferQty > 0) {
+                db.run(
+                  `INSERT INTO waste_log (inventory_id, item_name, quantity, reason, department) VALUES (?, ?, ?, ?, ?)`,
+                  [ingredient.inventory_id, ingredient.inv_name || itemName, bufferQty, `هالك تشغيل وتشغيل آلي مسموح (${bufferPct}%)`, ingredient.category || 'BARISTA']
+                );
+              }
+
+              pendingDeductions--;
+
+              if (pendingDeductions === 0) {
+                if (deductionError) return reject(deductionError);
+
                 db.get(`SELECT * FROM orders WHERE id = ?`, [orderId], async (err, row) => {
                   if (err) return reject(err);
                   row.category = await getItemCategory(row.item_name);
                   resolve(row);
                 });
-              });
-              return;
-            }
-
-            // 3. Deduct stock for each ingredient in the recipe
-            const updateStockSql = `UPDATE inventory SET current_stock = current_stock - ? WHERE id = ?`;
-            let pendingDeductions = recipeRows.length;
-            let deductionError = null;
-
-            recipeRows.forEach((ingredient) => {
-              const totalRequired = ingredient.quantity_required * quantity;
-              db.run(updateStockSql, [totalRequired, ingredient.inventory_id], (err) => {
-                if (err && !deductionError) deductionError = err;
-                pendingDeductions--;
-
-                if (pendingDeductions === 0) {
-                  if (deductionError) {
-                    db.run('ROLLBACK');
-                    return reject(deductionError);
-                  }
-
-                  db.run('COMMIT', (err) => {
-                    if (err) return reject(err);
-                    db.get(`SELECT * FROM orders WHERE id = ?`, [orderId], async (err, row) => {
-                      if (err) return reject(err);
-                      row.category = await getItemCategory(row.item_name);
-                      resolve(row);
-                    });
-                  });
-                }
-              });
+              }
             });
           });
         });
@@ -2652,6 +2755,559 @@ function deleteUser(id) {
   });
 }
 
+// ============================================================
+// DEDICATED TABLE MANAGEMENT & LIFECYCLE HELPERS
+// ============================================================
+function createCustomTable(tableNumber, customName = null, zone = 'INDOOR_1', capacity = 4, customerName = null, customerPhone = null, customerId = null) {
+  return new Promise((resolve, reject) => {
+    const tNum = parseInt(tableNumber, 10);
+    if (!tNum) return reject(new Error('رقم الطاولة مطلوب'));
+    const sql = `
+      INSERT INTO tables (table_number, custom_name, zone, capacity, customer_name, customer_phone, customer_id, status)
+      VALUES (?, ?, ?, ?, ?, ?, ?, 'VACANT')
+      ON CONFLICT(table_number) DO UPDATE SET
+        custom_name = excluded.custom_name,
+        zone = excluded.zone,
+        capacity = excluded.capacity,
+        customer_name = excluded.customer_name,
+        customer_phone = excluded.customer_phone,
+        customer_id = excluded.customer_id
+    `;
+    db.run(sql, [tNum, customName || null, zone || 'INDOOR_1', parseInt(capacity, 10) || 4, customerName || null, customerPhone || null, customerId || null], function(err) {
+      if (err) return reject(err);
+      resolve({ success: true, table_number: tNum, custom_name: customName, zone, capacity });
+    });
+  });
+}
+
+function updateTableMetadata(tableNumber, fields = {}) {
+  return new Promise((resolve, reject) => {
+    const { custom_name, zone, capacity, customer_name, customer_phone, customer_id } = fields;
+    const sql = `
+      UPDATE tables SET
+        custom_name = COALESCE(?, custom_name),
+        zone = COALESCE(?, zone),
+        capacity = COALESCE(?, capacity),
+        customer_name = COALESCE(?, customer_name),
+        customer_phone = COALESCE(?, customer_phone),
+        customer_id = COALESCE(?, customer_id)
+      WHERE table_number = ?
+    `;
+    db.run(sql, [
+      custom_name !== undefined ? custom_name : null,
+      zone || null,
+      capacity ? parseInt(capacity, 10) : null,
+      customer_name !== undefined ? customer_name : null,
+      customer_phone !== undefined ? customer_phone : null,
+      customer_id !== undefined ? customer_id : null,
+      tableNumber
+    ], function(err) {
+      if (err) return reject(err);
+      resolve({ success: true, table_number: tableNumber });
+    });
+  });
+}
+
+function updateTableLifecycleStatus(tableNumber, lifecycleState, userId = null, waiterId = null) {
+  return new Promise((resolve, reject) => {
+    const tNum = parseInt(tableNumber, 10);
+    let updateSql = '';
+    const params = [];
+
+    switch (lifecycleState) {
+      case 'OPENED':
+        updateSql = `
+          UPDATE tables SET 
+            status = 'OPEN',
+            opened_at = CURRENT_TIMESTAMP,
+            seated_at = COALESCE(seated_at, CURRENT_TIMESTAMP),
+            opened_by_user_id = ?,
+            vacated_at = NULL
+          WHERE table_number = ?
+        `;
+        params.push(userId, tNum);
+        break;
+
+      case 'WAITER_APPROACHED':
+        updateSql = `
+          UPDATE tables SET 
+            status = 'APPROACHED',
+            waiter_approached_at = CURRENT_TIMESTAMP,
+            assigned_waiter_id = COALESCE(?, assigned_waiter_id)
+          WHERE table_number = ?
+        `;
+        params.push(waiterId || userId, tNum);
+        break;
+
+      case 'ORDERED':
+        updateSql = `
+          UPDATE tables SET 
+            status = 'ORDERED',
+            first_ordered_at = COALESCE(first_ordered_at, CURRENT_TIMESTAMP),
+            last_ordered_at = CURRENT_TIMESTAMP
+          WHERE table_number = ?
+        `;
+        params.push(tNum);
+        break;
+
+      case 'REAPPROACHED':
+        updateSql = `
+          UPDATE tables SET 
+            status = 'REAPPROACHED',
+            reapproached_at = CURRENT_TIMESTAMP
+          WHERE table_number = ?
+        `;
+        params.push(tNum);
+        break;
+
+      case 'REORDERED':
+        updateSql = `
+          UPDATE tables SET 
+            status = 'REORDERED',
+            reordered_at = CURRENT_TIMESTAMP,
+            last_ordered_at = CURRENT_TIMESTAMP
+          WHERE table_number = ?
+        `;
+        params.push(tNum);
+        break;
+
+      case 'BILL_REQUESTED':
+        updateSql = `
+          UPDATE tables SET 
+            status = 'CHECK_REQUESTED',
+            check_requested_at = CURRENT_TIMESTAMP
+          WHERE table_number = ?
+        `;
+        params.push(tNum);
+        break;
+
+      case 'PAID':
+        updateSql = `
+          UPDATE tables SET 
+            status = 'PAID',
+            paid_at = CURRENT_TIMESTAMP
+          WHERE table_number = ?
+        `;
+        params.push(tNum);
+        break;
+
+      case 'VACATED':
+        updateSql = `
+          UPDATE tables SET 
+            status = 'VACANT',
+            vacated_at = CURRENT_TIMESTAMP,
+            seated_at = NULL,
+            opened_at = NULL,
+            waiter_approached_at = NULL,
+            first_ordered_at = NULL,
+            last_ordered_at = NULL,
+            reapproached_at = NULL,
+            reordered_at = NULL,
+            check_requested_at = NULL,
+            paid_at = NULL,
+            customer_name = NULL,
+            customer_phone = NULL,
+            customer_id = NULL
+          WHERE table_number = ?
+        `;
+        params.push(tNum);
+        break;
+
+      default:
+        return reject(new Error('حالة الطاولة غير معروفة: ' + lifecycleState));
+    }
+
+    db.run(updateSql, params, function(err) {
+      if (err) return reject(err);
+      logAudit(userId, 'UPDATE_TABLE_LIFECYCLE', 'tables', tNum, null, { lifecycleState });
+      resolve({ success: true, table_number: tNum, status: lifecycleState });
+    });
+  });
+}
+
+function getTablesByZone(zone = 'ALL') {
+  return new Promise((resolve, reject) => {
+    const sql = zone && zone !== 'ALL'
+      ? `SELECT * FROM tables WHERE zone = ? ORDER BY table_number ASC`
+      : `SELECT * FROM tables ORDER BY table_number ASC`;
+    const params = zone && zone !== 'ALL' ? [zone] : [];
+    db.all(sql, params, (err, rows) => {
+      if (err) return reject(err);
+      resolve(rows || []);
+    });
+  });
+}
+
+// ============================================================
+// RECIPE DETAILS & BOM INSTRUCTIONS
+// ============================================================
+function getRecipeDetails(itemName) {
+  return new Promise((resolve, reject) => {
+    const recipeSql = `
+      SELECT r.id, r.menu_item_name, r.category, r.price, r.instructions, r.tolerance_percent,
+             r.inventory_id, r.quantity_required, i.name as ingredient_name, i.unit as ingredient_unit, i.current_stock
+      FROM recipes r
+      LEFT JOIN inventory i ON r.inventory_id = i.id
+      WHERE r.menu_item_name = ?
+    `;
+    db.all(recipeSql, [itemName], (err, rows) => {
+      if (err) return reject(err);
+      if (!rows || rows.length === 0) {
+        // Fallback default recipe details
+        return resolve({
+          menu_item_name: itemName,
+          category: itemName.includes('شيشة') ? 'SHISHA' : (itemName.includes('ساندوتش') ? 'KITCHEN' : 'BARISTA'),
+          price: 0,
+          instructions: 'تحضير الصنف حسب المعايير القياسية.',
+          tolerance_percent: 5.0,
+          ingredients: []
+        });
+      }
+
+      const first = rows[0];
+      const ingredients = rows
+        .filter(r => r.inventory_id !== null)
+        .map(r => ({
+          inventory_id: r.inventory_id,
+          name: r.ingredient_name || 'خامة أساسية',
+          quantity_required: r.quantity_required,
+          unit: r.ingredient_unit || 'g',
+          current_stock: r.current_stock || 0
+        }));
+
+      resolve({
+        menu_item_name: first.menu_item_name,
+        category: first.category || 'BARISTA',
+        price: first.price || 0,
+        instructions: first.instructions || 'تحضير الصنف وفق المعايير القياسية مع مراعاة درجة الحرارة ونظافة المحطة.',
+        tolerance_percent: first.tolerance_percent !== null ? first.tolerance_percent : 5.0,
+        ingredients
+      });
+    });
+  });
+}
+
+// ============================================================
+// INTER-STATION MATERIAL TRANSFERS (إعارة وتحويل خامات)
+// ============================================================
+function transferMaterial(inventoryId, fromDept, toDept, quantity, notes = '', userId = null, userName = null) {
+  return new Promise((resolve, reject) => {
+    const qty = parseFloat(quantity);
+    if (!qty || qty <= 0) return reject(new Error('الكمية المحولة غير صحيحة'));
+
+    db.get(`SELECT name, unit, current_stock FROM inventory WHERE id = ?`, [inventoryId], (err, item) => {
+      if (err || !item) return reject(err || new Error('الخامة غير موجودة بالمخزون'));
+
+      const sql = `
+        INSERT INTO material_transfers (inventory_id, item_name, from_department, to_department, quantity, unit, notes, transferred_by_user_id, transferred_by_name)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `;
+      db.run(sql, [inventoryId, item.name, fromDept, toDept, qty, item.unit, notes || null, userId, userName || null], function(err2) {
+        if (err2) return reject(err2);
+        const transferId = this.lastID;
+        logAudit(userId, 'TRANSFER_MATERIAL', 'material_transfers', transferId, null, { fromDept, toDept, item: item.name, qty });
+        resolve({
+          success: true,
+          id: transferId,
+          item_name: item.name,
+          from_department: fromDept,
+          to_department: toDept,
+          quantity: qty,
+          unit: item.unit
+        });
+      });
+    });
+  });
+}
+
+function getMaterialTransfers(limit = 50) {
+  return new Promise((resolve, reject) => {
+    const sql = `SELECT * FROM material_transfers ORDER BY id DESC LIMIT ?`;
+    db.all(sql, [limit], (err, rows) => {
+      if (err) return reject(err);
+      resolve(rows || []);
+    });
+  });
+}
+
+// ============================================================
+// STAFF ALLOWANCES & STAFF ORDERS
+// ============================================================
+function getStaffAllowances() {
+  return new Promise((resolve, reject) => {
+    db.all(`SELECT * FROM staff_allowances ORDER BY role ASC`, [], (err, rows) => {
+      if (err) return reject(err);
+      resolve(rows || []);
+    });
+  });
+}
+
+function updateStaffAllowance(role, dailyDrinks, dailyMeals, budget = 500) {
+  return new Promise((resolve, reject) => {
+    const sql = `
+      INSERT INTO staff_allowances (role, daily_drink_quota, daily_meal_quota, monthly_budget)
+      VALUES (?, ?, ?, ?)
+      ON CONFLICT(role) DO UPDATE SET
+        daily_drink_quota = excluded.daily_drink_quota,
+        daily_meal_quota = excluded.daily_meal_quota,
+        monthly_budget = excluded.monthly_budget
+    `;
+    db.run(sql, [role, parseInt(dailyDrinks, 10) || 0, parseInt(dailyMeals, 10) || 0, parseFloat(budget) || 500], function(err) {
+      if (err) return reject(err);
+      resolve({ success: true, role });
+    });
+  });
+}
+
+function getStaffRemainingQuota(staffUserId) {
+  return new Promise((resolve, reject) => {
+    db.get(`SELECT id, name, role FROM users WHERE id = ?`, [staffUserId], (err, user) => {
+      if (err || !user) return reject(err || new Error('الموظف غير موجود'));
+
+      db.get(`SELECT * FROM staff_allowances WHERE role = ?`, [user.role], (err2, allowance) => {
+        const drinkLimit = allowance ? allowance.daily_drink_quota : 2;
+        const mealLimit = allowance ? allowance.daily_meal_quota : 1;
+
+        const consumedSql = `
+          SELECT 
+            COALESCE(SUM(CASE WHEN r.category IN ('BARISTA', 'SHISHA') THEN o.quantity ELSE 0 END), 0) as drinks_used,
+            COALESCE(SUM(CASE WHEN r.category = 'KITCHEN' THEN o.quantity ELSE 0 END), 0) as meals_used
+          FROM orders o
+          LEFT JOIN recipes r ON o.item_name = r.menu_item_name
+          WHERE o.staff_user_id = ? 
+            AND o.order_type = 'STAFF'
+            AND date(o.created_at) = date('now', 'localtime')
+            AND o.status != 'VOIDED'
+        `;
+        db.get(consumedSql, [staffUserId], (err3, consumed) => {
+          const drinksUsed = consumed ? consumed.drinks_used : 0;
+          const mealsUsed = consumed ? consumed.meals_used : 0;
+
+          resolve({
+            user_id: user.id,
+            user_name: user.name,
+            role: user.role,
+            drinks_limit: drinkLimit,
+            drinks_used: drinksUsed,
+            drinks_remaining: Math.max(0, drinkLimit - drinksUsed),
+            meals_limit: mealLimit,
+            meals_used: mealsUsed,
+            meals_remaining: Math.max(0, mealLimit - mealsUsed)
+          });
+        });
+      });
+    });
+  });
+}
+
+async function createStaffOrder(itemName, quantity = 1, staffUserId, authorizerUserId = null, notes = '', shiftType = 'MORNING') {
+  const staffMember = await new Promise((res, rej) => {
+    db.get(`SELECT id, name, role FROM users WHERE id = ?`, [staffUserId], (e, r) => e ? rej(e) : res(r));
+  });
+  if (!staffMember) throw new Error('الموظف غير موجود');
+
+  const quota = await getStaffRemainingQuota(staffUserId);
+  const category = await getItemCategory(itemName);
+  const isMeal = category === 'KITCHEN';
+
+  if (isMeal && (quota.meals_remaining < quantity)) {
+    throw new Error(`تجاوز حد الوجبات اليومية المسموحة للموظف (${quota.meals_used}/${quota.meals_limit})`);
+  }
+  if (!isMeal && (quota.drinks_remaining < quantity)) {
+    throw new Error(`تجاوز حد المشروبات اليومية المسموحة للموظف (${quota.drinks_used}/${quota.drinks_limit})`);
+  }
+
+  // Create order with 0 price for staff hospitality
+  const order = await createOrderWithBOM(itemName, quantity, 0, 0, null, null, null, {
+    order_type: 'STAFF',
+    item_notes: `طلب موظف: ${staffMember.name} (${staffMember.role}) - ${notes || ''}`,
+    staff_user_id: staffUserId,
+    user_id: authorizerUserId,
+    user_name: staffMember.name,
+    shift_type: shiftType
+  });
+
+  logAudit(authorizerUserId, 'STAFF_ORDER', 'orders', order.id, null, { staff: staffMember.name, item: itemName, qty: quantity });
+  return order;
+}
+
+// ============================================================
+// EXPECTED BOM vs ACTUAL BOM RECONCILIATION
+// ============================================================
+function getBOMVarianceReport(period = 'today') {
+  return new Promise((resolve, reject) => {
+    let dateWhere = `date(o.created_at) = date('now', 'localtime')`;
+    let wasteWhere = `date(w.created_at) = date('now', 'localtime')`;
+    let purchWhere = `date(p.created_at) = date('now', 'localtime')`;
+
+    if (period === 'week') {
+      dateWhere = `date(o.created_at) >= date('now', 'localtime', '-7 days')`;
+      wasteWhere = `date(w.created_at) >= date('now', 'localtime', '-7 days')`;
+      purchWhere = `date(p.created_at) >= date('now', 'localtime', '-7 days')`;
+    } else if (period === 'month') {
+      dateWhere = `date(o.created_at) >= date('now', 'localtime', '-30 days')`;
+      wasteWhere = `date(w.created_at) >= date('now', 'localtime', '-30 days')`;
+      purchWhere = `date(p.created_at) >= date('now', 'localtime', '-30 days')`;
+    }
+
+    const sql = `
+      SELECT 
+        i.id as inventory_id,
+        i.name as item_name,
+        i.unit,
+        i.department,
+        i.current_stock,
+        COALESCE(i.unit_cost, 0) as unit_cost,
+        COALESCE(SUM(r.quantity_required * o.quantity), 0) as theoretical_usage,
+        COALESCE(SUM((r.quantity_required * o.quantity) * (COALESCE(r.tolerance_percent, 5.0) / 100.0)), 0) as allowed_production_buffer
+      FROM inventory i
+      LEFT JOIN recipes r ON i.id = r.inventory_id
+      LEFT JOIN orders o ON r.menu_item_name = o.item_name AND ${dateWhere} AND o.status != 'VOIDED'
+      GROUP BY i.id, i.name
+    `;
+
+    db.all(sql, [], async (err, rows) => {
+      if (err) return reject(err);
+
+      const result = [];
+      for (const row of (rows || [])) {
+        // Fetch logged waste for this item in period
+        const wasteRow = await new Promise((res) => {
+          db.get(`SELECT COALESCE(SUM(quantity), 0) as waste_qty FROM waste_log w WHERE w.inventory_id = ? AND ${wasteWhere}`, [row.inventory_id], (e, r) => res(r || { waste_qty: 0 }));
+        });
+        const wasteQty = parseFloat(wasteRow.waste_qty) || 0;
+
+        // Fetch purchases for this item in period
+        const purchRow = await new Promise((res) => {
+          db.get(`SELECT COALESCE(SUM(qty_added), 0) as purch_qty FROM purchases p WHERE p.inventory_id = ? AND ${purchWhere}`, [row.inventory_id], (e, r) => res(r || { purch_qty: 0 }));
+        });
+        const purchQty = parseFloat(purchRow.purch_qty) || 0;
+
+        const theoUsage = parseFloat(row.theoretical_usage) || 0;
+        const allowedBuffer = parseFloat(row.allowed_production_buffer) || 0;
+        const expectedTotalConsumption = theoUsage + allowedBuffer;
+        const varianceQty = wasteQty > allowedBuffer ? (wasteQty - allowedBuffer) : 0;
+        const varianceCost = varianceQty * row.unit_cost;
+
+        result.push({
+          inventory_id: row.inventory_id,
+          name: row.item_name,
+          unit: row.unit,
+          department: row.department,
+          unit_cost: row.unit_cost,
+          current_stock: row.current_stock,
+          purchased_in_period: Math.round(purchQty * 100) / 100,
+          theoretical_usage: Math.round(theoUsage * 100) / 100,
+          allowed_production_buffer: Math.round(allowedBuffer * 100) / 100,
+          logged_waste: Math.round(wasteQty * 100) / 100,
+          expected_total_deduction: Math.round(expectedTotalConsumption * 100) / 100,
+          variance_qty: Math.round(varianceQty * 100) / 100,
+          variance_cost: Math.round(varianceCost * 100) / 100,
+          efficiency_pct: expectedTotalConsumption > 0 ? Math.min(100, Math.round((theoUsage / (theoUsage + wasteQty || 1)) * 100)) : 100
+        });
+      }
+
+      resolve(result);
+    });
+  });
+}
+
+// ============================================================
+// EXPECTED CASH DRAWER vs ACTUAL RECONCILIATION
+// ============================================================
+function getExpectedCashForShift(shiftType = 'MORNING', date = null) {
+  return new Promise((resolve, reject) => {
+    const dateFilter = date ? `date('${date}')` : `date('now', 'localtime')`;
+
+    // 1. Cash sales in shift
+    const cashSalesSql = `
+      SELECT COALESCE(SUM(op.amount), 0) as total_cash_sales
+      FROM order_payments op
+      JOIN orders o ON op.order_id = o.id
+      WHERE op.method = 'CASH' 
+        AND date(op.created_at) = ${dateFilter}
+        AND (o.shift_type = ? OR ? = 'ALL')
+        AND o.status != 'VOIDED'
+    `;
+
+    // 2. Advances & expenses in shift
+    const advancesSql = `SELECT COALESCE(SUM(amount), 0) as total_advances FROM employee_advances WHERE date(issued_at) = ${dateFilter}`;
+    const expensesSql = `SELECT COALESCE(SUM(amount), 0) as total_expenses FROM daily_expenses WHERE date(expense_date) = ${dateFilter}`;
+
+    db.get(cashSalesSql, [shiftType, shiftType], (err, salesRow) => {
+      if (err) return reject(err);
+      const cashSales = parseFloat(salesRow ? salesRow.total_cash_sales : 0);
+
+      db.get(advancesSql, [], (err2, advRow) => {
+        const advances = parseFloat(advRow ? advRow.total_advances : 0);
+
+        db.get(expensesSql, [], (err3, expRow) => {
+          const expenses = parseFloat(expRow ? expRow.total_expenses : 0);
+          const openingFloat = shiftType === 'MORNING' ? 500 : 1000; // Standard float
+          const expectedCash = openingFloat + cashSales - advances - expenses;
+
+          resolve({
+            shift_type: shiftType,
+            date: date || new Date().toISOString().slice(0, 10),
+            opening_float: openingFloat,
+            cash_sales: cashSales,
+            cash_advances: advances,
+            cash_expenses: expenses,
+            expected_cash_drawer: expectedCash
+          });
+        });
+      });
+    });
+  });
+}
+
+function declareCashExtended(userId, userName, shiftType, declaredCash, openingFloat = 500, managerPin = null, notes = '') {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const calc = await getExpectedCashForShift(shiftType);
+      const expectedAmount = calc.expected_cash_drawer;
+      const declared = parseFloat(declaredCash) || 0;
+      const variance = declared - expectedAmount;
+
+      let managerApproved = null;
+      if (managerPin) {
+        const mgr = await loginWithPin(managerPin);
+        if (mgr && (mgr.role === 'MANAGER' || mgr.role === 'OP_MANAGER' || mgr.role === 'OWNER' || mgr.role === 'ADMIN')) {
+          managerApproved = mgr.id;
+        }
+      }
+
+      const sql = `
+        INSERT INTO drawer_declarations (
+          user_id, user_name, declared_amount, expected_amount, variance, 
+          opening_float, cash_sales, cash_advances, cash_expenses, shift_type, status, manager_approved_by
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'CLOSED', ?)
+      `;
+      db.run(sql, [
+        userId, userName, declared, expectedAmount, variance,
+        calc.opening_float, calc.cash_sales, calc.cash_advances, calc.cash_expenses, shiftType, managerApproved
+      ], function(err) {
+        if (err) return reject(err);
+        const declId = this.lastID;
+        logAudit(userId, 'EXTENDED_DRAWER_CLOSE', 'drawer_declarations', declId, null, {
+          shiftType, declared, expectedAmount, variance
+        });
+        resolve({
+          id: declId,
+          shift_type: shiftType,
+          declared_amount: declared,
+          expected_amount: expectedAmount,
+          variance: variance,
+          variance_status: variance === 0 ? 'MATCH' : (variance > 0 ? 'OVER' : 'SHORT'),
+          manager_approved: !!managerApproved
+        });
+      });
+    } catch (e) {
+      reject(e);
+    }
+  });
+}
+
 module.exports = {
   db,
   getMenu,
@@ -2690,6 +3346,7 @@ module.exports = {
   getTotalTipsPool,
   voidOrder,
   declareCash,
+  declareCashExtended,
   getDrawerDeclarations,
   logAudit,
   getAuditLogs,
@@ -2704,12 +3361,25 @@ module.exports = {
   getComplaints,
   resolveComplaint,
   getAllTables,
+  createCustomTable,
+  updateTableMetadata,
+  updateTableLifecycleStatus,
+  getTablesByZone,
   seatTable,
   requestTableCheck,
   vacateTable,
   updateTableTimestampsOnOrder,
   updateTableStatusOnCheckout,
-  // New exports
+  getRecipeDetails,
+  transferMaterial,
+  getMaterialTransfers,
+  getStaffAllowances,
+  updateStaffAllowance,
+  getStaffRemainingQuota,
+  createStaffOrder,
+  getBOMVarianceReport,
+  getExpectedCashForShift,
+  // Existing exports
   getWasteLogs,
   getSuppliers, addSupplier, updateSupplier, deleteSupplier,
   getMenuCategories, addMenuCategory, updateMenuCategory, deleteMenuCategory,

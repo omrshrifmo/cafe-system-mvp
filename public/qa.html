@@ -14,26 +14,24 @@
 </head>
 <body class="bg-slate-950 text-slate-100 h-screen max-h-screen flex flex-col overflow-hidden selection:bg-amber-500 selection:text-black">
 
-  <!-- Header -->
-  <header class="shrink-0 border-b border-slate-800 bg-slate-900 px-6 py-3 flex items-center justify-between shadow-xl z-20">
+  <!-- Page Action Header -->
+  <div class="shrink-0 bg-slate-900/90 border-b border-slate-800 px-6 py-3.5 flex items-center justify-between shadow-md z-20">
     <div class="flex items-center gap-3">
       <div class="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 text-xl shadow-inner">
         🛡️
       </div>
       <div>
-        <h1 class="text-lg font-black text-slate-100 tracking-wide">كافيه مزاج - إدارة الجودة والشكاوى (Quality Assurance)</h1>
-        <p class="text-[11px] text-indigo-400 font-semibold">توثيق ملاحظات الجودة، المرتجعات، وتجاوزات الخدمة ضد الموظفين</p>
+        <h1 class="text-lg font-black text-white">إدارة الجودة والشكاوى (QA)</h1>
+        <p class="text-xs text-slate-400">توثيق ملاحظات الجودة، المرتجعات، وتجاوزات الخدمة ومسؤوليات الأقسام</p>
       </div>
     </div>
 
     <!-- Navigation -->
     <div class="flex items-center gap-3">
-      <a href="/portal.html" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-lg border border-slate-700">🏠 القائمة الرئيسية</a>
-      <a href="/hr.html" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-lg border border-slate-700">👥 إدارة الموظفين</a>
-      <a href="/pos.html" class="px-3 py-1.5 bg-emerald-950 hover:bg-emerald-900 text-emerald-300 text-xs font-bold rounded-lg border border-emerald-500/40">💳 نقطة البيع</a>
-      <div id="network-status" class="w-3 h-3 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" title="المتصل بالنظام"></div>
+      <a href="/hr.html" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl border border-slate-700 transition-colors">💼 الموارد البشرية</a>
+      <a href="/pos.html" class="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-black rounded-xl transition-colors shadow">💳 نقطة البيع</a>
     </div>
-  </header>
+  </div>
 
   <!-- Toast Notification Container -->
   <div id="toast-container" class="fixed top-16 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-2 pointer-events-none"></div>

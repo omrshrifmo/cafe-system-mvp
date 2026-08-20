@@ -7,14 +7,17 @@
     ],
     "teamSize": "solo",
     "aiTools": [
-      "claude"
+      "cursor",
+      "claude",
+      "copilot",
+      "kiro"
     ],
     "budgetPattern": "none",
     "hasSharedClaudeSkills": false,
     "isGitRepo": true,
     "branchCount": 1,
-    "trackedFileCount": 1886,
-    "repoSizeKb": 7,
+    "trackedFileCount": 2022,
+    "repoSizeKb": 8,
     "commitsLast30d": 2,
     "commitsTotal": 2,
     "projectAgeDays": 0,
@@ -28,14 +31,15 @@
     "remoteAuthors30d": 1,
     "upstreamAhead": 0,
     "upstreamBehind": 0,
-    "remoteProbeSource": "remote-tracking"
+    "remoteProbeSource": "cache"
   },
   "enabledFeatures": {
     "autoOptimizer": false
   },
   "costTracking": "minimal",
   "confidence": 0.72,
-  "detectedAt": "2026-08-17T21:42:03.516Z",
-  "appliedAt": "2026-08-17T21:42:03.516Z",
-  "rationale": "Git analysis: 1886 tracked files, 1 branch (1 local, 1 remote), 2 commits (2 last 30d), 1 author (30d), low activity, ~7 KB git objects. Remote git (https://github.com/omrshrifmo/cafe-system-mvp.git): 1 remote branch, 1 remote author (30d), via cache. Solo, low-intensity product — branch profiles with token-saving focus."
+  "detectedAt": "2026-08-18T12:43:34.526Z",
+  "appliedAt": "2026-08-18T12:43:34.526Z",
+  "userPlan": "accept-detected",
+  "rationale": "Git analysis: 2022 tracked files, 1 branch (1 local, 1 remote), 2 commits (2 last 30d), 1 author (30d), low activity, ~8 KB git objects, 1d old. Remote git (https://github.com/omrshrifmo/cafe-system-mvp.git): 1 remote branch, 1 remote author (30d), via cache. Solo, low-intensity product — branch profiles with token-saving focus."
 }

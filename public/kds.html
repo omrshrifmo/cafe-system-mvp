@@ -17,106 +17,101 @@
   </script>
   <style> body { font-family: 'Cairo', sans-serif; } </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col overflow-y-auto selection:bg-emerald-500 selection:text-black">
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col overflow-y-auto selection:bg-amber-500 selection:text-black">
 
-  <!-- Header (Shrink-0) -->
-  <header class="shrink-0 border-b border-slate-800 bg-slate-900 px-6 py-3 flex items-center justify-between shadow-xl z-20">
+  <!-- Page Action Header -->
+  <div class="shrink-0 bg-slate-900/90 border-b border-slate-800 px-6 py-3 flex items-center justify-between shadow-md z-20">
     <div class="flex items-center gap-3">
-      <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 text-xl shadow-inner">
+      <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 text-xl shadow-inner">
         ☕
       </div>
       <div>
-        <h1 class="text-lg font-black text-slate-100 tracking-wide">كافيه مزاج - شاشة البارستا (Barista KDS)</h1>
-        <p class="text-[11px] text-emerald-400 font-semibold">استقبال وتجهيز طلبات المشروبات فوراً</p>
+        <h1 class="text-lg font-black text-white flex items-center gap-2">
+          <span>شاشة تحضير البارستا (Barista KDS)</span>
+          <span class="text-[10px] px-2 py-0.5 bg-amber-500/20 text-amber-300 rounded-lg font-mono">قسم المشروبات</span>
+        </h1>
+        <p class="text-xs text-slate-400">استقبال وتجهيز المشروبات، عرض الوصفات ونسب الخامات، وإعارة الخامات</p>
       </div>
     </div>
 
-    <!-- Status & Counter -->
-    <div class="flex items-center gap-4">
-      <div class="flex items-center gap-2 bg-slate-800 px-3 py-1 rounded-xl border border-slate-700">
-        <span class="text-xs text-slate-400">النشطة:</span>
-        <span id="pending-counter" class="text-sm font-extrabold text-amber-400 font-mono">0</span>
+    <!-- Status, Lending Button & Counters -->
+    <div class="flex items-center gap-3">
+      <button onclick="openLendingModal()" class="px-3.5 py-2 bg-indigo-950/80 hover:bg-indigo-900 border border-indigo-500/40 text-indigo-300 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm transition-colors">
+        <span>🔄</span>
+        <span>إعارة واستعارة خامات</span>
+      </button>
+
+      <div class="flex items-center gap-2 bg-slate-800/80 px-3 py-1.5 rounded-xl border border-slate-700 text-xs">
+        <span class="text-slate-400">الطلبات النشطة:</span>
+        <span id="pending-counter" class="font-black text-amber-400 font-mono">0</span>
       </div>
 
-      <div id="ws-status" class="flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-bold">
-        <span class="w-2 h-2 rounded-full bg-amber-500"></span>
-        <span id="ws-status-text">جاري الاتصال...</span>
-      </div>
-
-      <div id="live-clock" class="text-slate-400 font-mono text-xs bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700/50 hidden md:block">
-        00:00:00
+      <div id="ws-status" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold">
+        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+        <span id="ws-status-text">متصل</span>
       </div>
     </div>
-  </header>
+  </div>
 
-  <!-- 4-Tab Navigation Bar (Shrink-0) -->
-  <nav class="shrink-0 bg-slate-900 border-b border-slate-800 px-6 py-2 flex items-center gap-2 z-10 flex-wrap">
-    <button onclick="switchTab('live')" id="tab-btn-live" class="px-4 py-2 rounded-xl text-xs font-black bg-emerald-600 text-white cursor-pointer">
+  <!-- Tab Navigation Bar -->
+  <nav class="shrink-0 bg-slate-900/90 border-b border-slate-800 px-4 py-1.5 flex items-center gap-2 z-10 flex-wrap">
+    <button onclick="switchTab('live')" id="tab-btn-live" class="px-3.5 py-1.5 rounded-xl text-xs font-black bg-amber-500 text-slate-950 cursor-pointer shadow">
       ⚡ الطلبات النشطة (<span id="live-tab-count">0</span>)
     </button>
-    <button onclick="switchTab('past')" id="tab-btn-past" class="px-4 py-2 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 cursor-pointer">
-      📜 السجلات اليومية (Past Orders)
+    <button onclick="switchTab('past')" id="tab-btn-past" class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 cursor-pointer">
+      📜 السجلات اليومية المكتملة
     </button>
-    <button onclick="switchTab('inventory')" id="tab-btn-inventory" class="px-4 py-2 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 cursor-pointer">
-      📦 مخزون البارستا (Local Inventory)
+    <button onclick="switchTab('inventory')" id="tab-btn-inventory" class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 cursor-pointer">
+      📦 مخزون البارستا المحلي
     </button>
-    <button onclick="switchTab('waste')" id="tab-btn-waste" class="px-4 py-2 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 cursor-pointer">
-      ⚠️ تسجيل الهالك (Log Waste)
+    <button onclick="switchTab('transfers')" id="tab-btn-transfers" class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 cursor-pointer">
+      🔄 سجل الإعارات والتحويلات
+    </button>
+    <button onclick="switchTab('waste')" id="tab-btn-waste" class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 cursor-pointer">
+      ⚠️ تسجيل الهالك والانسكاب
     </button>
   </nav>
 
   <!-- Toast Area -->
-  <div id="kds-toast-container" class="fixed top-24 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-2 pointer-events-none"></div>
+  <div id="kds-toast-container" class="fixed top-16 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-2 pointer-events-none"></div>
 
-  <!-- Main Content Container (Responsive Scroll) -->
-  <main class="max-w-7xl w-full mx-auto p-4 flex-1 flex flex-col min-h-0 overflow-y-auto">
+  <!-- Main Content Container -->
+  <main class="w-full p-4 flex-1 flex flex-col min-h-0 overflow-y-auto">
 
-    <!-- Tab 1: Live 4-Lane KDS Grid -->
+    <!-- Tab 1: Live 3-Lane Active KDS Grid -->
     <section id="tab-content-live" class="w-full flex-1 flex flex-col min-h-0">
-
-      <!-- Empty State -->
       <div id="empty-state" class="hidden my-auto flex flex-col items-center justify-center text-center py-16 px-4 border-2 border-dashed border-slate-800 rounded-3xl bg-slate-900/30">
-        <div class="w-20 h-20 rounded-full bg-slate-800/60 flex items-center justify-center text-4xl mb-3 text-slate-600">✨</div>
-        <h2 class="text-xl font-bold text-slate-300 mb-1">لا توجد طلبات معلقة الآن</h2>
-        <p class="text-slate-500 text-xs">جميع طلبات البارستا مكتملة!</p>
+        <div class="w-16 h-16 rounded-full bg-slate-800/60 flex items-center justify-center text-3xl mb-2 text-slate-600">✨</div>
+        <h2 class="text-base font-bold text-slate-300 mb-1">لا توجد طلبات معلقة الآن</h2>
+        <p class="text-slate-500 text-xs">جميع طلبات البارستا جاهزة ومسلّمة!</p>
       </div>
 
-      <!-- 4-Lane KDS State Machine Grid -->
-      <div id="orders-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 w-full flex-1 min-h-[500px]">
-        <!-- Lane 1: Pending -->
-        <div class="bg-slate-900/60 border border-amber-500/30 rounded-2xl p-3 flex flex-col max-h-[650px]">
-          <h3 class="text-xs font-black text-amber-400 mb-2 border-b border-amber-500/20 pb-2 flex items-center justify-between">
-            <span>🟡 طلبات جديدة</span>
-            <span id="count-pending" class="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-mono text-[10px]">0</span>
-          </h3>
+      <div id="orders-grid" class="grid grid-cols-1 md:grid-cols-3 gap-3 w-full flex-1 min-h-[500px]">
+        <!-- Lane 1: Pending (جديد) -->
+        <div class="bg-slate-900/70 border border-amber-500/30 rounded-2xl p-3 flex flex-col">
+          <div class="text-xs font-black text-amber-400 mb-2 border-b border-amber-500/20 pb-2 flex items-center justify-between">
+            <span class="flex items-center gap-1.5"><span>🟡</span> طلبات جديدة (معلقة)</span>
+            <span id="count-pending" class="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-mono text-[10px] font-black">0</span>
+          </div>
           <div id="lane-pending" class="space-y-3 overflow-y-auto flex-1 pr-1"></div>
         </div>
 
-        <!-- Lane 2: Accepted -->
-        <div class="bg-slate-900/60 border border-blue-500/30 rounded-2xl p-3 flex flex-col max-h-[650px]">
-          <h3 class="text-xs font-black text-blue-400 mb-2 border-b border-blue-500/20 pb-2 flex items-center justify-between">
-            <span>⏳ جاري التجهيز</span>
-            <span id="count-accepted" class="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 font-mono text-[10px]">0</span>
-          </h3>
+        <!-- Lane 2: In Preparation (جاري التجهيز) -->
+        <div class="bg-slate-900/70 border border-blue-500/30 rounded-2xl p-3 flex flex-col">
+          <div class="text-xs font-black text-blue-400 mb-2 border-b border-blue-500/20 pb-2 flex items-center justify-between">
+            <span class="flex items-center gap-1.5"><span>⏳</span> قيد التجهيز والتحضير</span>
+            <span id="count-accepted" class="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 font-mono text-[10px] font-black">0</span>
+          </div>
           <div id="lane-accepted" class="space-y-3 overflow-y-auto flex-1 pr-1"></div>
         </div>
 
-        <!-- Lane 3: Ready -->
-        <div class="bg-slate-900/60 border border-emerald-500/30 rounded-2xl p-3 flex flex-col max-h-[650px]">
-          <h3 class="text-xs font-black text-emerald-400 mb-2 border-b border-emerald-500/20 pb-2 flex items-center justify-between">
-            <span>☕ جاهز للاستلام</span>
-            <span id="count-ready" class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-mono text-[10px]">0</span>
-          </h3>
+        <!-- Lane 3: Ready for Pickup (جاهز للاستلام والتسليم) -->
+        <div class="bg-slate-900/70 border border-emerald-500/30 rounded-2xl p-3 flex flex-col">
+          <div class="text-xs font-black text-emerald-400 mb-2 border-b border-emerald-500/20 pb-2 flex items-center justify-between">
+            <span class="flex items-center gap-1.5"><span>☕</span> جاهز للتسليم للويتر/العميل</span>
+            <span id="count-ready" class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-mono text-[10px] font-black">0</span>
+          </div>
           <div id="lane-ready" class="space-y-3 overflow-y-auto flex-1 pr-1"></div>
-        </div>
-
-        <!-- Lane 4: Delivered -->
-        <div class="bg-slate-900/60 border border-slate-700/50 rounded-2xl p-3 flex flex-col max-h-[650px]">
-          <h3 class="text-xs font-black text-slate-400 mb-2 border-b border-slate-700/50 pb-2 flex items-center justify-between">
-            <span>✓ تم التسليم</span>
-            <span id="count-delivered" class="px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 font-mono text-[10px]">0</span>
-          </h3>
-          <div id="lane-delivered" class="space-y-3 overflow-y-auto flex-1 pr-1 opacity-75"></div>
         </div>
       </div>
     </section>
@@ -125,7 +120,7 @@
     <section id="tab-content-past" class="w-full hidden">
       <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
         <h3 class="text-sm font-black text-amber-400 mb-3 flex items-center gap-2">
-          <span>📜</span> طلبات البارستا المكتملة اليوم
+          <span>📜</span> طلبات البارستا المسلّمة والمكتملة اليوم
         </h3>
         <div id="past-orders-list" class="space-y-2 max-h-[500px] overflow-y-auto pr-1"></div>
       </div>
@@ -134,24 +129,38 @@
     <!-- Tab 3: Local Inventory -->
     <section id="tab-content-inventory" class="w-full hidden">
       <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
-        <h3 class="text-sm font-black text-emerald-400 mb-3 flex items-center gap-2">
-          <span>📦</span> رصيد خامات قسم البارستا (BARISTA)
-        </h3>
-        <div id="inventory-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3"></div>
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-sm font-black text-emerald-400 flex items-center gap-2">
+            <span>📦</span> رصيد خامات قسم البارستا (BARISTA)
+          </h3>
+          <button onclick="fetchLocalInventory()" class="px-3 py-1 bg-slate-800 hover:bg-slate-700 rounded-lg text-xs font-bold text-slate-300 cursor-pointer">
+            تحديث الرصيد 🔄
+          </button>
+        </div>
+        <div id="inventory-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3"></div>
       </div>
     </section>
 
-    <!-- Tab 4: Log Waste -->
+    <!-- Tab 4: Transfers History -->
+    <section id="tab-content-transfers" class="w-full hidden">
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+        <h3 class="text-sm font-black text-indigo-400 mb-3 flex items-center gap-2">
+          <span>🔄</span> سجل إعارات وتحويل الخامات بين الأقسام
+        </h3>
+        <div id="transfers-list" class="space-y-2 max-h-[500px] overflow-y-auto pr-1"></div>
+      </div>
+    </section>
+
+    <!-- Tab 5: Log Waste -->
     <section id="tab-content-waste" class="w-full hidden">
       <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-lg mx-auto w-full">
         <h3 class="text-base font-black text-rose-400 mb-4 flex items-center gap-2">
-          <span>⚠️</span> تسجيل مواد هالكة/مفقودة - قسم البارستا
+          <span>⚠️</span> تسجيل مواد هالكة / انسكاب - قسم البارستا
         </h3>
         <form onsubmit="submitWasteLog(event)" class="space-y-4">
           <div>
             <label class="block text-xs font-bold text-slate-300 mb-1">اختر الخامة:</label>
             <select id="waste-inv-select" required class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-white text-xs focus:border-amber-500 focus:outline-none">
-              <!-- Rendered via JS -->
             </select>
           </div>
           <div>
@@ -159,8 +168,8 @@
             <input type="number" step="0.1" min="0.1" id="waste-qty-input" required placeholder="مثال: 50" class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-amber-400 font-mono font-black text-xs focus:border-amber-500 focus:outline-none" />
           </div>
           <div>
-            <label class="block text-xs font-bold text-slate-300 mb-1">سبب الهدر / الملاحظات:</label>
-            <input type="text" id="waste-reason-input" placeholder="مثال: انسحاب حليب / تلف بن" class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-white text-xs focus:border-amber-500 focus:outline-none" />
+            <label class="block text-xs font-bold text-slate-300 mb-1">سبب الهدر / الانسكاب:</label>
+            <input type="text" id="waste-reason-input" placeholder="مثال: انسكاب حليب / استخلاص غير مطابق" class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-white text-xs focus:border-amber-500 focus:outline-none" />
           </div>
           <button type="submit" class="w-full py-3 bg-rose-600 hover:bg-rose-500 text-white font-black rounded-xl text-sm shadow-lg cursor-pointer">
             تسجيل وتحديث رصيد المخزون ⚠️
@@ -171,9 +180,80 @@
 
   </main>
 
-  <footer class="border-t border-slate-800 bg-slate-950 py-3 text-center text-xs text-slate-500">
-    كافيه مزاج - شاشة البارستا KDS &copy; 2026
-  </footer>
+  <!-- Recipe & Ingredients Modal -->
+  <div id="recipe-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-lg p-6 shadow-2xl flex flex-col max-h-[90vh] overflow-y-auto text-right">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+        <div class="flex items-center gap-2">
+          <span class="text-2xl">📖</span>
+          <h3 id="recipe-modal-title" class="text-base font-black text-amber-400">طريقة التحضير والمقادير</h3>
+        </div>
+        <button onclick="closeRecipeModal()" class="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center font-bold text-sm cursor-pointer">✕</button>
+      </div>
+
+      <div id="recipe-modal-body" class="space-y-4 text-xs text-slate-300">
+        <!-- Injected dynamically -->
+      </div>
+
+      <div class="mt-6 pt-3 border-t border-slate-800 flex justify-end">
+        <button onclick="closeRecipeModal()" class="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl text-xs cursor-pointer">إغلاق</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Inter-Station Lending Modal -->
+  <div id="lending-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md p-6 shadow-2xl text-right">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+        <div class="flex items-center gap-2">
+          <span class="text-2xl">🔄</span>
+          <h3 class="text-base font-black text-indigo-400">إعارة / استعارة خامات بين الأقسام</h3>
+        </div>
+        <button onclick="closeLendingModal()" class="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center font-bold text-sm cursor-pointer">✕</button>
+      </div>
+
+      <form onsubmit="submitMaterialTransfer(event)" class="space-y-3.5 text-xs">
+        <div>
+          <label class="block font-bold text-slate-300 mb-1">الخامة المراد تحويلها/إعارتها:</label>
+          <select id="lend-inv-select" required class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-white focus:border-indigo-500 focus:outline-none">
+          </select>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block font-bold text-slate-300 mb-1">من قسم (المُعير):</label>
+            <select id="lend-from-dept" required class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-white">
+              <option value="BARISTA" selected>البارستا (BARISTA)</option>
+              <option value="SHISHA">الشيشة (SHISHA)</option>
+              <option value="KITCHEN">المطبخ (KITCHEN)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-bold text-slate-300 mb-1">إلى قسم (المستعير):</label>
+            <select id="lend-to-dept" required class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-white">
+              <option value="KITCHEN">المطبخ (KITCHEN)</option>
+              <option value="SHISHA">الشيشة (SHISHA)</option>
+              <option value="BARISTA">البارستا (BARISTA)</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-300 mb-1">الكمية:</label>
+          <input type="number" step="0.1" min="0.1" id="lend-qty-input" required placeholder="مثال: 500" class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-amber-400 font-mono font-black focus:border-indigo-500 focus:outline-none" />
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-300 mb-1">ملاحظات التحويل / الإعارة:</label>
+          <input type="text" id="lend-notes-input" placeholder="مثال: استعارة حليب مؤقتاً لتغطية طلبات المساء" class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-white focus:border-indigo-500 focus:outline-none" />
+        </div>
+
+        <button type="submit" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-xl text-xs shadow-lg cursor-pointer mt-2">
+          تأكيد تحويل الخامة وإثبات العملية 🔄
+        </button>
+      </form>
+    </div>
+  </div>
 
   <script>
     const STATION_DEPARTMENT = 'BARISTA';
@@ -186,32 +266,36 @@
 
     const ordersMap = new Map();
     let ws = null;
+    let allInventory = [];
     let localInventory = [];
 
     function switchTab(tabName) {
-      ['live', 'past', 'inventory', 'waste'].forEach(t => {
-        document.getElementById(`tab-content-${t}`).classList.add('hidden');
+      ['live', 'past', 'inventory', 'transfers', 'waste'].forEach(t => {
+        const content = document.getElementById(`tab-content-${t}`);
+        if (content) content.classList.add('hidden');
         const btn = document.getElementById(`tab-btn-${t}`);
-        btn.className = 'px-4 py-2 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 cursor-pointer';
+        if (btn) btn.className = 'px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 cursor-pointer';
       });
 
-      document.getElementById(`tab-content-${tabName}`).classList.remove('hidden');
+      const activeContent = document.getElementById(`tab-content-${tabName}`);
+      if (activeContent) activeContent.classList.remove('hidden');
       const activeBtn = document.getElementById(`tab-btn-${tabName}`);
-      activeBtn.className = 'px-4 py-2 rounded-xl text-xs font-black bg-emerald-600 text-white cursor-pointer';
+      if (activeBtn) activeBtn.className = 'px-3.5 py-1.5 rounded-xl text-xs font-black bg-amber-500 text-slate-950 cursor-pointer shadow';
 
       if (tabName === 'past') fetchPastOrders();
       if (tabName === 'inventory' || tabName === 'waste') fetchLocalInventory();
+      if (tabName === 'transfers') fetchTransfers();
     }
 
     function showToast(message, isInfo = true) {
       const container = document.getElementById('kds-toast-container');
       const toast = document.createElement('div');
-      toast.className = `px-5 py-2.5 rounded-xl border text-xs font-bold flex items-center gap-2 ${
+      toast.className = `px-4 py-2 rounded-xl border text-xs font-bold flex items-center gap-2 shadow-2xl ${
         isInfo ? 'bg-amber-950 text-amber-300 border-amber-500/50' : 'bg-emerald-950 text-emerald-300 border-emerald-500/50'
       }`;
       toast.innerHTML = `<span>${isInfo ? '🔔' : '✅'}</span><span>${message}</span>`;
       container.appendChild(toast);
-      setTimeout(() => toast.remove(), 2500);
+      setTimeout(() => toast.remove(), 3000);
     }
 
     function playBeep() {
@@ -240,11 +324,21 @@
           const data = JSON.parse(event.data);
           if ((data.type === 'NEW_ORDER' || data.type === 'KDS_STATUS_UPDATED' || data.type === 'CANCEL_REQUESTED' || data.type === 'CANCEL_RESOLVED') && data.order && data.order.category === STATION_DEPARTMENT) {
             playBeep();
-            ordersMap.set(data.order.id, data.order);
+            const ord = data.order;
+            const status = (ord.kds_status || ord.status || 'PENDING').toUpperCase();
+            // Automatically remove DELIVERED / COMPLETED from live lanes!
+            if (status === 'DELIVERED' || status === 'COMPLETED') {
+              ordersMap.delete(ord.id);
+            } else {
+              ordersMap.set(ord.id, ord);
+            }
             renderAllLanes();
           } else if (data.type === 'ORDER_COMPLETED' && data.orderId) {
             ordersMap.delete(data.orderId);
             renderAllLanes();
+          } else if (data.type === 'MATERIAL_TRANSFERRED') {
+            showToast(`🔄 تحويل خام: ${data.transfer.item_name} من ${data.transfer.from_department} إلى ${data.transfer.to_department}`, false);
+            fetchLocalInventory();
           } else {
             fetchPendingOrders();
           }
@@ -256,11 +350,16 @@
 
     async function fetchPendingOrders() {
       try {
-        const res = await fetch('/api/orders');
+        const res = await fetch(`/api/orders?department=${STATION_DEPARTMENT}&exclude_completed=1`);
         const data = await res.json();
         if (res.ok && data.success && Array.isArray(data.orders)) {
           ordersMap.clear();
-          data.orders.forEach(o => { if (o.category === STATION_DEPARTMENT) ordersMap.set(o.id, o); });
+          data.orders.forEach(o => {
+            const status = (o.kds_status || o.status || 'PENDING').toUpperCase();
+            if (status !== 'DELIVERED' && status !== 'COMPLETED') {
+              ordersMap.set(o.id, o);
+            }
+          });
           renderAllLanes();
         }
       } catch (e) {}
@@ -281,7 +380,8 @@
               <div class="flex items-center gap-2">
                 <span class="font-bold text-emerald-400 font-mono">#${o.id}</span>
                 <span class="font-bold text-white">${o.item_name} (x${o.quantity})</span>
-                ${o.table_number ? `<span class="bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded text-[10px]">طاولة ${o.table_number}</span>` : ''}
+                ${o.table_number ? `<span class="bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded text-[10px]">طاولة ${o.table_number}</span>` : '<span class="bg-slate-700 text-slate-300 px-1.5 py-0.5 rounded text-[10px]">مباشر/سفري</span>'}
+                ${o.sugar_level ? `<span class="text-[10px] text-amber-300 bg-amber-950/60 px-1.5 py-0.5 rounded">🍬 ${o.sugar_level}</span>` : ''}
               </div>
               <span class="text-[10px] font-mono text-slate-400">${new Date(o.created_at).toLocaleTimeString('ar-EG')}</span>
             </div>
@@ -295,6 +395,7 @@
         const res = await fetch('/api/inventory');
         const data = await res.json();
         if (res.ok && data.success && Array.isArray(data.inventory)) {
+          allInventory = data.inventory;
           localInventory = data.inventory.filter(i => i.department === STATION_DEPARTMENT);
           
           const invGrid = document.getElementById('inventory-grid');
@@ -312,10 +413,329 @@
           wasteSelect.innerHTML = localInventory.map(item => `
             <option value="${item.id}">${item.name} (الرصيد: ${item.current_stock} ${item.unit})</option>
           `).join('');
+
+          const lendSelect = document.getElementById('lend-inv-select');
+          lendSelect.innerHTML = allInventory.map(item => `
+            <option value="${item.id}">${item.name} [قسم: ${item.department}] (الرصيد: ${item.current_stock} ${item.unit})</option>
+          `).join('');
         }
       } catch (e) {}
     }
 
+    async function fetchTransfers() {
+      try {
+        const res = await fetch('/api/materials/transfers');
+        const data = await res.json();
+        const container = document.getElementById('transfers-list');
+        if (res.ok && data.success && Array.isArray(data.transfers)) {
+          if (data.transfers.length === 0) {
+            container.innerHTML = '<p class="text-xs text-slate-500 text-center py-6">لا توجد عمليات إعارة مسجلة بعد</p>';
+            return;
+          }
+          container.innerHTML = data.transfers.map(t => `
+            <div class="p-2.5 bg-slate-800/80 border border-slate-700 rounded-xl flex items-center justify-between text-xs">
+              <div>
+                <div class="font-black text-white flex items-center gap-1.5">
+                  <span>${t.item_name}</span>
+                  <span class="font-mono text-amber-400">(${t.quantity})</span>
+                  <span class="text-[10px] text-slate-400">من: <strong class="text-indigo-300">${t.from_department}</strong> ➔ إلى: <strong class="text-emerald-300">${t.to_department}</strong></span>
+                </div>
+                ${t.notes ? `<div class="text-[10px] text-slate-400 mt-0.5">📝 ${t.notes}</div>` : ''}
+              </div>
+              <div class="text-right">
+                <span class="text-[10px] font-mono text-slate-400">${new Date(t.created_at).toLocaleTimeString('ar-EG')}</span>
+                <div class="text-[9px] text-amber-400 font-bold">بواسطة: ${t.user_name || 'موظف'}</div>
+              </div>
+            </div>
+          `).join('');
+        }
+      } catch (e) {}
+    }
+
+    function renderAllLanes() {
+      const lanePending = document.getElementById('lane-pending');
+      const laneAccepted = document.getElementById('lane-accepted');
+      const laneReady = document.getElementById('lane-ready');
+
+      lanePending.innerHTML = '';
+      laneAccepted.innerHTML = '';
+      laneReady.innerHTML = '';
+
+      let cPending = 0, cAccepted = 0, cReady = 0;
+
+      ordersMap.forEach(order => {
+        const status = (order.kds_status || order.status || 'PENDING').toUpperCase();
+        // Skip completed/delivered orders from live 3 lanes
+        if (status === 'DELIVERED' || status === 'COMPLETED') return;
+
+        const card = createKdsCard(order, status);
+
+        if (status === 'PENDING') {
+          lanePending.appendChild(card);
+          cPending++;
+        } else if (status === 'ACCEPTED' || status === 'PREPARING') {
+          laneAccepted.appendChild(card);
+          cAccepted++;
+        } else if (status === 'READY') {
+          laneReady.appendChild(card);
+          cReady++;
+        }
+      });
+
+      document.getElementById('count-pending').textContent = cPending;
+      document.getElementById('count-accepted').textContent = cAccepted;
+      document.getElementById('count-ready').textContent = cReady;
+
+      const totalActive = cPending + cAccepted + cReady;
+      document.getElementById('pending-counter').textContent = totalActive;
+      document.getElementById('live-tab-count').textContent = totalActive;
+
+      const emptyState = document.getElementById('empty-state');
+      const ordersGrid = document.getElementById('orders-grid');
+      if (totalActive === 0) {
+        emptyState.classList.remove('hidden');
+        ordersGrid.classList.add('hidden');
+      } else {
+        emptyState.classList.add('hidden');
+        ordersGrid.classList.remove('hidden');
+      }
+    }
+
+    function createKdsCard(order, status) {
+      const card = document.createElement('div');
+      const tableText = order.table_number && order.table_number > 0 ? `طاولة #${order.table_number}` : (order.order_type === 'STAFF' ? '👤 طلب موظف' : 'طلب سفري/مباشر');
+      const isCancelRequested = order.edit_request === 'CANCEL_REQUESTED';
+
+      card.className = `bg-slate-900 border ${isCancelRequested ? 'border-rose-500 animate-pulse' : 'border-slate-800'} rounded-2xl p-3 flex flex-col justify-between shadow-lg text-right transition-none`;
+
+      card.innerHTML = `
+        <div>
+          <div class="flex items-center justify-between border-b border-slate-800 pb-1.5 mb-2">
+            <div class="flex items-center gap-1.5">
+              <span class="text-xs font-mono font-extrabold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300">#${order.id}</span>
+              ${order.order_type === 'STAFF' ? '<span class="text-[9px] bg-purple-500/20 text-purple-300 px-1.5 py-0.5 rounded font-bold">موظف</span>' : ''}
+            </div>
+            <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-300">${tableText}</span>
+          </div>
+
+          ${isCancelRequested ? `
+            <div class="mb-2 p-2 bg-rose-950/80 border border-rose-500/50 rounded-xl text-rose-300 text-xs font-bold text-center">
+              ⚠️ طلب إلغاء من الصالة/الويتر!
+              <div class="flex gap-1 mt-2">
+                <button onclick="resolveCancel(${order.id}, true)" class="w-1/2 py-1 bg-rose-600 text-white rounded text-[11px] font-black cursor-pointer">موافقة ✓</button>
+                <button onclick="resolveCancel(${order.id}, false)" class="w-1/2 py-1 bg-slate-700 text-slate-200 rounded text-[11px] font-bold cursor-pointer">رفض ✕</button>
+              </div>
+            </div>
+          ` : ''}
+
+          <h4 class="text-sm font-black text-white leading-tight">${order.item_name}</h4>
+
+          <!-- Customizations Badges -->
+          <div class="flex flex-wrap gap-1 mt-1.5">
+            ${order.sugar_level ? `<span class="px-1.5 py-0.5 rounded bg-amber-950/80 border border-amber-500/30 text-amber-300 text-[10px] font-bold">🍬 السكر: ${order.sugar_level}</span>` : ''}
+            ${order.roast_type ? `<span class="px-1.5 py-0.5 rounded bg-amber-900/40 border border-amber-600/30 text-amber-200 text-[10px] font-bold">☕ الخلطة: ${order.roast_type}</span>` : ''}
+            ${order.variant ? `<span class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-200 text-[10px] font-bold">🏷️ ${order.variant}</span>` : ''}
+            ${order.addons ? `<span class="px-1.5 py-0.5 rounded bg-emerald-950/80 border border-emerald-500/30 text-emerald-300 text-[10px] font-bold">➕ ${order.addons}</span>` : ''}
+          </div>
+
+          ${order.item_notes ? `<div class="mt-1.5 text-[10px] bg-slate-950/60 p-1.5 rounded-lg border border-slate-800 text-slate-300">📝 ${order.item_notes}</div>` : ''}
+
+          <div class="flex items-center justify-between bg-slate-800/90 px-2.5 py-1 rounded-lg mt-2 text-xs">
+            <span class="text-slate-400">الكمية:</span>
+            <span class="text-amber-400 font-mono font-black text-sm">x${order.quantity}</span>
+          </div>
+
+          <!-- Recipe & Instructions Modal Trigger -->
+          <button onclick="viewRecipeDetails('${encodeURIComponent(order.item_name)}')" class="w-full mt-2 py-1 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 cursor-pointer">
+            <span>📖</span>
+            <span>طريقة التحضير والمقادير (BOM)</span>
+          </button>
+        </div>
+
+        <!-- Lane Action Buttons -->
+        <div class="mt-3 pt-2 border-t border-slate-800">
+          ${status === 'PENDING' ? `
+            <button onclick="changeKdsStatus(${order.id}, 'ACCEPTED')" class="w-full py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-xl text-xs cursor-pointer shadow">
+              بدء التحضير ⏳
+            </button>
+          ` : ''}
+          ${status === 'ACCEPTED' || status === 'PREPARING' ? `
+            <button onclick="changeKdsStatus(${order.id}, 'READY')" class="w-full py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-xl text-xs cursor-pointer shadow">
+              جاهز للاستلام ☕
+            </button>
+          ` : ''}
+          ${status === 'READY' ? `
+            <button onclick="changeKdsStatus(${order.id}, 'DELIVERED')" class="w-full py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-100 font-black rounded-xl text-xs cursor-pointer shadow">
+              تسليم 🚀 (نقل للسجلات)
+            </button>
+          ` : ''}
+        </div>
+      `;
+      return card;
+    }
+
+    async function changeKdsStatus(orderId, nextStatus) {
+      try {
+        if (nextStatus === 'DELIVERED') {
+          ordersMap.delete(orderId);
+          renderAllLanes();
+          showToast(`تم تسليم الطلب #${orderId} ونقله للسجلات بنجاح`, false);
+        } else {
+          const ord = ordersMap.get(orderId);
+          if (ord) {
+            ord.kds_status = nextStatus;
+            renderAllLanes();
+          }
+        }
+
+        const res = await fetch('/api/orders/kds-status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: orderId, kds_status: nextStatus })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          if (nextStatus !== 'DELIVERED') {
+            ordersMap.set(orderId, data.order);
+            renderAllLanes();
+          }
+        }
+      } catch (e) {}
+    }
+
+    async function resolveCancel(orderId, approved) {
+      try {
+        const res = await fetch('/api/orders/resolve-cancel', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: orderId, approved })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          showToast(data.message, false);
+          fetchPendingOrders();
+        }
+      } catch (e) {}
+    }
+
+    // Recipe Modal
+    async function viewRecipeDetails(encodedItemName) {
+      const modal = document.getElementById('recipe-modal');
+      const body = document.getElementById('recipe-modal-body');
+      const title = document.getElementById('recipe-modal-title');
+      const itemName = decodeURIComponent(encodedItemName);
+
+      modal.classList.remove('hidden');
+      body.innerHTML = '<p class="text-center py-6 text-slate-400">جاري تحميل وصفة الصنف والمقادير والمعايير...</p>';
+      title.textContent = `طريقة تحضير: ${itemName}`;
+
+      try {
+        const res = await fetch(`/api/recipes/details/${encodeURIComponent(itemName)}`);
+        const data = await res.json();
+
+        if (res.ok && data.success && data.recipe) {
+          const r = data.recipe;
+          body.innerHTML = `
+            <div class="bg-slate-950 p-3 rounded-2xl border border-slate-800">
+              <div class="flex items-center justify-between mb-2">
+                <span class="font-black text-white text-sm">${r.item_name}</span>
+                <span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold text-[10px]">قسم: ${r.category}</span>
+              </div>
+              <p class="text-[11px] text-slate-400">السعر القياسي: <strong class="text-emerald-400 font-mono">${r.price} ج.م</strong> | نسبة التفاوت المقبولة: <strong class="text-amber-400 font-mono">${r.tolerance_percent}%</strong></p>
+            </div>
+
+            <div>
+              <h4 class="font-black text-amber-400 mb-2 flex items-center gap-1.5">
+                <span>🧪</span> المقادير والخامات المعيارية (BOM):
+              </h4>
+              <div class="space-y-1.5">
+                ${r.ingredients.length > 0 ? r.ingredients.map(ing => `
+                  <div class="flex items-center justify-between p-2 bg-slate-950/60 border border-slate-800 rounded-xl">
+                    <span class="font-bold text-white">${ing.ingredient_name}</span>
+                    <span class="font-mono text-amber-400 font-black">${ing.quantity_required} ${ing.unit} <span class="text-[10px] text-slate-500 font-normal">(+${((ing.quantity_required * r.tolerance_percent)/100).toFixed(1)} ${ing.unit} هادر تلقائي)</span></span>
+                  </div>
+                `).join('') : '<p class="text-slate-500 text-[11px]">لم يتم إدراج خامات معيارية بعد في جدول BOM لهذا الصنف.</p>'}
+              </div>
+            </div>
+
+            <div>
+              <h4 class="font-black text-emerald-400 mb-2 flex items-center gap-1.5">
+                <span>📋</span> خطوات وتعليمات التحضير القياسية:
+              </h4>
+              <div class="p-3 bg-slate-950/80 rounded-2xl border border-slate-800 text-slate-200 text-xs leading-relaxed whitespace-pre-line">
+                ${r.instructions || 'قم باتباع معايير الجودة المعتمدة لتحضير الصنف بدرجة الحرارة والضغط المناسبين.'}
+              </div>
+            </div>
+          `;
+        } else {
+          body.innerHTML = '<p class="text-center py-6 text-rose-400 font-bold">تعذر العثور على بيانات الوصفة لهذا الصنف</p>';
+        }
+      } catch (e) {
+        body.innerHTML = '<p class="text-center py-6 text-rose-400 font-bold">خطأ أثناء جلب الوصفة</p>';
+      }
+    }
+
+    function closeRecipeModal() {
+      document.getElementById('recipe-modal').classList.add('hidden');
+    }
+
+    // Lending Modal
+    function openLendingModal() {
+      fetchLocalInventory();
+      document.getElementById('lending-modal').classList.remove('hidden');
+    }
+
+    function closeLendingModal() {
+      document.getElementById('lending-modal').classList.add('hidden');
+    }
+
+    async function submitMaterialTransfer(e) {
+      e.preventDefault();
+      const invId = document.getElementById('lend-inv-select').value;
+      const fromDept = document.getElementById('lend-from-dept').value;
+      const toDept = document.getElementById('lend-to-dept').value;
+      const qty = parseFloat(document.getElementById('lend-qty-input').value);
+      const notes = document.getElementById('lend-notes-input').value;
+
+      if (fromDept === toDept) {
+        showToast('يجب أن يكون القسم المستعير مختلفاً عن القسم المعير', true);
+        return;
+      }
+
+      const user = JSON.parse(localStorage.getItem('currentUser') || localStorage.getItem('user') || '{}');
+
+      try {
+        const res = await fetch('/api/materials/transfer', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            inventory_id: invId,
+            from_department: fromDept,
+            to_department: toDept,
+            quantity: qty,
+            notes: notes,
+            user_id: user.id || null,
+            user_name: user.name || 'باريستا'
+          })
+        });
+
+        const data = await res.json();
+        if (res.ok && data.success) {
+          showToast('تم تسجيل تحويل الخامة وإثبات العملية بنجاح! 🔄', false);
+          closeLendingModal();
+          document.getElementById('lend-qty-input').value = '';
+          document.getElementById('lend-notes-input').value = '';
+          fetchLocalInventory();
+          switchTab('transfers');
+        } else {
+          showToast(data.error || 'خطأ في تحويل الخامة', true);
+        }
+      } catch (e) {
+        showToast('خطأ بالاتصال بالسيرفر', true);
+      }
+    }
+
+    // Waste Logging
     async function submitWasteLog(e) {
       e.preventDefault();
       const invId = document.getElementById('waste-inv-select').value;
@@ -350,154 +770,6 @@
         }
       } catch (e) {
         showToast('خطأ بالاتصال بالسيرفر', true);
-      }
-    }
-
-    function renderAllLanes() {
-      const lanePending = document.getElementById('lane-pending');
-      const laneAccepted = document.getElementById('lane-accepted');
-      const laneReady = document.getElementById('lane-ready');
-      const laneDelivered = document.getElementById('lane-delivered');
-
-      lanePending.innerHTML = '';
-      laneAccepted.innerHTML = '';
-      laneReady.innerHTML = '';
-      laneDelivered.innerHTML = '';
-
-      let cPending = 0, cAccepted = 0, cReady = 0, cDelivered = 0;
-
-      ordersMap.forEach(order => {
-        const status = (order.kds_status || 'PENDING').toUpperCase();
-        const card = createKdsCard(order, status);
-
-        if (status === 'PENDING') {
-          lanePending.appendChild(card);
-          cPending++;
-        } else if (status === 'ACCEPTED') {
-          laneAccepted.appendChild(card);
-          cAccepted++;
-        } else if (status === 'READY') {
-          laneReady.appendChild(card);
-          cReady++;
-        } else if (status === 'DELIVERED') {
-          laneDelivered.appendChild(card);
-          cDelivered++;
-        }
-      });
-
-      document.getElementById('count-pending').textContent = cPending;
-      document.getElementById('count-accepted').textContent = cAccepted;
-      document.getElementById('count-ready').textContent = cReady;
-      document.getElementById('count-delivered').textContent = cDelivered;
-
-      document.getElementById('pending-counter').textContent = cPending + cAccepted;
-      document.getElementById('live-tab-count').textContent = cPending + cAccepted;
-    }
-
-    function createKdsCard(order, status) {
-      const card = document.createElement('div');
-      const tableText = order.table_number && order.table_number > 0 ? `طاولة ${order.table_number}` : 'طلب مباشر';
-      const isCancelRequested = order.edit_request === 'CANCEL_REQUESTED';
-
-      card.className = `bg-slate-900 border ${isCancelRequested ? 'border-rose-500 animate-pulse' : 'border-slate-800'} rounded-2xl p-3.5 flex flex-col justify-between shadow-lg text-right`;
-
-      const modifiersText = [order.sugar_level, order.roast_type].filter(Boolean).join(' | ');
-
-      card.innerHTML = `
-        <div>
-          <div class="flex items-center justify-between border-b border-slate-800 pb-1.5 mb-2">
-            <div class="flex items-center gap-1.5">
-              <span class="text-xs font-mono font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300">#${order.id}</span>
-            </div>
-            <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-300">${tableText}</span>
-          </div>
-
-          ${isCancelRequested ? `
-            <div class="mb-2 p-2 bg-rose-950/80 border border-rose-500/50 rounded-xl text-rose-300 text-xs font-bold text-center">
-              ⚠️ طلب إلغاء من الويتر!
-              <div class="flex gap-1 mt-2">
-                <button onclick="resolveCancel(${order.id}, true)" class="w-1/2 py-1 bg-rose-600 text-white rounded text-[11px] font-black">موافقة ✓</button>
-                <button onclick="resolveCancel(${order.id}, false)" class="w-1/2 py-1 bg-slate-700 text-slate-200 rounded text-[11px] font-bold">رفض ✕</button>
-              </div>
-            </div>
-          ` : ''}
-
-          <h4 class="text-base font-black text-white leading-snug">${order.item_name}</h4>
-          ${modifiersText ? `<div class="text-[11px] font-bold text-amber-400 my-1">✨ ${modifiersText}</div>` : ''}
-
-          <div class="flex items-center justify-between bg-slate-800 px-2.5 py-1 rounded-lg mt-2 text-xs">
-            <span class="text-slate-400">الكمية:</span>
-            <span class="text-amber-400 font-mono font-extrabold">x${order.quantity}</span>
-          </div>
-        </div>
-
-        <div class="mt-3 pt-2 border-t border-slate-800/80">
-          ${status === 'PENDING' ? `
-            <button onclick="changeKdsStatus(${order.id}, 'ACCEPTED')" class="w-full py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl text-xs">
-              بدء التجهيز ⏳
-            </button>
-          ` : ''}
-          ${status === 'ACCEPTED' ? `
-            <button onclick="changeKdsStatus(${order.id}, 'READY')" class="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs">
-              جاهز للاستلام ☕
-            </button>
-          ` : ''}
-          ${status === 'READY' ? `
-            <button onclick="changeKdsStatus(${order.id}, 'DELIVERED')" class="w-full py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold rounded-xl text-xs">
-              تسليم للعميل 🚀
-            </button>
-          ` : ''}
-          ${status === 'DELIVERED' ? `
-            <div class="text-[11px] text-emerald-400 font-bold text-center py-1">✓ مكتمل وتسلم</div>
-          ` : ''}
-        </div>
-      `;
-      return card;
-    }
-
-    async function changeKdsStatus(orderId, nextStatus) {
-      try {
-        const order = ordersMap.get(orderId);
-        if (order) {
-          order.kds_status = nextStatus;
-          renderAllLanes();
-        }
-        const res = await fetch('/api/orders/kds-status', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: orderId, kds_status: nextStatus })
-        });
-        const data = await res.json();
-        if (res.ok && data.success) {
-          ordersMap.set(orderId, data.order);
-          renderAllLanes();
-        }
-      } catch (e) {}
-    }
-
-    async function resolveCancel(orderId, approved) {
-      try {
-        const res = await fetch('/api/orders/resolve-cancel', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: orderId, approved })
-        });
-        const data = await res.json();
-        if (res.ok && data.success) {
-          showToast(data.message, false);
-          fetchPendingOrders();
-        }
-      } catch (e) {}
-    }
-
-    function updateEmptyState() {
-      const count = ordersMap.size;
-      document.getElementById('pending-counter').textContent = count;
-      document.getElementById('live-tab-count').textContent = count;
-      const emptyState = document.getElementById('empty-state');
-      if (emptyState) {
-        if (count === 0) emptyState.classList.remove('hidden');
-        else emptyState.classList.add('hidden');
       }
     }
 

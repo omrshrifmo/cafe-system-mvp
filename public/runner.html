@@ -15,35 +15,31 @@
 </head>
 <body class="bg-slate-950 text-slate-100 h-screen max-h-screen flex flex-col overflow-hidden selection:bg-amber-500 selection:text-black">
 
-  <!-- Header (Shrink-0) -->
-  <header class="shrink-0 border-b border-slate-800 bg-slate-900 px-6 py-3 flex items-center justify-between shadow-xl z-20">
+  <!-- Page Action Header -->
+  <div class="shrink-0 bg-slate-900/90 border-b border-slate-800 px-6 py-3.5 flex items-center justify-between shadow-md z-20">
     <div class="flex items-center gap-3">
       <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 text-xl shadow-inner">
         🏃‍♂️
       </div>
       <div>
-        <h1 class="text-lg font-black text-slate-100 tracking-wide">كافيه مزاج - شاشة متابعة الـ Runner (Pickup Alerts)</h1>
-        <p class="text-[11px] text-amber-400 font-semibold">تنبيهات فورية عالية التباين لاستلام وتسليم الطلبات الجاهزة</p>
+        <h1 class="text-lg font-black text-white">شاشة الويتر ومتابعة التوصيل (Runner)</h1>
+        <p class="text-xs text-slate-400">تنبيهات فورية عالية التباين لاستلام وتسليم الطلبات الجاهزة من الأقسام للطاولات</p>
       </div>
     </div>
 
-    <!-- Status & Clock -->
-    <div class="flex items-center gap-4">
-      <div class="flex items-center gap-2 bg-slate-800 px-3 py-1 rounded-xl border border-slate-700">
-        <span class="text-xs text-slate-400">تنبيهات جارية:</span>
+    <!-- Status -->
+    <div class="flex items-center gap-3">
+      <div class="flex items-center gap-2 bg-slate-800/80 px-3 py-1.5 rounded-xl border border-slate-700">
+        <span class="text-xs text-slate-400">تنبيهات جاهزة:</span>
         <span id="alerts-counter" class="text-sm font-extrabold text-emerald-400 font-mono">0</span>
       </div>
 
-      <div id="ws-status" class="flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-bold">
+      <div id="ws-status" class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-bold">
         <span class="w-2 h-2 rounded-full bg-amber-500"></span>
         <span id="ws-status-text">جاري الاتصال...</span>
       </div>
-
-      <div id="live-clock" class="text-slate-400 font-mono text-xs bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700/50 hidden md:block">
-        00:00:00
-      </div>
     </div>
-  </header>
+  </div>
 
   <!-- Toast Container -->
   <div id="runner-toast-container" class="fixed top-16 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-2 pointer-events-none"></div>

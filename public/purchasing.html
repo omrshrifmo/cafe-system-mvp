@@ -17,26 +17,21 @@
 </head>
 <body class="min-h-screen flex flex-col bg-slate-950">
 
-  <!-- Header -->
-  <header class="bg-slate-900 border-b border-slate-800 px-6 py-4 flex items-center justify-between shadow-md">
+  <!-- Page Action Header -->
+  <div class="bg-slate-900/90 border-b border-slate-800 px-6 py-3.5 flex items-center justify-between sticky top-0 z-30 shadow-md">
     <div class="flex items-center gap-3">
-      <a href="portal.html" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg border border-slate-700 text-xs font-semibold flex items-center gap-1">
-        <span>←</span> العودة للبوابة
-      </a>
-      <div class="h-5 w-px bg-slate-800"></div>
-      <div class="w-9 h-9 bg-amber-600 rounded-lg flex items-center justify-center text-lg font-bold text-slate-950">
+      <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 text-xl shadow-inner">
         🛒
       </div>
       <div>
-        <h1 class="text-xl font-bold text-slate-100">إدارة المشتريات والتوريد</h1>
+        <h1 class="text-lg font-black text-white">إدارة المشتريات والتوريد</h1>
         <p class="text-xs text-slate-400">تسجيل فواتير وتوريدات المواد الخام وإعادة تغذية المخزون (BOM)</p>
       </div>
     </div>
-
-    <div id="userBadge" class="text-xs bg-slate-800 border border-slate-700 px-3 py-1.5 rounded-lg text-slate-300">
+    <div id="userBadge" class="text-xs bg-slate-800/80 border border-slate-700 px-3 py-1.5 rounded-xl font-bold text-slate-300">
       مدير النظام
     </div>
-  </header>
+  </div>
 
   <main class="flex-1 max-w-6xl w-full mx-auto p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
 

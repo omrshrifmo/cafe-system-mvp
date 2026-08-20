@@ -1,237 +1,343 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="ar" dir="rtl" class="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>كافيه مزاج - تقرير نهاية اليوم (EOD Report)</title>
+  <title>كافيه مزاج - تقرير الورديات ونهاية اليوم (EOD & Shifts)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="/nav.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
-  <style>
-    body { font-family: 'Cairo', sans-serif; }
-    * { transition: none !important; animation: none !important; }
-  </style>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: { extend: { fontFamily: { cairo: ['Cairo', 'sans-serif'] } } }
+    }
+  </script>
+  <style> body { font-family: 'Cairo', sans-serif; } </style>
 </head>
-<body class="bg-slate-950 text-slate-100 h-screen max-h-screen flex flex-col overflow-hidden selection:bg-amber-500 selection:text-black">
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col overflow-y-auto selection:bg-emerald-500 selection:text-black">
 
-  <!-- Header (Shrink-0) -->
-  <header class="shrink-0 border-b border-slate-800 bg-slate-900 px-6 py-4 flex items-center justify-between shadow-xl z-20">
+  <!-- Page Action Header -->
+  <div class="shrink-0 bg-slate-900/90 border-b border-slate-800 px-6 py-3.5 flex items-center justify-between shadow-md z-20">
     <div class="flex items-center gap-3">
-      <div class="w-11 h-11 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 text-2xl shadow-inner">
+      <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 text-xl shadow-inner">
         📊
       </div>
       <div>
-        <h1 class="text-xl font-black text-slate-100 tracking-wide">كافيه مزاج - تقرير نهاية اليوم (End-of-Day EOD)</h1>
-        <p class="text-xs text-emerald-400 font-semibold">حساب الأرباح والنقد المتوقع بالدرج لجمع مستحقات الشركاء فوراً</p>
+        <h1 class="text-lg font-black text-white">تقرير نهاية اليوم وتسوية الدرج (EOD)</h1>
+        <p class="text-xs text-slate-400">مطابقة الكاش الفعلي مع المتوقع، تقفيل الورديات، واحتساب الفروقات المالية</p>
       </div>
     </div>
 
-    <!-- Actions & Clock -->
-    <div class="flex items-center gap-4">
-      <button 
-        onclick="fetchEodReport()" 
-        class="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs shadow-lg flex items-center gap-1.5 cursor-pointer">
-        <span>🔄</span>
-        <span>تحديث التقرير (Refresh)</span>
+    <!-- Actions -->
+    <div class="flex items-center gap-3">
+      <div class="flex items-center bg-slate-800/80 rounded-xl p-1 border border-slate-700 text-xs">
+        <button onclick="selectShiftFilter('ALL')" id="shift-btn-ALL" class="px-3 py-1.5 rounded-lg font-bold bg-emerald-500 text-slate-950 cursor-pointer shadow-sm">اليوم بالكامل</button>
+        <button onclick="selectShiftFilter('MORNING')" id="shift-btn-MORNING" class="px-3 py-1.5 rounded-lg font-bold text-slate-300 hover:text-white cursor-pointer transition-colors">☀️ صباحية</button>
+        <button onclick="selectShiftFilter('NIGHT')" id="shift-btn-NIGHT" class="px-3 py-1.5 rounded-lg font-bold text-slate-300 hover:text-white cursor-pointer transition-colors">🌙 مسائية</button>
+      </div>
+
+      <button onclick="fetchReportsData()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold cursor-pointer transition-colors border border-slate-700">
+        🔄 تحديث
       </button>
-
-      <a href="/shareholders.html" class="px-3.5 py-2 bg-emerald-950 hover:bg-emerald-900 text-emerald-300 text-xs font-bold rounded-xl border border-emerald-500/40">💎 حسابات الشركاء</a>
-      <a href="/pos.html" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl border border-slate-700">📱 الكاشير</a>
-      <a href="/hr.html" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl border border-slate-700">💼 السُلف والمصروفات</a>
-
-      <div id="live-clock" class="text-slate-400 font-mono text-xs bg-slate-800 px-3 py-2 rounded-xl border border-slate-700 hidden md:block">
-        00:00:00
-      </div>
     </div>
-  </header>
+  </div>
 
-  <!-- Main Scrollable Dashboard Container -->
-  <main class="max-w-7xl w-full mx-auto p-4 md:p-6 flex-1 min-h-0 overflow-y-auto space-y-6">
+  <!-- Main Container -->
+  <main class="w-full p-4 md:p-6 flex-1 flex flex-col min-h-0 overflow-y-auto space-y-5">
 
-    <!-- HERO PROMINENT CARD: Expected Cash in Drawer (النقد المتوقع في الدرج) -->
-    <section class="bg-emerald-950/40 border-2 border-emerald-500/60 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden">
-      <div class="absolute -left-10 -bottom-10 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
-      
-      <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
+    <!-- HERO CARD: Expected Cash in Drawer -->
+    <section class="bg-emerald-950/40 border border-emerald-500/50 rounded-3xl p-5 md:p-6 shadow-2xl relative overflow-hidden">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
         <div>
-          <div class="flex items-center gap-2 mb-2">
-            <span class="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-black border border-emerald-500/40">المعيار المالي الرئيسي</span>
-            <span id="report-date" class="text-xs text-slate-400 font-mono font-bold">2026-08-11</span>
+          <div class="flex items-center gap-2 mb-1.5">
+            <span class="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-black border border-emerald-500/40">المعيار المالي للنقدية</span>
+            <span id="shift-badge-indicator" class="text-[10px] bg-slate-800 text-amber-300 px-2 py-0.5 rounded font-mono font-bold">كل الورديات</span>
           </div>
-          <h2 class="text-2xl md:text-3xl font-black text-white tracking-tight">النقد الفعلي المتوقع في درج الخزينة</h2>
-          <p class="text-xs md:text-sm text-slate-300 mt-1 max-w-xl">المبلغ النقدي المحسوب بدقة والذي يجب أن يتوافر بالدرج حالياً لجمع الأرباح والمستحقات (مبيعات الكاش - مصروفات الدرج - سُلف الموظفين).</p>
+          <h2 class="text-xl md:text-2xl font-black text-white">النقد الفعلي المتوقع في درج الخزينة</h2>
+          <p class="text-xs text-slate-300 mt-1 max-w-xl">المبلغ النقدي المحسوب بالدرج (مبيعات الكاش - مصروفات الدرج - سُلف الموظفين).</p>
         </div>
 
-        <div class="bg-slate-950/80 border border-emerald-500/50 p-6 rounded-2xl text-center md:text-right min-w-[260px] shadow-2xl">
-          <span class="text-xs font-bold text-emerald-400 uppercase tracking-widest block mb-1">Expected Physical Cash</span>
-          <div id="hero-expected-cash" class="text-4xl md:text-5xl font-black text-emerald-400 font-mono tracking-tight leading-none mb-2">
+        <div class="bg-slate-950/90 border border-emerald-500/50 p-4 rounded-2xl text-center md:text-right min-w-[220px] shadow-2xl">
+          <span class="text-[10px] font-bold text-emerald-400 uppercase tracking-widest block mb-0.5">Expected Cash</span>
+          <div id="hero-expected-cash" class="text-3xl md:text-4xl font-black text-emerald-400 font-mono leading-none mb-1">
             0 ج.م
           </div>
-          <p class="text-[11px] text-slate-400 font-bold">صافي النقد المتوفر للتصفية</p>
+          <p class="text-[10px] text-slate-400 font-bold">صافي النقد المتوفر للتصفية</p>
         </div>
       </div>
 
-      <!-- Formula Calculation Bar -->
-      <div class="mt-6 pt-4 border-t border-emerald-500/20 grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
-        <div class="bg-slate-900/90 p-3 rounded-xl border border-slate-800">
-          <span class="text-slate-400 block text-[11px]">💵 مبيعات الكاش (Cash Sales):</span>
-          <span id="formula-cash-sales" class="font-black text-emerald-400 font-mono text-sm">0 ج.م</span>
+      <!-- Formula Bar -->
+      <div class="mt-4 pt-3 border-t border-emerald-500/20 grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+        <div class="bg-slate-900/90 p-2.5 rounded-xl border border-slate-800">
+          <span class="text-slate-400 block text-[10px]">💵 مبيعات الكاش:</span>
+          <span id="formula-cash-sales" class="font-black text-emerald-400 font-mono">0 ج.م</span>
         </div>
-        <div class="bg-slate-900/90 p-3 rounded-xl border border-slate-800">
-          <span class="text-slate-400 block text-[11px]">💸 مصروفات الدرج (Drawer Expenses):</span>
-          <span id="formula-drawer-expenses" class="font-black text-rose-400 font-mono text-sm">-0 ج.م</span>
+        <div class="bg-slate-900/90 p-2.5 rounded-xl border border-slate-800">
+          <span class="text-slate-400 block text-[10px]">💸 مصروفات الدرج:</span>
+          <span id="formula-drawer-expenses" class="font-black text-rose-400 font-mono">-0 ج.م</span>
         </div>
-        <div class="bg-slate-900/90 p-3 rounded-xl border border-slate-800">
-          <span class="text-slate-400 block text-[11px]">💼 سُلف الموظفين (Advances):</span>
-          <span id="formula-advances" class="font-black text-amber-400 font-mono text-sm">-0 ج.م</span>
+        <div class="bg-slate-900/90 p-2.5 rounded-xl border border-slate-800">
+          <span class="text-slate-400 block text-[10px]">💼 سُلف الموظفين:</span>
+          <span id="formula-advances" class="font-black text-amber-400 font-mono">-0 ج.م</span>
         </div>
-        <div class="bg-emerald-900/40 p-3 rounded-xl border border-emerald-500/40 flex items-center justify-between">
-          <span class="font-bold text-white text-[11px]">النتيجة النهائية:</span>
-          <span id="formula-result" class="font-black text-emerald-300 font-mono text-sm">0 ج.م</span>
+        <div class="bg-emerald-900/40 p-2.5 rounded-xl border border-emerald-500/40 flex items-center justify-between">
+          <span class="font-bold text-white text-[10px]">الصافي:</span>
+          <span id="formula-result" class="font-black text-emerald-300 font-mono">0 ج.م</span>
         </div>
       </div>
     </section>
 
-    <!-- SECONDARY METRICS GRID -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-
-      <!-- Total Revenue & Order Volume -->
-      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-md flex flex-col justify-between">
-        <div class="flex items-center justify-between mb-4">
-          <div class="flex items-center gap-2">
-            <span class="text-2xl">📈</span>
-            <div>
-              <h3 class="font-black text-white text-base">إجمالي مبيعات اليوم</h3>
-              <p class="text-[11px] text-slate-400">جميع الفواتير بجميع وسائل الدفع</p>
-            </div>
-          </div>
-          <span id="total-orders-badge" class="px-2.5 py-1 bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded-lg text-xs font-mono font-bold">0 طلب</span>
+    <!-- Cash Drawer Shift Reconciliation Panel -->
+    <section class="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-xl">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+        <div>
+          <h3 class="text-sm font-black text-amber-400 flex items-center gap-2">
+            <span>🔒</span> تسوية وإغلاق درج النقدية بالوردية (Cash Drawer Declaration)
+          </h3>
+          <p class="text-[10px] text-slate-400">إثبات العد الفعلي للنقدية ومطابقته آلياً مع المتوقع واكتشاف العجز أو الزيادة فوراً</p>
         </div>
-        <div id="stat-total-revenue" class="text-3xl font-black text-white font-mono mb-2">0 ج.م</div>
-        <div class="text-[11px] text-slate-400 border-t border-slate-800 pt-2 flex items-center justify-between">
+        <span class="px-2.5 py-1 rounded bg-amber-500/20 text-amber-300 text-[10px] font-bold">إلزامية عند تبديل الوردية</span>
+      </div>
+
+      <form onsubmit="submitDrawerDeclaration(event)" class="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
+        <div>
+          <label class="block font-bold text-slate-300 mb-1">الوردية المراد تسويتها:</label>
+          <select id="decl-shift-select" onchange="calculateDrawerReconciliation()" class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-white font-bold">
+            <option value="MORNING">☀️ الوردية الصباحية (Morning)</option>
+            <option value="NIGHT">🌙 الوردية المسائية (Night)</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-300 mb-1">عهدة افتتاح الدرج (ج.م):</label>
+          <input type="number" step="1" id="decl-opening-cash" value="200" oninput="calculateDrawerReconciliation()" class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-white font-mono font-bold" />
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-300 mb-1">العد الفعلي للكاش بالدرج (ج.م):</label>
+          <input type="number" step="1" id="decl-actual-cash" required placeholder="المبلغ المعدود باليد" oninput="calculateDrawerReconciliation()" class="w-full px-3 py-2 bg-slate-950 border border-amber-500/60 rounded-xl text-amber-400 font-mono font-black text-sm" />
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-300 mb-1">ملاحظات العجز / التسوية:</label>
+          <input type="text" id="decl-notes" placeholder="ملاحظات اختيارية" class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-white" />
+        </div>
+
+        <!-- Live Variance Result -->
+        <div class="col-span-full bg-slate-950 p-3 rounded-2xl border border-slate-800 flex flex-col md:flex-row items-center justify-between gap-2">
+          <div class="flex items-center gap-4 text-xs font-mono">
+            <span>المتوقع بالدرج: <strong id="rec-expected-val" class="text-blue-400">0 ج.م</strong></span>
+            <span>الفعلي المعدود: <strong id="rec-actual-val" class="text-amber-400">0 ج.م</strong></span>
+            <span>الفارق / العجز: <strong id="rec-variance-val" class="text-emerald-400">0 ج.م</strong></span>
+          </div>
+
+          <button type="submit" class="px-6 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-xl text-xs shadow-lg cursor-pointer">
+            تأكيد وإغلاق تسوية الوردية 🔒
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <!-- Secondary Metrics -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <!-- Total Revenue -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow flex flex-col justify-between">
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="font-black text-white text-xs flex items-center gap-1.5">
+            <span>📈</span> إجمالي المبيعات
+          </h3>
+          <span id="total-orders-badge" class="px-2 py-0.5 bg-amber-500/10 text-amber-400 rounded text-[10px] font-mono font-bold">0 طلب</span>
+        </div>
+        <div id="stat-total-revenue" class="text-2xl font-black text-white font-mono mb-1">0 ج.م</div>
+        <div class="text-[10px] text-slate-400 border-t border-slate-800 pt-1.5 flex items-center justify-between">
           <span>متوسط الفاتورة:</span>
           <span id="stat-avg-ticket" class="font-bold font-mono text-slate-200">0 ج.م</span>
         </div>
       </div>
 
-      <!-- Total Advances & Expenses Overview -->
-      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-md flex flex-col justify-between">
-        <div class="flex items-center gap-2 mb-4">
-          <span class="text-2xl">💸</span>
-          <div>
-            <h3 class="font-black text-white text-base">إجمالي الخصومات والمصروفات</h3>
-            <p class="text-[11px] text-slate-400">سُلف الموظفين ومصروفات التشغيل</p>
-          </div>
+      <!-- Total Expenses -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow flex flex-col justify-between">
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="font-black text-white text-xs flex items-center gap-1.5">
+            <span>💸</span> إجمالي المصروفات والسُلف
+          </h3>
         </div>
-        
-        <div class="space-y-2 mb-2">
-          <div class="flex items-center justify-between text-xs bg-slate-950 p-2 rounded-xl border border-slate-800">
-            <span class="text-slate-400">سُلف الموظفين:</span>
-            <span id="stat-advances" class="font-black text-amber-400 font-mono">0 ج.م</span>
+        <div class="space-y-1 text-xs">
+          <div class="flex items-center justify-between bg-slate-950 px-2 py-1 rounded">
+            <span class="text-slate-400 text-[10px]">سُلف موظفين:</span>
+            <span id="stat-advances" class="font-bold text-amber-400 font-mono">0 ج.م</span>
           </div>
-          <div class="flex items-center justify-between text-xs bg-slate-950 p-2 rounded-xl border border-slate-800">
-            <span class="text-slate-400">مصروفات درج النقدية:</span>
-            <span id="stat-drawer-exp" class="font-black text-rose-400 font-mono">0 ج.م</span>
-          </div>
-        </div>
-
-        <div class="text-[11px] text-slate-400 border-t border-slate-800 pt-2 flex items-center justify-between">
-          <span>مصروفات إلكترونية (InstaPay):</span>
-          <span id="stat-digital-exp" class="font-bold font-mono text-emerald-400">0 ج.م</span>
-        </div>
-      </div>
-
-      <!-- Payment Method Split Overview -->
-      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-md flex flex-col justify-between">
-        <div class="flex items-center justify-between mb-3">
-          <div class="flex items-center gap-2">
-            <span class="text-2xl">💳</span>
-            <div>
-              <h3 class="font-black text-white text-base">توزيع وسائل الدفع</h3>
-              <p class="text-[11px] text-slate-400">مبيعات اليوم حسب القناة</p>
-            </div>
-          </div>
-        </div>
-
-        <div class="space-y-1.5 text-xs">
-          <div class="flex items-center justify-between bg-slate-950 px-3 py-1.5 rounded-lg">
-            <span class="text-slate-300 font-bold">💵 كاش (Cash):</span>
-            <span id="method-cash" class="font-black text-white font-mono">0 ج.م</span>
-          </div>
-          <div class="flex items-center justify-between bg-slate-950 px-3 py-1.5 rounded-lg">
-            <span class="text-emerald-400 font-bold">📱 InstaPay:</span>
-            <span id="method-instapay" class="font-black text-emerald-400 font-mono">0 ج.م</span>
-          </div>
-          <div class="flex items-center justify-between bg-slate-950 px-3 py-1.5 rounded-lg">
-            <span class="text-blue-400 font-bold">💳 فيزا (Visa):</span>
-            <span id="method-visa" class="font-black text-blue-400 font-mono">0 ج.م</span>
-          </div>
-          <div class="flex items-center justify-between bg-slate-950 px-3 py-1.5 rounded-lg">
-            <span class="text-purple-400 font-bold">👛 محفظة (Wallet):</span>
-            <span id="method-wallet" class="font-black text-purple-400 font-mono">0 ج.م</span>
+          <div class="flex items-center justify-between bg-slate-950 px-2 py-1 rounded">
+            <span class="text-slate-400 text-[10px]">مصروفات درج:</span>
+            <span id="stat-drawer-exp" class="font-bold text-rose-400 font-mono">0 ج.م</span>
           </div>
         </div>
       </div>
 
+      <!-- Payment Channels -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow flex flex-col justify-between">
+        <h3 class="font-black text-white text-xs mb-2 flex items-center gap-1.5">
+          <span>💳</span> توزيع وسائل الدفع
+        </h3>
+        <div class="grid grid-cols-2 gap-1 text-[10px] font-mono">
+          <div class="bg-slate-950 p-1.5 rounded flex justify-between">
+            <span class="text-slate-400">كاش:</span>
+            <span id="method-cash" class="font-bold text-white">0</span>
+          </div>
+          <div class="bg-slate-950 p-1.5 rounded flex justify-between">
+            <span class="text-emerald-400">InstaPay:</span>
+            <span id="method-instapay" class="font-bold text-emerald-400">0</span>
+          </div>
+          <div class="bg-slate-950 p-1.5 rounded flex justify-between">
+            <span class="text-blue-400">Visa:</span>
+            <span id="method-visa" class="font-bold text-blue-400">0</span>
+          </div>
+          <div class="bg-slate-950 p-1.5 rounded flex justify-between">
+            <span class="text-purple-400">محفظة:</span>
+            <span id="method-wallet" class="font-bold text-purple-400">0</span>
+          </div>
+        </div>
+      </div>
     </div>
 
   </main>
 
   <script>
+    let activeShiftFilter = 'ALL';
+    let currentShiftExpected = 0;
+
     function updateClock() {
-      const now = new Date();
-      document.getElementById('live-clock').textContent = now.toLocaleTimeString('ar-EG');
+      document.getElementById('live-clock').textContent = new Date().toLocaleTimeString('ar-EG');
     }
     setInterval(updateClock, 1000);
     updateClock();
 
-    async function fetchEodReport() {
+    function selectShiftFilter(shift) {
+      activeShiftFilter = shift;
+      ['ALL', 'MORNING', 'NIGHT'].forEach(s => {
+        const btn = document.getElementById(`shift-btn-${s}`);
+        if (btn) {
+          btn.className = s === shift 
+            ? 'px-2.5 py-1 rounded-lg font-bold bg-emerald-500 text-slate-950 cursor-pointer shadow'
+            : 'px-2.5 py-1 rounded-lg font-bold text-slate-300 hover:text-white cursor-pointer';
+        }
+      });
+
+      const badge = document.getElementById('shift-badge-indicator');
+      if (shift === 'ALL') badge.textContent = 'كل الورديات';
+      else if (shift === 'MORNING') badge.textContent = '☀️ وردية صباحية';
+      else if (shift === 'NIGHT') badge.textContent = '🌙 وردية مسائية';
+
+      fetchReportsData();
+    }
+
+    async function fetchReportsData() {
       try {
-        const res = await fetch('/api/reports/eod');
+        const res = await fetch(`/api/reports/eod?shift=${activeShiftFilter}`);
         const data = await res.json();
         if (data.success && data.report) {
           renderEodReport(data.report);
         }
-      } catch (err) {
-        console.error('Error fetching EOD report:', err);
-      }
+      } catch (err) {}
+      calculateDrawerReconciliation();
     }
 
     function renderEodReport(report) {
-      document.getElementById('report-date').textContent = report.date || new Date().toISOString().split('T')[0];
-
-      // Hero Prominent Expected Cash
       const expectedCash = report.expected_cash_in_drawer || 0;
-      const heroEl = document.getElementById('hero-expected-cash');
-      heroEl.textContent = `${expectedCash} ج.م`;
+      document.getElementById('hero-expected-cash').textContent = `${expectedCash} ج.م`;
 
-      // Formula Bar
       const cashSales = (report.payment_methods && report.payment_methods.CASH) || report.total_revenue || 0;
       document.getElementById('formula-cash-sales').textContent = `${cashSales} ج.م`;
       document.getElementById('formula-drawer-expenses').textContent = `-${report.drawer_expenses || 0} ج.م`;
       document.getElementById('formula-advances').textContent = `-${report.total_advances || 0} ج.م`;
       document.getElementById('formula-result').textContent = `${expectedCash} ج.م`;
 
-      // Secondary Stats
-      document.getElementById('total-orders-badge').textContent = `${report.total_orders || 0} طلبات`;
+      document.getElementById('total-orders-badge').textContent = `${report.total_orders || 0} طلب`;
       document.getElementById('stat-total-revenue').textContent = `${report.total_revenue || 0} ج.م`;
-      
+
       const avgTicket = report.total_orders > 0 ? (report.total_revenue / report.total_orders).toFixed(1) : 0;
       document.getElementById('stat-avg-ticket').textContent = `${avgTicket} ج.م`;
 
       document.getElementById('stat-advances').textContent = `${report.total_advances || 0} ج.م`;
       document.getElementById('stat-drawer-exp').textContent = `${report.drawer_expenses || 0} ج.م`;
-      document.getElementById('stat-digital-exp').textContent = `${report.digital_expenses || 0} ج.م`;
 
-      // Payment Breakdown
       const methods = report.payment_methods || {};
       document.getElementById('method-cash').textContent = `${methods.CASH || 0} ج.م`;
       document.getElementById('method-instapay').textContent = `${methods.INSTAPAY || 0} ج.م`;
-      document.getElementById('method-visa').textContent = `${methods.VISA || 0} ج.m`;
+      document.getElementById('method-visa').textContent = `${methods.VISA || 0} ج.م`;
       document.getElementById('method-wallet').textContent = `${methods.WALLET || 0} ج.م`;
     }
 
-    fetchEodReport();
+    async function calculateDrawerReconciliation() {
+      const shift = document.getElementById('decl-shift-select').value;
+      const openingCash = parseFloat(document.getElementById('decl-opening-cash').value) || 0;
+      const actualCash = parseFloat(document.getElementById('decl-actual-cash').value) || 0;
+
+      try {
+        const res = await fetch(`/api/reports/cash-reconciliation?shift=${shift}`);
+        const data = await res.json();
+        if (res.ok && data.success && data.reconciliation) {
+          const rec = data.reconciliation;
+          const expected = (openingCash + rec.cash_sales) - (rec.cash_expenses + rec.cash_advances);
+          currentShiftExpected = expected;
+
+          document.getElementById('rec-expected-val').textContent = `${expected.toFixed(2)} ج.م`;
+          document.getElementById('rec-actual-val').textContent = `${actualCash.toFixed(2)} ج.م`;
+
+          const variance = actualCash - expected;
+          const varEl = document.getElementById('rec-variance-val');
+          if (variance === 0) {
+            varEl.textContent = '0 ج.م (مطابق تماماً ✅)';
+            varEl.className = 'text-emerald-400 font-bold';
+          } else if (variance < 0) {
+            varEl.textContent = `${variance.toFixed(2)} ج.م (عجز ⚠️)`;
+            varEl.className = 'text-rose-400 font-bold';
+          } else {
+            varEl.textContent = `+${variance.toFixed(2)} ج.م (فائض ➕)`;
+            varEl.className = 'text-purple-400 font-bold';
+          }
+        }
+      } catch (e) {}
+    }
+
+    async function submitDrawerDeclaration(e) {
+      e.preventDefault();
+      const shift = document.getElementById('decl-shift-select').value;
+      const openingCash = parseFloat(document.getElementById('decl-opening-cash').value) || 0;
+      const actualCash = parseFloat(document.getElementById('decl-actual-cash').value) || 0;
+      const notes = document.getElementById('decl-notes').value;
+      const user = JSON.parse(localStorage.getItem('currentUser') || localStorage.getItem('user') || '{}');
+
+      try {
+        const res = await fetch('/api/drawer/declare-extended', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            shift_type: shift,
+            opening_cash: openingCash,
+            actual_cash: actualCash,
+            user_id: user.id || null,
+            user_name: user.name || 'كاشير الوردية',
+            notes: notes
+          })
+        });
+
+        const data = await res.json();
+        if (res.ok && data.success) {
+          alert(`تم إثبات تسوية الدرج للوردية ${shift} بنجاح!\nالرصيد الفعلي: ${actualCash} ج.م\nالفارق: ${data.declaration.variance} ج.م`);
+          fetchReportsData();
+        } else {
+          alert(data.error || 'خطأ في تسوية الدرج');
+        }
+      } catch (e) {
+        alert('خطأ بالاتصال بالسيرفر');
+      }
+    }
+
+    fetchReportsData();
   </script>
 </body>
 </html>

@@ -14,31 +14,29 @@
 </head>
 <body class="bg-slate-950 text-slate-100 h-screen max-h-screen flex flex-col overflow-hidden selection:bg-amber-500 selection:text-black">
 
-  <!-- Header -->
-  <header class="shrink-0 border-b border-slate-800 bg-slate-900 px-6 py-3 flex items-center justify-between shadow-xl z-20">
+  <!-- Page Action Header -->
+  <div class="shrink-0 bg-slate-900/90 border-b border-slate-800 px-6 py-3.5 flex items-center justify-between shadow-md z-20">
     <div class="flex items-center gap-3">
       <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 text-xl shadow-inner">
         👥
       </div>
       <div>
-        <h1 class="text-lg font-black text-slate-100 tracking-wide">كافيه مزاج - إدارة الموارد البشرية والرواتب (HR & Payroll)</h1>
-        <p class="text-[11px] text-amber-400 font-semibold">حساب الرواتب الساعاتية تلقائياً، الجزاءات، السُلف، وتقفيل الدرج الأعمى</p>
+        <h1 class="text-lg font-black text-white">إدارة الموارد البشرية والرواتب (HR)</h1>
+        <p class="text-xs text-slate-400">حساب الرواتب الساعاتية، الجزاءات، السُلف، مخصصات المشروبات والوجبات</p>
       </div>
     </div>
 
     <div class="flex items-center gap-3">
-      <a href="/portal.html" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-lg border border-slate-700">🏠 القائمة الرئيسية</a>
-      <a href="/qa.html" class="px-3 py-1.5 bg-indigo-950 hover:bg-indigo-900 text-indigo-300 text-xs font-bold rounded-lg border border-indigo-500/40">🛡️ إدارة الجودة</a>
-      <a href="/pos.html" class="px-3 py-1.5 bg-emerald-950 hover:bg-emerald-900 text-emerald-300 text-xs font-bold rounded-lg border border-emerald-500/40">💳 نقطة البيع</a>
-      <div id="network-status" class="w-3 h-3 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" title="المتصل بالنظام"></div>
+      <a href="/qa.html" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl border border-slate-700 transition-colors">🛡️ إدارة الجودة</a>
+      <a href="/pos.html" class="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-black rounded-xl transition-colors shadow">💳 نقطة البيع</a>
     </div>
-  </header>
+  </div>
 
   <!-- Toast Notification Container -->
   <div id="toast-container" class="fixed top-16 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-2 pointer-events-none"></div>
 
   <!-- Navigation Tab Bar -->
-  <div class="bg-slate-900 border-b border-slate-800 px-6 py-2 shrink-0 flex items-center gap-3">
+  <div class="bg-slate-900 border-b border-slate-800 px-6 py-2 shrink-0 flex items-center gap-3 flex-wrap">
     <button onclick="switchTab('daily')" id="tab-btn-daily" class="px-4 py-2 rounded-xl text-xs font-black bg-amber-500 text-slate-950 border border-amber-400 flex items-center gap-1.5 cursor-pointer">
       <span>📋</span>
       <span>العمليات اليومية والدرج</span>
@@ -50,6 +48,10 @@
     <button onclick="switchTab('penalties')" id="tab-btn-penalties" class="px-4 py-2 rounded-xl text-xs font-black bg-slate-800 text-slate-400 hover:text-white border border-slate-700 flex items-center gap-1.5 cursor-pointer">
       <span>⚖️</span>
       <span>سجل الخصومات والجزاءات</span>
+    </button>
+    <button onclick="switchTab('allowances')" id="tab-btn-allowances" class="px-4 py-2 rounded-xl text-xs font-black bg-slate-800 text-slate-400 hover:text-white border border-slate-700 flex items-center gap-1.5 cursor-pointer">
+      <span>☕</span>
+      <span>مخصصات وجبات ومشروبات الموظفين</span>
     </button>
   </div>
 
@@ -344,6 +346,42 @@
     </div>
   </div>
 
+  <!-- TAB 4: Staff Allowances & Orders Management -->
+  <div id="tab-content-allowances" class="flex-1 min-h-0 overflow-y-auto p-4 md:p-6 hidden flex flex-col gap-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-xl">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+        <div>
+          <h2 class="text-base font-black text-amber-400 flex items-center gap-2">
+            <span>☕</span>
+            <span>مخصصات وجبات ومشروبات الموظفين (Staff Food & Drink Allowances)</span>
+          </h2>
+          <p class="text-xs text-slate-400">تحديد عدد المشروبات والوجبات المجانية المسموحة يومياً لكل دور وخصومات الطلبات الإضافية</p>
+        </div>
+        <button onclick="fetchStaffAllowances()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold cursor-pointer">
+          تحديث 🔄
+        </button>
+      </div>
+
+      <div class="overflow-x-auto border border-slate-800 rounded-2xl bg-slate-950">
+        <table class="w-full text-right text-xs">
+          <thead class="bg-slate-800 text-slate-400 font-bold border-b border-slate-700">
+            <tr>
+              <th class="p-3">الموظف</th>
+              <th class="p-3">الدور الوظيفي</th>
+              <th class="p-3">مشروبات يومية مسموحة</th>
+              <th class="p-3">وجبات يومية مسموحة</th>
+              <th class="p-3">نسبة الخصم للإضافي (%)</th>
+              <th class="p-3 text-center">إجراءات الحفظ</th>
+            </tr>
+          </thead>
+          <tbody id="allowances-table-body" class="divide-y divide-slate-800">
+            <tr><td colspan="6" class="p-6 text-center text-slate-500">جاري تحميل مخصصات الموظفين...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
   <script>
     let activeTab = 'daily';
 
@@ -352,19 +390,23 @@
       document.getElementById('tab-content-daily').classList.toggle('hidden', tabId !== 'daily');
       document.getElementById('tab-content-payroll').classList.toggle('hidden', tabId !== 'payroll');
       document.getElementById('tab-content-penalties').classList.toggle('hidden', tabId !== 'penalties');
+      document.getElementById('tab-content-allowances').classList.toggle('hidden', tabId !== 'allowances');
 
       // Update button styles
-      ['daily', 'payroll', 'penalties'].forEach(t => {
+      ['daily', 'payroll', 'penalties', 'allowances'].forEach(t => {
         const btn = document.getElementById(`tab-btn-${t}`);
-        if (t === tabId) {
-          btn.className = 'px-4 py-2 rounded-xl text-xs font-black bg-amber-500 text-slate-950 border border-amber-400 flex items-center gap-1.5 cursor-pointer';
-        } else {
-          btn.className = 'px-4 py-2 rounded-xl text-xs font-black bg-slate-800 text-slate-400 hover:text-white border border-slate-700 flex items-center gap-1.5 cursor-pointer';
+        if (btn) {
+          if (t === tabId) {
+            btn.className = 'px-4 py-2 rounded-xl text-xs font-black bg-amber-500 text-slate-950 border border-amber-400 flex items-center gap-1.5 cursor-pointer';
+          } else {
+            btn.className = 'px-4 py-2 rounded-xl text-xs font-black bg-slate-800 text-slate-400 hover:text-white border border-slate-700 flex items-center gap-1.5 cursor-pointer';
+          }
         }
       });
 
       if (tabId === 'payroll') fetchPayroll();
       if (tabId === 'penalties') fetchPenalties();
+      if (tabId === 'allowances') fetchStaffAllowances();
     }
 
     function showToast(message, isError = false) {
@@ -697,6 +739,71 @@
       }
     }
     function closeDeclarationsHistoryModal() { document.getElementById('declarations-modal').classList.add('hidden'); }
+
+    // Staff Allowances Functions
+    async function fetchStaffAllowances() {
+      const tbody = document.getElementById('allowances-table-body');
+      try {
+        const res = await fetch('/api/staff-allowances');
+        const data = await res.json();
+        if (res.ok && data.success && Array.isArray(data.allowances)) {
+          if (data.allowances.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="p-6 text-center text-slate-500">لا توجد مخصصات مسجلة</td></tr>';
+            return;
+          }
+          tbody.innerHTML = data.allowances.map(a => `
+            <tr class="hover:bg-slate-900/50">
+              <td class="p-3 font-bold text-white">${a.user_name}</td>
+              <td class="p-3"><span class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 text-[10px] font-bold">${a.role}</span></td>
+              <td class="p-3">
+                <input type="number" min="0" max="10" id="allowance-drinks-${a.user_id}" value="${a.daily_free_drinks}" class="w-20 px-2 py-1 bg-slate-950 border border-slate-700 rounded-lg text-amber-400 font-mono font-bold text-xs" />
+              </td>
+              <td class="p-3">
+                <input type="number" min="0" max="10" id="allowance-food-${a.user_id}" value="${a.daily_free_food}" class="w-20 px-2 py-1 bg-slate-950 border border-slate-700 rounded-lg text-emerald-400 font-mono font-bold text-xs" />
+              </td>
+              <td class="p-3">
+                <input type="number" min="0" max="100" id="allowance-disc-${a.user_id}" value="${a.discount_percent_above_limit}" class="w-20 px-2 py-1 bg-slate-950 border border-slate-700 rounded-lg text-blue-400 font-mono font-bold text-xs" /> %
+              </td>
+              <td class="p-3 text-center">
+                <button onclick="saveStaffAllowance(${a.user_id})" class="px-3 py-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-lg text-xs cursor-pointer shadow">
+                  حفظ ✓
+                </button>
+              </td>
+            </tr>
+          `).join('');
+        }
+      } catch (err) {
+        tbody.innerHTML = '<tr><td colspan="6" class="p-6 text-center text-rose-400">خطأ في تحميل المخصصات</td></tr>';
+      }
+    }
+
+    async function saveStaffAllowance(userId) {
+      const drinks = parseInt(document.getElementById(`allowance-drinks-${userId}`).value, 10) || 0;
+      const food = parseInt(document.getElementById(`allowance-food-${userId}`).value, 10) || 0;
+      const disc = parseFloat(document.getElementById(`allowance-disc-${userId}`).value) || 0;
+
+      try {
+        const res = await fetch('/api/staff-allowances', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            user_id: userId,
+            daily_free_drinks: drinks,
+            daily_free_food: food,
+            discount_percent_above_limit: disc
+          })
+        });
+
+        const data = await res.json();
+        if (res.ok && data.success) {
+          showToast('تم تحديث مخصصات الموظف بنجاح! ☕', false);
+        } else {
+          showToast(data.error || 'خطأ في تحديث المخصصات', true);
+        }
+      } catch (err) {
+        showToast('خطأ بالاتصال بالسيرفر', true);
+      }
+    }
 
     // Init Page
     window.addEventListener('DOMContentLoaded', () => {

@@ -58,12 +58,26 @@ const {
   getComplaints,
   resolveComplaint,
   getAllTables,
+  createCustomTable,
+  updateTableMetadata,
+  updateTableLifecycleStatus,
+  getTablesByZone,
   seatTable,
   requestTableCheck,
   vacateTable,
   updateTableTimestampsOnOrder,
   updateTableStatusOnCheckout,
-  // New imports
+  getRecipeDetails,
+  transferMaterial,
+  getMaterialTransfers,
+  getStaffAllowances,
+  updateStaffAllowance,
+  getStaffRemainingQuota,
+  createStaffOrder,
+  getBOMVarianceReport,
+  getExpectedCashForShift,
+  declareCashExtended,
+  // Existing imports
   getWasteLogs,
   getSuppliers, addSupplier, updateSupplier, deleteSupplier,
   getMenuCategories, addMenuCategory, updateMenuCategory, deleteMenuCategory,
@@ -519,12 +533,47 @@ app.post('/api/menu/upload', upload.single('csvFile'), async (req, res) => {
 });
 
 /**
- * Dynamic Table Lifecycle Endpoints
+ * Dynamic Table Lifecycle & Zone Endpoints
  */
 app.get('/api/tables', async (req, res) => {
   try {
-    const tables = await getAllTables();
+    const { zone } = req.query;
+    const tables = zone ? await getTablesByZone(zone) : await getAllTables();
     res.json({ success: true, tables });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post('/api/tables', async (req, res) => {
+  try {
+    const { table_number, custom_name, zone, capacity, customer_name, customer_phone, customer_id } = req.body;
+    if (!table_number) return res.status(400).json({ success: false, error: 'رقم الطاولة مطلوب' });
+    const result = await createCustomTable(table_number, custom_name, zone, capacity, customer_name, customer_phone, customer_id);
+    broadcast({ type: 'TABLE_CREATED_OR_UPDATED', table: result });
+    res.status(201).json(result);
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.put('/api/tables/:table_number/metadata', async (req, res) => {
+  try {
+    const result = await updateTableMetadata(req.params.table_number, req.body);
+    broadcast({ type: 'TABLE_METADATA_UPDATED', table_number: req.params.table_number, ...req.body });
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.put('/api/tables/:table_number/lifecycle', async (req, res) => {
+  try {
+    const { status, user_id, waiter_id } = req.body;
+    if (!status) return res.status(400).json({ success: false, error: 'حالة الطاولة مطلوبة' });
+    const result = await updateTableLifecycleStatus(req.params.table_number, status, user_id, waiter_id);
+    broadcast({ type: 'TABLE_LIFECYCLE_CHANGED', table_number: req.params.table_number, status, user_id });
+    res.json(result);
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
@@ -597,6 +646,133 @@ app.get('/api/tables/:table_number/orders', async (req, res) => {
   }
 });
 
+// ============================================================
+// RECIPE DETAILS & INGREDIENTS MODAL API
+// ============================================================
+app.get('/api/recipes/details/:itemName', async (req, res) => {
+  try {
+    const recipe = await getRecipeDetails(req.params.itemName);
+    res.json({ success: true, recipe });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ============================================================
+// INTER-STATION MATERIAL TRANSFERS (إعارة وتحويل خامات)
+// ============================================================
+app.post('/api/materials/transfer', async (req, res) => {
+  try {
+    const { inventory_id, from_department, to_department, quantity, notes, user_id, user_name } = req.body;
+    if (!inventory_id || !from_department || !to_department || !quantity) {
+      return res.status(400).json({ success: false, error: 'جميع بيانات التحويل مطلوبة' });
+    }
+    const result = await transferMaterial(inventory_id, from_department, to_department, quantity, notes, user_id, user_name);
+    broadcast({ type: 'MATERIAL_TRANSFERRED', transfer: result });
+    res.status(201).json(result);
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.get('/api/materials/transfers', async (req, res) => {
+  try {
+    const transfers = await getMaterialTransfers(parseInt(req.query.limit, 10) || 50);
+    res.json({ success: true, transfers });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ============================================================
+// STAFF ALLOWANCES & STAFF ORDERS
+// ============================================================
+app.get('/api/staff-allowances', async (req, res) => {
+  try {
+    const allowances = await getStaffAllowances();
+    res.json({ success: true, allowances });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post('/api/staff-allowances', async (req, res) => {
+  try {
+    const { role, daily_drink_quota, daily_meal_quota, monthly_budget } = req.body;
+    if (!role) return res.status(400).json({ success: false, error: 'الدور الوظيفي مطلوب' });
+    const result = await updateStaffAllowance(role, daily_drink_quota, daily_meal_quota, monthly_budget);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.get('/api/staff-orders/quota/:userId', async (req, res) => {
+  try {
+    const quota = await getStaffRemainingQuota(req.params.userId);
+    res.json({ success: true, quota });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post('/api/staff-orders', async (req, res) => {
+  try {
+    const { item_name, quantity, staff_user_id, authorizer_user_id, notes, shift_type } = req.body;
+    if (!item_name || !staff_user_id) {
+      return res.status(400).json({ success: false, error: 'اسم الصنف والموظف مطلوبان' });
+    }
+    const order = await createStaffOrder(item_name, quantity || 1, staff_user_id, authorizer_user_id, notes, shift_type || 'MORNING');
+    broadcast({ type: 'NEW_ORDER', order });
+    res.status(201).json({ success: true, order });
+  } catch (err) {
+    res.status(400).json({ success: false, error: err.message });
+  }
+});
+
+// ============================================================
+// CASH RECONCILIATION & EXTENDED BLIND CLOSE
+// ============================================================
+app.get('/api/reports/cash-reconciliation', async (req, res) => {
+  try {
+    const { shift_type, date } = req.query;
+    const report = await getExpectedCashForShift(shift_type || 'MORNING', date);
+    res.json({ success: true, report });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post('/api/drawer/declare-extended', async (req, res) => {
+  try {
+    const { user_id, user_name, shift_type, declared_amount, actual_cash, opening_float, opening_cash, manager_pin, notes } = req.body;
+    const amount = declared_amount !== undefined ? declared_amount : actual_cash;
+    const floatVal = opening_float !== undefined ? opening_float : (opening_cash !== undefined ? opening_cash : 500);
+    const uid = user_id || 1;
+
+    if (amount === undefined || amount === null) {
+      return res.status(400).json({ success: false, error: 'المبلغ الفعلي المقر مطلوب' });
+    }
+    const result = await declareCashExtended(uid, user_name || 'كاشير الوردية', shift_type || 'MORNING', amount, floatVal, manager_pin, notes);
+    broadcast({ type: 'DRAWER_DECLARED', result });
+    res.json({ success: true, declaration: result, result });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ============================================================
+// BOM THEORETICAL vs ACTUAL VARIANCE REPORT
+// ============================================================
+app.get('/api/reports/bom-reconciliation', async (req, res) => {
+  try {
+    const report = await getBOMVarianceReport(req.query.period || 'today');
+    res.json({ success: true, report });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 /**
  * Waste Logging Endpoint
  */
@@ -644,11 +820,23 @@ app.get('/api/inventory', async (req, res) => {
 });
 
 /**
- * GET /api/orders
+ * GET /api/orders (Supports department, status, and exclude_completed filters)
  */
 app.get('/api/orders', async (req, res) => {
   try {
-    const orders = await getPendingOrders();
+    const { department, status, exclude_completed } = req.query;
+    let orders = await getPendingOrders();
+
+    if (department && department !== 'ALL') {
+      orders = orders.filter(o => o.category === department);
+    }
+    if (status && status !== 'ALL') {
+      orders = orders.filter(o => o.status === status || o.kds_status === status);
+    }
+    if (exclude_completed === '1' || exclude_completed === 'true') {
+      orders = orders.filter(o => o.status !== 'READY' && o.status !== 'COMPLETED' && o.kds_status !== 'DELIVERED' && o.kds_status !== 'READY');
+    }
+
     res.json({ success: true, orders });
   } catch (err) {
     console.error('Error fetching pending orders:', err);
@@ -661,7 +849,11 @@ app.get('/api/orders', async (req, res) => {
  */
 app.post('/api/orders', async (req, res) => {
   try {
-    const { item_name, quantity, price, table_number, waiter_id, sugar_level, roast_type } = req.body;
+    const { 
+      item_name, quantity, price, table_number, waiter_id, 
+      sugar_level, roast_type, order_type, item_notes, addons, 
+      variant, staff_user_id, user_id, user_name, shift_type 
+    } = req.body;
 
     if (!item_name || typeof item_name !== 'string' || !item_name.trim()) {
       return res.status(400).json({ success: false, error: 'اسم الصنف مطلوب (item_name is required)' });
@@ -670,13 +862,25 @@ app.post('/api/orders', async (req, res) => {
     const qty = parseInt(quantity, 10) || 1;
     const inputPrice = price !== undefined && price !== null ? Number(price) : null;
     const tNum = parseInt(table_number, 10) || 0;
-    const newOrder = await createOrderWithBOM(item_name.trim(), qty, inputPrice, tNum, waiter_id, sugar_level, roast_type);
+
+    const extra = {
+      order_type: order_type || (tNum > 0 ? 'DINE_IN' : 'TAKEAWAY'),
+      item_notes: item_notes || null,
+      addons: addons || null,
+      variant: variant || null,
+      staff_user_id: staff_user_id || null,
+      user_id: user_id || null,
+      user_name: user_name || null,
+      shift_type: shift_type || 'MORNING'
+    };
+
+    const newOrder = await createOrderWithBOM(item_name.trim(), qty, inputPrice, tNum, waiter_id, sugar_level, roast_type, extra);
 
     if (tNum > 0) {
       await updateTableTimestampsOnOrder(tNum);
     }
 
-    console.log(`➕ [NEW ORDER] #${newOrder.id} - ${newOrder.item_name} (x${newOrder.quantity}) [Table #${newOrder.table_number}] Price: ${newOrder.price} EGP [Category: ${newOrder.category}]`);
+    console.log(`➕ [NEW ORDER] #${newOrder.id} - ${newOrder.item_name} (x${newOrder.quantity}) [Table #${newOrder.table_number}] Type: ${newOrder.order_type} [By: ${user_name || 'System'}]`);
 
     broadcast({
       type: 'NEW_ORDER',
@@ -1319,6 +1523,13 @@ app.put('/api/reservations/:id/status', async (req, res) => {
 // CUSTOMER CRM API
 // ============================================================
 app.get('/api/customers', async (req, res) => {
+  try {
+    const customers = await getAllCustomers(req.query.search || null);
+    res.json({ success: true, customers });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+app.get('/api/crm/customers', async (req, res) => {
   try {
     const customers = await getAllCustomers(req.query.search || null);
     res.json({ success: true, customers });

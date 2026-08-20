@@ -26,31 +26,27 @@
 </head>
 <body class="min-h-screen flex flex-col bg-slate-950">
 
-  <!-- Navigation Bar -->
-  <header class="bg-slate-900 border-b border-slate-800 px-6 py-4 flex items-center justify-between shadow-md">
+  <!-- Page Action Header -->
+  <div class="bg-slate-900/90 border-b border-slate-800 px-6 py-3.5 flex items-center justify-between sticky top-0 z-30 shadow-md">
     <div class="flex items-center gap-3">
-      <div class="w-10 h-10 bg-amber-600 rounded-lg flex items-center justify-center text-xl font-bold text-slate-950">
-        ☕
+      <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 text-xl shadow-inner">
+        🏠
       </div>
       <div>
-        <h1 class="text-xl font-bold text-slate-100">كافيه مزاج - بوابة الأنظمة</h1>
-        <p class="text-xs text-slate-400">منظومة إدارة الكافيه المتكاملة</p>
+        <h1 class="text-lg font-black text-white">بوابة الأنظمة الرئيسية</h1>
+        <p class="text-xs text-slate-400">لوحة الوصول السريع لجميع أقسام وتشغيل كافيه مزاج</p>
       </div>
     </div>
-
-    <div class="flex items-center gap-4">
-      <div class="text-left bg-slate-800 border border-slate-700 px-3 py-1.5 rounded-lg flex items-center gap-2">
+    <div class="flex items-center gap-3">
+      <div class="text-right bg-slate-800/80 border border-slate-700 px-3 py-1.5 rounded-xl flex items-center gap-2">
         <span class="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse"></span>
         <div>
-          <div id="userName" class="text-sm font-bold text-amber-400">---</div>
-          <div id="userRole" class="text-[11px] text-slate-400">---</div>
+          <div id="userName" class="text-xs font-black text-amber-400">---</div>
+          <div id="userRole" class="text-[10px] text-slate-400">---</div>
         </div>
       </div>
-      <button onclick="logout()" class="bg-rose-950 hover:bg-rose-900 border border-rose-800 text-rose-300 text-xs px-3 py-2 rounded-lg font-bold flex items-center gap-1">
-        تسجيل الخروج 🚪
-      </button>
     </div>
-  </header>
+  </div>
 
   <main class="flex-1 max-w-6xl w-full mx-auto p-6 flex flex-col gap-6">
 

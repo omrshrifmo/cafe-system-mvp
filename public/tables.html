@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>إدارة وتوزيع الطاولات - كافيه مزاج</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/nav.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: { extend: { fontFamily: { cairo: ['Cairo', 'sans-serif'] } } }
+    }
+  </script>
+  <style> body { font-family: 'Cairo', sans-serif; } </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col overflow-y-auto selection:bg-amber-500 selection:text-black">
+
+  <!-- Page Action Header -->
+  <div class="shrink-0 bg-slate-900/90 border-b border-slate-800 px-6 py-3.5 flex items-center justify-between shadow-md z-20">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 text-xl shadow-inner">
+        🪑
+      </div>
+      <div>
+        <h1 class="text-lg font-black text-white">إدارة وتوزيع طاولات الصالة</h1>
+        <p class="text-xs text-slate-400">متابعة دورة حياة الطاولات، المباشرة، الطلبات، وطلب الشيك لحظياً</p>
+      </div>
+    </div>
+
+    <!-- Actions & Stats Summary -->
+    <div class="flex items-center gap-3">
+      <div class="hidden sm:flex items-center gap-2 bg-slate-800/80 px-3 py-1.5 rounded-xl border border-slate-700 text-xs font-mono">
+        <span class="text-slate-400 font-bold">إجمالي: <strong id="stat-total" class="text-white">0</strong></span>
+        <span class="text-slate-600">|</span>
+        <span class="text-emerald-400 font-bold">متاحة: <strong id="stat-vacant">0</strong></span>
+        <span class="text-slate-600">|</span>
+        <span class="text-amber-400 font-bold">مشغولة: <strong id="stat-occupied">0</strong></span>
+        <span class="text-slate-600">|</span>
+        <span class="text-rose-400 font-bold">طلب شيك: <strong id="stat-check">0</strong></span>
+      </div>
+
+      <button onclick="openCustomTableModal()" class="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl text-xs font-black flex items-center gap-1.5 cursor-pointer shadow-lg transition-colors">
+        <span>➕</span>
+        <span>إعداد طاولة مخصصة</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Zone Filter Bar -->
+  <nav class="shrink-0 bg-slate-900/90 border-b border-slate-800 px-4 py-1.5 flex items-center gap-1.5 z-10 flex-wrap overflow-x-auto">
+    <button onclick="filterZone('ALL')" id="zone-btn-ALL" class="px-3 py-1 rounded-xl text-xs font-black bg-amber-500 text-slate-950 cursor-pointer shadow">
+      🌟 جميع المناطق (<span id="count-zone-ALL">0</span>)
+    </button>
+    <button onclick="filterZone('INDOOR_1')" id="zone-btn-INDOOR_1" class="px-3 py-1 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 cursor-pointer">
+      🏢 صالة داخلية 1 (<span id="count-zone-INDOOR_1">0</span>)
+    </button>
+    <button onclick="filterZone('INDOOR_2')" id="zone-btn-INDOOR_2" class="px-3 py-1 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 cursor-pointer">
+      🏢 صالة داخلية 2 (<span id="count-zone-INDOOR_2">0</span>)
+    </button>
+    <button onclick="filterZone('INDOOR_3')" id="zone-btn-INDOOR_3" class="px-3 py-1 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 cursor-pointer">
+      🏢 صالة داخلية 3 (<span id="count-zone-INDOOR_3">0</span>)
+    </button>
+    <button onclick="filterZone('OUTDOOR_RIGHT')" id="zone-btn-OUTDOOR_RIGHT" class="px-3 py-1 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 cursor-pointer">
+      🌳 تراس يمين (<span id="count-zone-OUTDOOR_RIGHT">0</span>)
+    </button>
+    <button onclick="filterZone('OUTDOOR_LEFT')" id="zone-btn-OUTDOOR_LEFT" class="px-3 py-1 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 cursor-pointer">
+      🌳 تراس يسار (<span id="count-zone-OUTDOOR_LEFT">0</span>)
+    </button>
+    <button onclick="filterZone('OUTDOOR_GATE')" id="zone-btn-OUTDOOR_GATE" class="px-3 py-1 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 cursor-pointer">
+      🚪 البوابة والمدخل (<span id="count-zone-OUTDOOR_GATE">0</span>)
+    </button>
+  </nav>
+
+  <!-- Toast Area -->
+  <div id="toast-container" class="fixed top-16 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-2 pointer-events-none"></div>
+
+  <!-- Tables Grid Container -->
+  <main class="w-full p-4 flex-1 flex flex-col min-h-0 overflow-y-auto">
+    <div id="tables-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3.5">
+      <!-- Injected Dynamically -->
+    </div>
+  </main>
+
+  <!-- Custom Table Modal -->
+  <div id="custom-table-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md p-5 shadow-2xl text-right">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-2.5 mb-3">
+        <div class="flex items-center gap-2">
+          <span class="text-xl">🪑</span>
+          <h3 id="table-modal-title" class="text-sm font-black text-amber-400">إعداد وتخصيص طاولة جديدة</h3>
+        </div>
+        <button onclick="closeCustomTableModal()" class="w-7 h-7 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center font-bold text-xs cursor-pointer">✕</button>
+      </div>
+
+      <form onsubmit="submitCustomTable(event)" class="space-y-3 text-xs">
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block font-bold text-slate-300 mb-1">رقم الطاولة (Table #):</label>
+            <input type="number" id="modal-table-number" required placeholder="مثال: 12" class="w-full px-3 py-1.5 bg-slate-950 border border-slate-700 rounded-xl text-white font-mono font-black focus:border-amber-500 focus:outline-none" />
+          </div>
+          <div>
+            <label class="block font-bold text-slate-300 mb-1">السعة (عدد المقاعد):</label>
+            <input type="number" id="modal-table-capacity" value="4" min="1" max="50" class="w-full px-3 py-1.5 bg-slate-950 border border-slate-700 rounded-xl text-white font-mono font-bold focus:border-amber-500 focus:outline-none" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-300 mb-1">اسم مخصص للطاولة (اختياري):</label>
+          <input type="text" id="modal-table-name" placeholder="مثال: VIP ركن العائلات / طاولة 12" class="w-full px-3 py-1.5 bg-slate-950 border border-slate-700 rounded-xl text-white focus:border-amber-500 focus:outline-none" />
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-300 mb-1">منطقة وموقع الطاولة (Zone):</label>
+          <select id="modal-table-zone" required class="w-full px-3 py-1.5 bg-slate-950 border border-slate-700 rounded-xl text-white focus:border-amber-500 focus:outline-none">
+            <option value="INDOOR_1">صالة داخلية 1 (INDOOR_1)</option>
+            <option value="INDOOR_2">صالة داخلية 2 (INDOOR_2)</option>
+            <option value="INDOOR_3">صالة داخلية 3 (INDOOR_3)</option>
+            <option value="OUTDOOR_RIGHT">تراس خارجي يمين (OUTDOOR_RIGHT)</option>
+            <option value="OUTDOOR_LEFT">تراس خارجي يسار (OUTDOOR_LEFT)</option>
+            <option value="OUTDOOR_GATE">البوابة والمدخل (OUTDOOR_GATE)</option>
+          </select>
+        </div>
+
+        <div class="border-t border-slate-800/80 pt-2">
+          <label class="block font-bold text-slate-300 mb-1">ربط عميل مخصص (CRM / ضيف):</label>
+          <div class="grid grid-cols-2 gap-2">
+            <input type="text" id="modal-cust-name" placeholder="اسم العميل (اختياري)" class="w-full px-3 py-1.5 bg-slate-950 border border-slate-700 rounded-xl text-white focus:border-amber-500 focus:outline-none" />
+            <input type="tel" id="modal-cust-phone" placeholder="هاتف العميل" class="w-full px-3 py-1.5 bg-slate-950 border border-slate-700 rounded-xl text-white focus:border-amber-500 focus:outline-none" />
+          </div>
+        </div>
+
+        <button type="submit" class="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl text-xs shadow-lg cursor-pointer mt-2">
+          حفظ وتفعيل الطاولة 🪑
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    let allTables = [];
+    let currentZoneFilter = 'ALL';
+    let ws = null;
+
+    const ZONE_NAMES = {
+      'INDOOR_1': 'صالة 1 داخلي',
+      'INDOOR_2': 'صالة 2 داخلي',
+      'INDOOR_3': 'صالة 3 داخلي',
+      'OUTDOOR_RIGHT': 'تراس يمين',
+      'OUTDOOR_LEFT': 'تراس يسار',
+      'OUTDOOR_GATE': 'البوابة'
+    };
+
+    function showToast(message, isInfo = true) {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `px-4 py-2 rounded-xl border text-xs font-bold flex items-center gap-2 shadow-2xl ${
+        isInfo ? 'bg-amber-950 text-amber-300 border-amber-500/50' : 'bg-emerald-950 text-emerald-300 border-emerald-500/50'
+      }`;
+      toast.innerHTML = `<span>${isInfo ? '🔔' : '✅'}</span><span>${message}</span>`;
+      container.appendChild(toast);
+      setTimeout(() => toast.remove(), 2500);
+    }
+
+    function connectWebSocket() {
+      const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      ws = new WebSocket(`${protocol}//${location.host}`);
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === 'TABLE_LIFECYCLE_CHANGED' || data.type === 'TABLE_SEATED' || data.type === 'TABLE_VACATED' || data.type === 'TABLE_CHECK_REQUESTED' || data.type === 'TABLE_CREATED_OR_UPDATED' || data.type === 'NEW_ORDER') {
+            fetchTables();
+          }
+        } catch (e) {}
+      };
+      ws.onclose = () => setTimeout(connectWebSocket, 3000);
+    }
+
+    async function fetchTables() {
+      try {
+        const res = await fetch('/api/tables');
+        const data = await res.json();
+        if (res.ok && data.success && Array.isArray(data.tables)) {
+          allTables = data.tables;
+          renderTables();
+          updateStats();
+        }
+      } catch (e) {}
+    }
+
+    function filterZone(zone) {
+      currentZoneFilter = zone;
+      ['ALL', 'INDOOR_1', 'INDOOR_2', 'INDOOR_3', 'OUTDOOR_RIGHT', 'OUTDOOR_LEFT', 'OUTDOOR_GATE'].forEach(z => {
+        const btn = document.getElementById(`zone-btn-${z}`);
+        if (btn) {
+          btn.className = z === zone 
+            ? 'px-3 py-1 rounded-xl text-xs font-black bg-amber-500 text-slate-950 cursor-pointer shadow'
+            : 'px-3 py-1 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 cursor-pointer';
+        }
+      });
+      renderTables();
+    }
+
+    function updateStats() {
+      const total = allTables.length;
+      const vacant = allTables.filter(t => t.status === 'VACANT').length;
+      const check = allTables.filter(t => t.status === 'CHECK_REQUESTED').length;
+      const occupied = total - vacant;
+
+      document.getElementById('stat-total').textContent = total;
+      document.getElementById('stat-vacant').textContent = vacant;
+      document.getElementById('stat-occupied').textContent = occupied;
+      document.getElementById('stat-check').textContent = check;
+
+      document.getElementById('count-zone-ALL').textContent = total;
+      ['INDOOR_1', 'INDOOR_2', 'INDOOR_3', 'OUTDOOR_RIGHT', 'OUTDOOR_LEFT', 'OUTDOOR_GATE'].forEach(z => {
+        const count = allTables.filter(t => t.zone === z).length;
+        const el = document.getElementById(`count-zone-${z}`);
+        if (el) el.textContent = count;
+      });
+    }
+
+    function renderTables() {
+      const grid = document.getElementById('tables-grid');
+      grid.innerHTML = '';
+
+      const filtered = currentZoneFilter === 'ALL' 
+        ? allTables 
+        : allTables.filter(t => t.zone === currentZoneFilter);
+
+      if (filtered.length === 0) {
+        grid.innerHTML = '<div class="col-span-full py-16 text-center text-slate-500 text-xs">لا توجد طاولات في هذه المنطقة بعد</div>';
+        return;
+      }
+
+      filtered.forEach(t => {
+        const card = createTableCard(t);
+        grid.appendChild(card);
+      });
+    }
+
+    function createTableCard(t) {
+      const card = document.createElement('div');
+      const status = t.status || 'VACANT';
+
+      let statusBg = 'bg-slate-900 border-slate-800';
+      let statusBadge = 'bg-slate-800 text-emerald-400 border-emerald-500/30';
+      let statusText = '🟢 متاحة';
+
+      if (status === 'OPENED' || status === 'OCCUPIED') {
+        statusBg = 'bg-slate-900 border-blue-500/40';
+        statusBadge = 'bg-blue-500/20 text-blue-300 border-blue-500/30';
+        statusText = '🔵 تم الفتح';
+      } else if (status === 'WAITER_APPROACHED') {
+        statusBg = 'bg-slate-900 border-purple-500/40';
+        statusBadge = 'bg-purple-500/20 text-purple-300 border-purple-500/30';
+        statusText = '🟣 مباشرة ويتر 1';
+      } else if (status === 'ORDERED') {
+        statusBg = 'bg-slate-900 border-amber-500/40';
+        statusBadge = 'bg-amber-500/20 text-amber-300 border-amber-500/30';
+        statusText = '🟡 تم الطلب';
+      } else if (status === 'REAPPROACHED') {
+        statusBg = 'bg-slate-900 border-orange-500/40';
+        statusBadge = 'bg-orange-500/20 text-orange-300 border-orange-500/30';
+        statusText = '🟠 متابعة ثانية';
+      } else if (status === 'REORDERED') {
+        statusBg = 'bg-slate-900 border-indigo-500/40';
+        statusBadge = 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30';
+        statusText = '🟤 طلب إضافي';
+      } else if (status === 'CHECK_REQUESTED') {
+        statusBg = 'bg-rose-950/40 border-rose-500 animate-pulse';
+        statusBadge = 'bg-rose-500/20 text-rose-300 border-rose-500/40';
+        statusText = '🔴 طلب الشيك 🧾';
+      }
+
+      const zoneName = ZONE_NAMES[t.zone] || t.zone || 'صالة داخلية';
+
+      card.className = `${statusBg} border rounded-2xl p-3.5 flex flex-col justify-between shadow-lg text-right transition-none`;
+
+      card.innerHTML = `
+        <div>
+          <!-- Header -->
+          <div class="flex items-center justify-between border-b border-slate-800 pb-1.5 mb-2">
+            <div class="flex items-center gap-1.5">
+              <span class="text-sm font-mono font-black text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">#${t.table_number}</span>
+              <span class="text-[10px] text-slate-400 font-bold">👥 ${t.capacity || 4} مقاعد</span>
+            </div>
+            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full border ${statusBadge}">${statusText}</span>
+          </div>
+
+          <!-- Name & Zone -->
+          <h3 class="text-sm font-black text-white truncate">${t.custom_name || `طاولة ${t.table_number}`}</h3>
+          <div class="flex items-center gap-1 mt-1 text-[10px] text-slate-400">
+            <span>📍 ${zoneName}</span>
+          </div>
+
+          <!-- Customer badge -->
+          ${t.customer_name ? `
+            <div class="mt-2 p-1.5 bg-slate-950 rounded-xl border border-slate-800 text-[10px] text-slate-300 flex items-center justify-between">
+              <span>👤 ${t.customer_name}</span>
+              <span class="font-mono text-amber-400">${t.customer_phone || ''}</span>
+            </div>
+          ` : ''}
+
+          <!-- Lifecycle Times -->
+          <div class="mt-2 text-[9px] text-slate-500 space-y-0.5 font-mono">
+            ${t.opened_at ? `<div>فتح: ${new Date(t.opened_at).toLocaleTimeString('ar-EG')}</div>` : ''}
+            ${t.waiter_approached_at ? `<div>مباشرة: ${new Date(t.waiter_approached_at).toLocaleTimeString('ar-EG')}</div>` : ''}
+            ${t.reapproached_at ? `<div>متابعة 2: ${new Date(t.reapproached_at).toLocaleTimeString('ar-EG')}</div>` : ''}
+            ${t.check_requested_at ? `<div class="text-rose-400 font-bold">طلب شيك: ${new Date(t.check_requested_at).toLocaleTimeString('ar-EG')}</div>` : ''}
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="mt-3 pt-2 border-t border-slate-800 space-y-1">
+          ${status === 'VACANT' ? `
+            <button onclick="setTableLifecycle(${t.table_number}, 'OPENED')" class="w-full py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-[11px] cursor-pointer shadow">
+              فتح وجلوس عميل 🪑
+            </button>
+          ` : ''}
+
+          ${status === 'OPENED' ? `
+            <button onclick="setTableLifecycle(${t.table_number}, 'WAITER_APPROACHED')" class="w-full py-1.5 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl text-[11px] cursor-pointer shadow">
+              مباشرة ويتر الأولى 🏃
+            </button>
+          ` : ''}
+
+          ${status === 'WAITER_APPROACHED' || status === 'OPENED' || status === 'OCCUPIED' ? `
+            <button onclick="goToPOS(${t.table_number})" class="w-full py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl text-[11px] cursor-pointer shadow">
+              أخذ الطلب في POS 💳
+            </button>
+          ` : ''}
+
+          ${status === 'ORDERED' ? `
+            <button onclick="setTableLifecycle(${t.table_number}, 'REAPPROACHED')" class="w-full py-1.5 bg-orange-600 hover:bg-orange-500 text-white font-bold rounded-xl text-[11px] cursor-pointer shadow">
+              إعادة مباشرة ويتر 🏃
+            </button>
+          ` : ''}
+
+          ${status === 'REAPPROACHED' ? `
+            <button onclick="goToPOS(${t.table_number})" class="w-full py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-[11px] cursor-pointer shadow">
+              طلب إضافي في POS ➕
+            </button>
+          ` : ''}
+
+          ${status !== 'VACANT' && status !== 'CHECK_REQUESTED' ? `
+            <button onclick="setTableLifecycle(${t.table_number}, 'CHECK_REQUESTED')" class="w-full py-1 bg-rose-950/80 hover:bg-rose-900/90 text-rose-300 border border-rose-500/30 rounded-lg text-[10px] font-bold cursor-pointer">
+              طلب الشيك / الحساب 🧾
+            </button>
+          ` : ''}
+
+          ${status === 'CHECK_REQUESTED' ? `
+            <button onclick="goToPOS(${t.table_number})" class="w-full py-1.5 bg-rose-600 hover:bg-rose-500 text-white font-black rounded-xl text-[11px] cursor-pointer shadow">
+              محاسبة وإنهاء الشيك في POS 💳
+            </button>
+          ` : ''}
+
+          ${status !== 'VACANT' ? `
+            <button onclick="vacateTableAction(${t.table_number})" class="w-full py-1 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-lg text-[10px] font-bold cursor-pointer">
+              إخلاء وتفريغ الطاولة 🧹
+            </button>
+          ` : ''}
+        </div>
+      `;
+      return card;
+    }
+
+    async function setTableLifecycle(tableNumber, newStatus) {
+      const user = JSON.parse(localStorage.getItem('currentUser') || localStorage.getItem('user') || '{}');
+      try {
+        const res = await fetch(`/api/tables/${tableNumber}/lifecycle`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            status: newStatus,
+            user_id: user.id || null,
+            waiter_id: user.name || null
+          })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          showToast(`تم تحديث حالة الطاولة #${tableNumber} إلى ${newStatus}`, false);
+          fetchTables();
+        } else {
+          showToast(data.error || 'خطأ في تحديث حالة الطاولة', true);
+        }
+      } catch (e) {
+        showToast('خطأ بالاتصال بالسيرفر', true);
+      }
+    }
+
+    async function vacateTableAction(tableNumber) {
+      if (!confirm(`هل أنت متأكد من تفريغ وإخلاء طاولة #${tableNumber}؟`)) return;
+      try {
+        const res = await fetch('/api/tables/vacate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ table_number: tableNumber })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          showToast(`تم إخلاء طاولة #${tableNumber} بنجاح`, false);
+          fetchTables();
+        }
+      } catch (e) {}
+    }
+
+    function goToPOS(tableNumber) {
+      window.location.href = `/pos.html?table=${tableNumber}`;
+    }
+
+    function openCustomTableModal() {
+      document.getElementById('custom-table-modal').classList.remove('hidden');
+    }
+
+    function closeCustomTableModal() {
+      document.getElementById('custom-table-modal').classList.add('hidden');
+    }
+
+    async function submitCustomTable(e) {
+      e.preventDefault();
+      const tableNumber = document.getElementById('modal-table-number').value;
+      const customName = document.getElementById('modal-table-name').value;
+      const zone = document.getElementById('modal-table-zone').value;
+      const capacity = document.getElementById('modal-table-capacity').value;
+      const customerName = document.getElementById('modal-cust-name').value;
+      const customerPhone = document.getElementById('modal-cust-phone').value;
+
+      try {
+        const res = await fetch('/api/tables', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            table_number: parseInt(tableNumber, 10),
+            custom_name: customName || `طاولة ${tableNumber}`,
+            zone: zone,
+            capacity: parseInt(capacity, 10) || 4,
+            customer_name: customerName || null,
+            customer_phone: customerPhone || null
+          })
+        });
+
+        const data = await res.json();
+        if (res.ok && data.success) {
+          showToast(`تم إعداد طاولة #${tableNumber} بنجاح 🪑`, false);
+          closeCustomTableModal();
+          fetchTables();
+        } else {
+          showToast(data.error || 'خطأ في إعداد الطاولة', true);
+        }
+      } catch (e) {
+        showToast('خطأ بالاتصال بالسيرفر', true);
+      }
+    }
+
+    fetchTables();
+    connectWebSocket();
+  </script>
+</body>
+</html>

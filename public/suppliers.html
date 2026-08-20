@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;900&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/nav.js"></script>
   <style>
     body { font-family: 'Tajawal', sans-serif; background: #0f172a; color: #f8fafc; }
     .modal-bg { background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); }
@@ -17,19 +18,21 @@
 </head>
 <body class="min-h-screen">
 
-  <!-- Header -->
-  <header class="bg-slate-900 border-b border-slate-800 px-6 py-4 flex items-center justify-between sticky top-0 z-50">
+  <!-- Page Action Header -->
+  <div class="bg-slate-900/90 border-b border-slate-800 px-6 py-3.5 flex items-center justify-between sticky top-0 z-30 shadow-md">
     <div class="flex items-center gap-3">
-      <a href="portal.html" class="text-slate-400 hover:text-amber-400 text-2xl transition-colors">←</a>
+      <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 text-xl shadow-inner">
+        🚚
+      </div>
       <div>
-        <h1 class="text-xl font-bold text-white">🚚 إدارة الموردين</h1>
-        <p class="text-xs text-slate-400">تتبع الموردين وتاريخ المشتريات</p>
+        <h1 class="text-lg font-black text-white">دليل الموردين وسجل المشتريات</h1>
+        <p class="text-xs text-slate-400">تتبع حسابات الموردين وفواتير التوريد وعروض الأسعار</p>
       </div>
     </div>
-    <button onclick="openAddModal()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-5 py-2.5 rounded-xl flex items-center gap-2 transition-colors">
-      ➕ مورد جديد
+    <button onclick="openAddModal()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs px-4 py-2.5 rounded-xl flex items-center gap-1.5 transition-colors shadow-lg cursor-pointer">
+      <span>➕</span><span>مورد جديد</span>
     </button>
-  </header>
+  </div>
 
   <!-- Stats -->
   <div class="grid grid-cols-2 md:grid-cols-3 gap-4 p-6 pb-0">
