@@ -6,49 +6,50 @@
 
 (function () {
   // Navigation Route Configuration Grouped by Domain
+  const ALL_PRIVILEGED = ['SUPER_ADMIN', 'OWNER', 'OP_MANAGER', 'ADMIN', 'MANAGER'];
   const navGroups = [
     {
       groupTitle: 'الصالة ونقطة البيع',
       items: [
-        { title: 'نقطة البيع (POS)', path: '/pos.html', icon: '💳', roles: ['OWNER', 'OP_MANAGER', 'OP_ASSISTANT_CASHIER', 'HALL_MANAGER', 'WAITER', 'ADMIN', 'MANAGER', 'CASHIER'] },
-        { title: 'إدارة وتوزيع الطاولات', path: '/tables.html', icon: '🪑', roles: ['OWNER', 'OP_MANAGER', 'OP_ASSISTANT_CASHIER', 'HALL_MANAGER', 'WAITER', 'ADMIN', 'MANAGER', 'CASHIER'] },
-        { title: 'إدارة الحجوزات', path: '/reservations.html', icon: '📅', roles: ['OWNER', 'OP_MANAGER', 'HALL_MANAGER', 'WAITER', 'ADMIN', 'MANAGER'] },
-        { title: 'شاشة الويتر والرانر', path: '/runner.html', icon: '🏃', roles: ['OWNER', 'OP_MANAGER', 'HALL_MANAGER', 'WAITER', 'BARISTA', 'SHIASH', 'CHEF', 'ADMIN', 'MANAGER'] }
+        { title: 'نقطة البيع (POS)', path: '/pos.html', icon: '💳', roles: [...ALL_PRIVILEGED, 'OP_ASSISTANT_CASHIER', 'HALL_MANAGER', 'WAITER', 'JOKER', 'CASHIER'] },
+        { title: 'إدارة وتوزيع الطاولات', path: '/tables.html', icon: '🪑', roles: [...ALL_PRIVILEGED, 'OP_ASSISTANT_CASHIER', 'HALL_MANAGER', 'WAITER', 'JOKER', 'CASHIER'] },
+        { title: 'إدارة الحجوزات', path: '/reservations.html', icon: '📅', roles: [...ALL_PRIVILEGED, 'HALL_MANAGER', 'WAITER', 'JOKER'] },
+        { title: 'شاشة الويتر والرانر', path: '/runner.html', icon: '🏃', roles: [...ALL_PRIVILEGED, 'HALL_MANAGER', 'WAITER', 'JOKER', 'BARISTA', 'SHIASH', 'CHEF'] }
       ]
     },
     {
       groupTitle: 'شاشات التحضير KDS',
       items: [
-        { title: 'شاشة البارستا', path: '/kds.html', icon: '☕', roles: ['OWNER', 'OP_MANAGER', 'BARISTA', 'ADMIN', 'MANAGER'] },
-        { title: 'شاشة المطبخ', path: '/kitchen.html', icon: '🍳', roles: ['OWNER', 'OP_MANAGER', 'CHEF', 'ADMIN', 'MANAGER'] },
-        { title: 'شاشة الشيشة', path: '/shisha.html', icon: '💨', roles: ['OWNER', 'OP_MANAGER', 'SHIASH', 'ADMIN', 'MANAGER'] }
+        { title: 'شاشة البارستا', path: '/kds.html', icon: '☕', roles: [...ALL_PRIVILEGED, 'BARISTA', 'JOKER'] },
+        { title: 'شاشة المطبخ', path: '/kitchen.html', icon: '🍳', roles: [...ALL_PRIVILEGED, 'CHEF', 'JOKER'] },
+        { title: 'شاشة الشيشة', path: '/shisha.html', icon: '💨', roles: [...ALL_PRIVILEGED, 'SHIASH', 'JOKER'] }
       ]
     },
     {
       groupTitle: 'المخزون والمشتريات',
       items: [
-        { title: 'مدير قائمة الطعام', path: '/menu-manager.html', icon: '🍽️', roles: ['OWNER', 'OP_MANAGER', 'ADMIN', 'MANAGER'] },
-        { title: 'المخزون ومطابقة BOM', path: '/inventory.html', icon: '📦', roles: ['OWNER', 'OP_MANAGER', 'ADMIN', 'MANAGER'] },
-        { title: 'دليل الموردين', path: '/suppliers.html', icon: '🚚', roles: ['OWNER', 'OP_MANAGER', 'ADMIN', 'MANAGER'] },
-        { title: 'فواتير المشتريات', path: '/purchasing.html', icon: '🛒', roles: ['OWNER', 'OP_MANAGER', 'ADMIN', 'MANAGER'] }
+        { title: 'مدير قائمة الطعام', path: '/menu-manager.html', icon: '🍽️', roles: [...ALL_PRIVILEGED, 'BOM_MANAGER'] },
+        { title: 'المخزون ومطابقة BOM', path: '/inventory.html', icon: '📦', roles: [...ALL_PRIVILEGED, 'BOM_MANAGER'] },
+        { title: 'دليل الموردين', path: '/suppliers.html', icon: '🚚', roles: [...ALL_PRIVILEGED, 'BOM_MANAGER'] },
+        { title: 'فواتير المشتريات', path: '/purchasing.html', icon: '🛒', roles: [...ALL_PRIVILEGED, 'BOM_MANAGER'] }
       ]
     },
     {
       groupTitle: 'العملاء والموارد البشرية',
       items: [
-        { title: 'العملاء والولاء (CRM)', path: '/crm.html', icon: '👥', roles: ['OWNER', 'OP_MANAGER', 'ADMIN', 'MANAGER', 'CASHIER'] },
-        { title: 'الموارد البشرية والرواتب', path: '/hr.html', icon: '💼', roles: ['OWNER', 'OP_MANAGER', 'ADMIN', 'MANAGER'] },
-        { title: 'معايير الجودة والـ QA', path: '/qa.html', icon: '🛡️', roles: ['OWNER', 'OP_MANAGER', 'ADMIN', 'MANAGER'] }
+        { title: 'العملاء والولاء (CRM)', path: '/crm.html', icon: '👥', roles: [...ALL_PRIVILEGED, 'OP_ASSISTANT_CASHIER', 'CASHIER'] },
+        { title: 'الموارد البشرية والرواتب', path: '/hr.html', icon: '💼', roles: ALL_PRIVILEGED },
+        { title: 'معايير الجودة والـ QA', path: '/qa.html', icon: '🛡️', roles: [...ALL_PRIVILEGED, 'BOM_MANAGER'] }
       ]
     },
     {
       groupTitle: 'التقارير والإدارة المالية',
       items: [
-        { title: 'إعدادات النظام والضرائب', path: '/settings.html', icon: '⚙️', roles: ['OWNER', 'ADMIN'] },
-        { title: 'تقفيل الوردية (EOD)', path: '/eod.html', icon: '📊', roles: ['OWNER', 'OP_MANAGER', 'OP_ASSISTANT_CASHIER', 'ADMIN', 'MANAGER', 'CASHIER'] },
-        { title: 'مؤشرات الأداء (BI)', path: '/bi.html', icon: '📈', roles: ['OWNER', 'OP_MANAGER', 'ADMIN', 'MANAGER'] },
-        { title: 'حسابات الشركاء', path: '/shareholders.html', icon: '💎', roles: ['OWNER', 'ADMIN'] },
-        { title: 'البوابة الرئيسية', path: '/portal.html', icon: '🏠', roles: ['OWNER', 'OP_MANAGER', 'OP_ASSISTANT_CASHIER', 'HALL_MANAGER', 'WAITER', 'BARISTA', 'SHIASH', 'CHEF', 'ADMIN', 'MANAGER', 'CASHIER'] }
+        { title: 'إعدادات النظام والضرائب', path: '/settings.html', icon: '⚙️', roles: ['SUPER_ADMIN', 'OWNER', 'ADMIN'] },
+        { title: 'تقفيل الوردية (EOD)', path: '/eod.html', icon: '📊', roles: [...ALL_PRIVILEGED, 'OP_ASSISTANT_CASHIER', 'CASHIER'] },
+        { title: 'مؤشرات الأداء (BI)', path: '/bi.html', icon: '📈', roles: ALL_PRIVILEGED },
+        { title: 'حسابات الشركاء', path: '/shareholders.html', icon: '💎', roles: ['SUPER_ADMIN', 'OWNER', 'ADMIN'] },
+        { title: 'البوابة الرئيسية', path: '/portal.html', icon: '🏠', roles: [...ALL_PRIVILEGED, 'BOM_MANAGER', 'OP_ASSISTANT_CASHIER', 'HALL_MANAGER', 'WAITER', 'JOKER', 'BARISTA', 'SHIASH', 'CHEF', 'CASHIER'] }
       ]
     }
   ];
@@ -234,15 +235,38 @@
     const userRole = currentUser.role || 'OWNER';
     const currentShift = getActiveShiftType();
 
-    // Determine current active page title
+    // Determine current active page and check role permissions
     let currentPageTitle = 'لوحة التحكم';
+    let matchedItem = null;
     for (const grp of navGroups) {
       for (const item of grp.items) {
         if (pathname.endsWith(item.path)) {
+          matchedItem = item;
           currentPageTitle = item.title;
           break;
         }
       }
+      if (matchedItem) break;
+    }
+
+    // Direct access control guard: If current page requires roles that user lacks, show access denied
+    if (matchedItem && !matchedItem.roles.includes(userRole)) {
+      document.body.innerHTML = `
+        <div class="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-center text-slate-200" style="font-family: 'Tajawal', sans-serif;">
+          <div class="w-16 h-16 bg-rose-500/20 text-rose-400 border border-rose-500/40 rounded-2xl flex items-center justify-center text-3xl mb-4 shadow-lg">
+            ⛔
+          </div>
+          <h1 class="text-xl font-black text-rose-300 mb-2">غير مصرح بالوصول إلى هذه الصفحة</h1>
+          <p class="text-sm text-slate-400 max-w-md mb-6">
+            دورك الوظيفي الحالي (${userRole}) لا يمتلك الصلاحية الكافية لفتح صفحة [${matchedItem.title}].
+          </p>
+          <a href="/portal.html" class="px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl text-xs transition-colors shadow-lg">
+            العودة للبوابة الرئيسية 🏠
+          </a>
+        </div>
+      `;
+      setTimeout(() => { window.location.href = '/portal.html'; }, 2000);
+      return;
     }
 
     // Top Unified Header Bar HTML (Height: 46px)

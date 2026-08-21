@@ -227,10 +227,13 @@
       try {
         const res = await fetch('/api/inventory');
         const data = await res.json();
-        if (res.ok && data.success && Array.isArray(data.inventory)) {
-          renderInventory(data.inventory);
+        const items = Array.isArray(data) ? data : (data.inventory || data.items || []);
+        if (Array.isArray(items)) {
+          renderInventory(items);
         }
-      } catch (e) {}
+      } catch (e) {
+        console.error("Error fetching inventory:", e);
+      }
     }
 
     function renderInventory(items) {
@@ -245,8 +248,9 @@
       let cBarista = 0, cShisha = 0, cKitchen = 0;
 
       items.forEach(item => {
-        const stock = Number(item.current_stock);
-        const unit = item.unit;
+        const rawStock = Number(item.current_stock) || 0;
+        const stock = rawStock % 1 === 0 ? rawStock : parseFloat(rawStock.toFixed(2));
+        const unit = item.unit || 'وحدة';
         const dept = (item.department || 'BARISTA').toUpperCase();
 
         const card = document.createElement('div');

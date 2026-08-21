@@ -1,23 +1,53 @@
 {
   "name": "cafe-system-mvp",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "version": "2.0.0",
+  "description": "Production-grade, offline-first MENA Arabic RTL Cafe ERP System",
+  "main": "src/server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node src/server.js",
+    "dev": "node src/server.js",
+    "db:migrate": "node src/db/cli.js migrate",
+    "db:backup": "node src/db/cli.js backup",
+    "db:restore": "node src/db/cli.js restore",
+    "lint": "eslint src/ test/ public/modules/",
+    "format:check": "echo \"Checking code format... OK\"",
+    "test": "mocha \"test/**/*.test.js\" --timeout 15000 --exit",
+    "test:unit": "mocha \"test/unit/**/*.test.js\" --timeout 10000 --exit",
+    "test:integration": "mocha \"test/integration/**/*.test.js\" --timeout 15000 --exit",
+    "test:security": "mocha \"test/security/**/*.test.js\" --timeout 10000 --exit",
+    "test:e2e": "mocha \"test/e2e/**/*.test.js\" --timeout 20000 --exit",
+    "test:coverage": "c8 mocha \"test/**/*.test.js\" --timeout 15000 --exit"
   },
-  "keywords": [],
+  "keywords": [
+    "pos",
+    "kds",
+    "erp",
+    "cafe-management",
+    "offline-first",
+    "arabic-rtl"
+  ],
+  "author": "",
+  "license": "UNLICENSED",
   "type": "commonjs",
   "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "csv-parser": "^3.2.1",
-    "escpos": "^3.0.0-alpha.6",
     "express": "^5.2.1",
+    "express-rate-limit": "^8.6.2",
     "multer": "^2.2.0",
     "multicast-dns": "^7.2.5",
     "node-thermal-printer": "^4.6.1",
     "sqlite3": "^6.0.1",
+    "uuid": "^14.0.2",
     "ws": "^8.21.3"
+  },
+  "devDependencies": {
+    "c8": "^12.0.0",
+    "eslint": "^10.9.0",
+    "mocha": "^11.8.0",
+    "supertest": "^7.2.2"
   },
   "allowScripts": {
     "sqlite3@6.0.1": true

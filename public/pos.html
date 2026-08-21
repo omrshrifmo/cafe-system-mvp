@@ -799,33 +799,66 @@
       return '🍹';
     }
 
-    // Fetch Dynamic Menu
+    // Fetch Dynamic Menu with robust flattening, loading, error, and retry states
     async function fetchMenu() {
+      const grid = document.getElementById('menu-grid');
+      if (grid) {
+        grid.innerHTML = '<div class="col-span-full py-8 text-center text-slate-400 font-bold text-sm">جاري تحميل قائمة الطعام... ☕</div>';
+      }
       try {
         const response = await fetch('/api/menu');
         const data = await response.json();
 
-        if (response.ok && data.success && Array.isArray(data.menu)) {
-          menuItems = data.menu;
+        if (response.ok && data.success && data.menu) {
+          let flatItems = [];
+          if (Array.isArray(data.menu)) {
+            data.menu.forEach(catOrItem => {
+              if (catOrItem.items && Array.isArray(catOrItem.items)) {
+                catOrItem.items.forEach(it => {
+                  flatItems.push({
+                    ...it,
+                    menu_item_name: it.name || it.menu_item_name,
+                    category: it.department || catOrItem.name || 'BARISTA',
+                    price: it.price || (it.price_minor ? (it.price_minor / 100).toFixed(2) : 0)
+                  });
+                });
+              } else {
+                flatItems.push({
+                  ...catOrItem,
+                  menu_item_name: catOrItem.name || catOrItem.menu_item_name,
+                  category: catOrItem.department || catOrItem.category || 'BARISTA',
+                  price: catOrItem.price || (catOrItem.price_minor ? (catOrItem.price_minor / 100).toFixed(2) : 0)
+                });
+              }
+            });
+          }
+          menuItems = flatItems;
           renderMenuGrid();
         } else {
+          if (grid) {
+            grid.innerHTML = '<div class="col-span-full py-8 text-center text-rose-400 font-bold text-sm">تعذر جلب القائمة <button onclick="fetchMenu()" class="mr-2 px-3 py-1 bg-amber-500 text-slate-950 rounded-lg text-xs">إعادة المحاولة</button></div>';
+          }
           showToast('فشل في جلب قائمة الطعام', false);
         }
       } catch (err) {
         console.error('Failed to fetch menu:', err);
+        if (grid) {
+          grid.innerHTML = '<div class="col-span-full py-8 text-center text-rose-400 font-bold text-sm">خطأ بالاتصال بالسيرفر <button onclick="fetchMenu()" class="mr-2 px-3 py-1 bg-amber-500 text-slate-950 rounded-lg text-xs">إعادة المحاولة</button></div>';
+        }
         showToast('خطأ بالاتصال بالسيرفر', false);
       }
     }
 
-    // Render Compact Menu Buttons Grid (gap-2, p-2 padding)
+    // Render Compact Menu Buttons Grid
     function renderMenuGrid() {
       const grid = document.getElementById('menu-grid');
+      if (!grid) return;
       grid.innerHTML = '';
 
       // Permanent Custom Item Button on Menu Grid
       const customBtn = document.createElement('button');
       customBtn.onclick = openCustomItemModal;
-      customBtn.className = 'bg-amber-500/10 border-2 border-amber-500/60 rounded-xl p-2 flex flex-col items-center justify-between text-center min-h-[110px] cursor-pointer';
+      customBtn.className = 'bg-amber-500/10 border-2 border-amber-500/60 rounded-xl p-2 flex flex-col items-center justify-between text-center min-h-[110px] cursor-pointer hover:bg-amber-500/20 transition-colors';
       customBtn.innerHTML = `
         <div class="w-10 h-10 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center text-xl font-bold">
           ✨
@@ -840,23 +873,28 @@
       `;
       grid.appendChild(customBtn);
 
+      if (menuItems.length === 0) {
+        const emptyMsg = document.createElement('div');
+        emptyMsg.className = 'col-span-full py-6 text-center text-slate-400 font-semibold text-xs';
+        emptyMsg.textContent = 'لا توجد أصناف متاحة حالياً بالقائمة';
+        grid.appendChild(emptyMsg);
+        return;
+      }
+
       menuItems.forEach(item => {
-        const icon = getItemIcon(item.menu_item_name, item.category);
+        const name = item.menu_item_name || item.name || 'صنف';
+        const icon = getItemIcon(name, item.category);
         const price = Number(item.price) || 0;
 
-        let deptBadge = 'text-amber-400 border-amber-500/30 bg-amber-500/10';
-        if (item.category === 'SHISHA') deptBadge = 'text-purple-400 border-purple-500/30 bg-purple-500/10';
-        if (item.category === 'KITCHEN') deptBadge = 'text-orange-400 border-orange-500/30 bg-orange-500/10';
-
         const btn = document.createElement('button');
-        btn.onclick = () => addToCart(item.menu_item_name, item.category, icon, price);
-        btn.className = 'bg-slate-900 border border-slate-800 hover:border-amber-500/60 rounded-xl p-2 flex flex-col items-center justify-between text-center min-h-[110px] cursor-pointer';
+        btn.onclick = () => addToCart(name, item.category, icon, price);
+        btn.className = 'bg-slate-900 border border-slate-800 hover:border-amber-500/60 rounded-xl p-2 flex flex-col items-center justify-between text-center min-h-[110px] cursor-pointer transition-colors';
         btn.innerHTML = `
           <div class="w-10 h-10 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-xl shadow-inner">
             ${icon}
           </div>
           <div class="my-1 w-full px-1">
-            <span class="block text-xs font-extrabold text-white truncate">${item.menu_item_name}</span>
+            <span class="block text-xs font-extrabold text-white truncate">${name}</span>
             <span class="block text-[11px] font-black text-amber-400 font-mono">${price} ج.م</span>
           </div>
           <div class="w-full py-1 bg-slate-800 text-slate-200 font-bold rounded-lg text-[10px]">
@@ -976,14 +1014,27 @@
     }
 
     function submitCustomItem(e) {
-      e.preventDefault();
+      if (e) e.preventDefault();
       const name = document.getElementById('custom-name-input').value.trim();
       const price = Number(document.getElementById('custom-price-input').value) || 0;
 
-      if (!name) return;
+      if (!name) {
+        showToast('يرجى كتابة اسم الصنف المخصص', false);
+        return;
+      }
 
-      addToCart(name, 'BARISTA', '✨', price);
+      cart.push({
+        item_name: name,
+        category: 'BARISTA',
+        icon: '✨',
+        price: Math.max(0, price),
+        quantity: 1,
+        sugar_level: 'مظبوط',
+        roast_type: 'افتراضي'
+      });
+
       closeCustomItemModal();
+      renderCartUI();
       showToast(`تمت إضافة "${name}" للفاتورة`, true);
     }
 

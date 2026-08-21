@@ -151,7 +151,8 @@
       try {
         const res = await fetch('/api/inventory');
         const data = await res.json();
-        if (data.success && Array.isArray(data.inventory)) {
+        const items = Array.isArray(data) ? data : (data.inventory || data.items || []);
+        if (Array.isArray(items)) {
           const select = document.getElementById('inventorySelect');
           const tbody = document.getElementById('inventoryTableBody');
           
@@ -159,21 +160,25 @@
           tbody.innerHTML = '';
 
           inventoryMap = {};
-          data.inventory.forEach(item => {
+          items.forEach(item => {
             inventoryMap[item.id] = item;
+
+            const rawStock = Number(item.current_stock) || 0;
+            const stock = rawStock % 1 === 0 ? rawStock : parseFloat(rawStock.toFixed(2));
+            const unit = item.unit || 'وحدة';
 
             // Option item
             const opt = document.createElement('option');
             opt.value = item.id;
-            opt.textContent = `${item.name} (الرصيد: ${item.current_stock} ${item.unit})`;
+            opt.textContent = `${item.name} (الرصيد: ${stock} ${unit})`;
             select.appendChild(opt);
 
             // Table row
             const tr = document.createElement('tr');
-            const isLow = item.current_stock < 100;
+            const isLow = rawStock < 100;
             tr.innerHTML = `
               <td class="p-2.5 font-bold text-slate-200">${item.name}</td>
-              <td class="p-2.5 font-mono ${isLow ? 'text-rose-400 font-bold' : 'text-emerald-400'}">${item.current_stock} ${item.unit}</td>
+              <td class="p-2.5 font-mono ${isLow ? 'text-rose-400 font-bold' : 'text-emerald-400'}">${stock} ${unit}</td>
               <td class="p-2.5 text-slate-400">${item.department || 'BARISTA'}</td>
             `;
             tbody.appendChild(tr);
