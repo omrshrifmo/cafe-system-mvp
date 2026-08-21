@@ -111,23 +111,39 @@
         </div>
 
         <!-- Ticket Summary & Action Button -->
-        <div class="shrink-0 mt-2 pt-2 border-t border-slate-800">
-          <div class="flex items-center justify-between mb-1 px-1 text-xs">
+        <div class="shrink-0 mt-2 pt-2 border-t border-slate-800 space-y-1">
+          <div class="flex items-center justify-between px-1 text-xs">
             <span class="font-bold text-slate-400">عدد الأصناف:</span>
             <span id="cart-total-qty" class="font-black text-amber-400 font-mono text-sm">0</span>
           </div>
 
+          <div id="cart-subtotal-row" class="flex items-center justify-between px-1 text-xs text-slate-400">
+            <span>المجموع الفرعي:</span>
+            <span id="cart-subtotal-price" class="font-bold font-mono">0 ج.م</span>
+          </div>
+
+          <div id="cart-tax-breakdown-row" class="text-[11px] text-slate-400 space-y-0.5 border-t border-slate-800/60 pt-1">
+            <div class="flex justify-between">
+              <span>خدمة الصالة (<span id="cart-service-rate">12</span>%):</span>
+              <span id="cart-service-price" class="font-mono font-bold text-slate-300">0 ج.م</span>
+            </div>
+            <div class="flex justify-between">
+              <span>ضريبة القيمة المضافة (<span id="cart-vat-rate">14</span>%):</span>
+              <span id="cart-vat-price" class="font-mono font-bold text-slate-300">0 ج.م</span>
+            </div>
+          </div>
+
           <!-- Total Price Calculation -->
-          <div class="flex items-center justify-between mb-2 px-1 py-1.5 bg-slate-950 rounded-xl border border-slate-800">
+          <div class="flex items-center justify-between px-2 py-1.5 bg-slate-950 rounded-xl border border-slate-800 mt-1">
             <span class="text-xs font-black text-white">إجمالي الفاتورة:</span>
             <div class="flex items-baseline gap-1">
               <span id="cart-total-price" class="text-xl font-black text-amber-400 font-mono">0</span>
-              <span class="text-xs font-bold text-slate-400">ج.م</span>
+              <span id="cart-currency-label" class="text-xs font-bold text-slate-400">ج.م</span>
             </div>
           </div>
 
           <!-- Action Buttons: إرسال الطلبات & دفع الحساب -->
-          <div class="grid grid-cols-2 gap-2">
+          <div class="grid grid-cols-2 gap-2 pt-1">
             <button 
               id="send-orders-btn"
               onclick="sendCartOrders()"
@@ -971,16 +987,48 @@
       showToast(`تمت إضافة "${name}" للفاتورة`, true);
     }
 
+    // Global Live Configuration
+    let posSystemConfig = {
+      currency: 'ج.م',
+      vat_percent: 14,
+      service_percent: 12,
+      apply_taxes: true
+    };
+
+    async function loadPosConfig() {
+      try {
+        const res = await fetch('/api/config');
+        const data = await res.json();
+        if (data.success && data.config) {
+          posSystemConfig = data.config;
+          document.querySelectorAll('.currency-symbol').forEach(el => el.textContent = posSystemConfig.currency || 'ج.م');
+          const srvRateEl = document.getElementById('cart-service-rate');
+          const vatRateEl = document.getElementById('cart-vat-rate');
+          const currEl = document.getElementById('cart-currency-label');
+          if (srvRateEl) srvRateEl.textContent = posSystemConfig.service_percent;
+          if (vatRateEl) vatRateEl.textContent = posSystemConfig.vat_percent;
+          if (currEl) currEl.textContent = posSystemConfig.currency || 'ج.م';
+          renderCartUI();
+        }
+      } catch (err) {
+        console.warn('Could not load pos config:', err);
+      }
+    }
+
     // Render Cart Ticket UI
     function renderCartUI() {
       const container = document.getElementById('cart-items-container');
       const totalQtyElem = document.getElementById('cart-total-qty');
+      const subtotalElem = document.getElementById('cart-subtotal-price');
+      const serviceElem = document.getElementById('cart-service-price');
+      const vatElem = document.getElementById('cart-vat-price');
       const totalPriceElem = document.getElementById('cart-total-price');
+      const taxRow = document.getElementById('cart-tax-breakdown-row');
       const sendBtn = document.getElementById('send-orders-btn');
       const sendBtnText = document.getElementById('send-btn-text');
 
       let totalQty = 0;
-      let totalPrice = 0;
+      let subtotal = 0;
 
       if (cart.length === 0) {
         container.innerHTML = `
@@ -990,8 +1038,12 @@
             <p class="text-[10px] opacity-75 mt-0.5">اضغط الأصناف لإضافتها فوراً</p>
           </div>
         `;
-        totalQtyElem.textContent = '0';
-        totalPriceElem.textContent = '0';
+        if (totalQtyElem) totalQtyElem.textContent = '0';
+        if (subtotalElem) subtotalElem.textContent = `0 ${posSystemConfig.currency || 'ج.م'}`;
+        if (serviceElem) serviceElem.textContent = `0 ${posSystemConfig.currency || 'ج.م'}`;
+        if (vatElem) vatElem.textContent = `0 ${posSystemConfig.currency || 'ج.م'}`;
+        if (totalPriceElem) totalPriceElem.textContent = '0';
+        if (taxRow) taxRow.classList.toggle('hidden', !posSystemConfig.apply_taxes);
         sendBtn.disabled = true;
         sendBtnText.textContent = 'إرسال الطلبات (0)';
         return;
@@ -1002,20 +1054,21 @@
       cart.forEach((item, index) => {
         const itemSubtotal = item.quantity * item.price;
         totalQty += item.quantity;
-        totalPrice += itemSubtotal;
+        subtotal += itemSubtotal;
 
         const cartItemDiv = document.createElement('div');
         cartItemDiv.className = 'flex items-center justify-between p-2 bg-slate-800/90 border border-slate-700/80 rounded-xl text-xs';
         
         cartItemDiv.innerHTML = `
           <div class="flex items-center gap-2">
-            <span class="text-lg">${item.icon}</span>
+            <span class="text-lg">${item.icon || '☕'}</span>
             <div>
               <h4 class="font-extrabold text-white text-xs leading-tight">${item.item_name}</h4>
               <div class="flex items-center gap-2 mt-0.5">
-                <span class="text-[10px] font-mono text-amber-400 font-bold">${item.price} ج.م</span>
-                <span class="text-[10px] text-slate-400 font-mono font-bold">= ${itemSubtotal} ج.م</span>
+                <span class="text-[10px] font-mono text-amber-400 font-bold">${item.price} ${posSystemConfig.currency || 'ج.م'}</span>
+                <span class="text-[10px] text-slate-400 font-mono font-bold">= ${itemSubtotal} ${posSystemConfig.currency || 'ج.م'}</span>
               </div>
+              ${item.sugar_level || item.roast_type || item.addons ? `<p class="text-[9px] text-amber-300/80 font-mono mt-0.5">${[item.sugar_level, item.roast_type, item.addons].filter(Boolean).join(' | ')}</p>` : ''}
             </div>
           </div>
 
@@ -1044,13 +1097,32 @@
         container.appendChild(cartItemDiv);
       });
 
-      totalQtyElem.textContent = totalQty;
-      totalPriceElem.textContent = totalPrice.toLocaleString('ar-EG');
+      // Calculate dynamic taxation breakdown
+      let serviceFee = 0;
+      let vatFee = 0;
+      let finalTotal = subtotal;
+
+      if (posSystemConfig.apply_taxes) {
+        serviceFee = Number(((subtotal * (Number(posSystemConfig.service_percent) || 0)) / 100).toFixed(2));
+        const taxableBase = subtotal + serviceFee;
+        vatFee = Number(((taxableBase * (Number(posSystemConfig.vat_percent) || 0)) / 100).toFixed(2));
+        finalTotal = Number((taxableBase + vatFee).toFixed(2));
+        if (taxRow) taxRow.classList.remove('hidden');
+      } else {
+        if (taxRow) taxRow.classList.add('hidden');
+      }
+
+      if (totalQtyElem) totalQtyElem.textContent = totalQty;
+      if (subtotalElem) subtotalElem.textContent = `${subtotal.toLocaleString('ar-EG')} ${posSystemConfig.currency || 'ج.م'}`;
+      if (serviceElem) serviceElem.textContent = `${serviceFee.toLocaleString('ar-EG')} ${posSystemConfig.currency || 'ج.م'}`;
+      if (vatElem) vatElem.textContent = `${vatFee.toLocaleString('ar-EG')} ${posSystemConfig.currency || 'ج.م'}`;
+      if (totalPriceElem) totalPriceElem.textContent = finalTotal.toLocaleString('ar-EG');
+      
       sendBtn.disabled = false;
       sendBtnText.textContent = `إرسال الطلبات (${totalQty})`;
     }
 
-    // Send Cart Orders Action Handler
+    // Send Cart Orders Action Handler + Silent BOH Kitchen Print
     async function sendCartOrders() {
       if (cart.length === 0) return;
 
@@ -1105,6 +1177,18 @@
 
       if (failureCount === 0) {
         showToast(`تم إرسال ${successCount} طلب بنجاح!`, true);
+        
+        // Silently call hardware Kitchen/Bar Print bridge
+        fetch('/api/print/kitchen', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            table_number: selectedTableNumber,
+            items: itemsToSend,
+            waiter_name: currentUser.name || 'الكاشير'
+          })
+        }).catch(() => {});
+
         cart = [];
         renderCartUI();
       } else {
@@ -1125,7 +1209,7 @@
         <div class="flex items-center gap-2">
           <span class="font-bold text-amber-400 font-mono">#${order.id}</span>
           <span class="font-bold text-white">${order.item_name}</span>
-          <span class="text-[10px] text-amber-300 font-mono font-bold bg-amber-500/10 px-1.5 py-0.5 rounded">x${order.quantity} (${order.price || 0}ج.م)</span>
+          <span class="text-[10px] text-amber-300 font-mono font-bold bg-amber-500/10 px-1.5 py-0.5 rounded">x${order.quantity} (${order.price || 0}${posSystemConfig.currency || 'ج.م'})</span>
         </div>
         <div class="flex items-center gap-2">
           <span class="text-[10px] text-slate-400 font-mono">${new Date(order.created_at || Date.now()).toLocaleTimeString('ar-EG')}</span>
@@ -1140,14 +1224,25 @@
 
     // Checkout Modal Logic
     let currentCheckoutTotal = 0;
+    let currentCheckoutSubtotal = 0;
     let currentCustomerData = null;
 
     function openCheckoutModal() {
-      // Calculate total bill (from cart or table orders)
-      const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-      currentCheckoutTotal = cartTotal;
+      // Calculate total bill with dynamic taxes
+      const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+      currentCheckoutSubtotal = subtotal;
 
-      document.getElementById('checkout-total-bill').textContent = `${currentCheckoutTotal} ج.م`;
+      let finalBill = subtotal;
+      if (posSystemConfig.apply_taxes) {
+        const srv = Number(((subtotal * (Number(posSystemConfig.service_percent) || 0)) / 100).toFixed(2));
+        const taxable = subtotal + srv;
+        const vat = Number(((taxable * (Number(posSystemConfig.vat_percent) || 0)) / 100).toFixed(2));
+        finalBill = Number((taxable + vat).toFixed(2));
+      }
+
+      currentCheckoutTotal = finalBill;
+
+      document.getElementById('checkout-total-bill').textContent = `${currentCheckoutTotal} ${posSystemConfig.currency || 'ج.م'}`;
       document.getElementById('pay-cash').value = currentCheckoutTotal > 0 ? currentCheckoutTotal : '';
       document.getElementById('pay-instapay').value = '';
       document.getElementById('pay-visa').value = '';
@@ -1197,7 +1292,7 @@
       const visa = Number(document.getElementById('pay-visa').value) || 0;
       const wallet = Number(document.getElementById('pay-wallet').value) || 0;
 
-      // Points discount deduction (1 point = 1 EGP)
+      // Points discount deduction (1 point = 1 unit of currency)
       let pointsDiscount = 0;
       const redeemToggle = document.getElementById('redeem-points-toggle');
       if (redeemToggle && redeemToggle.checked && currentCustomerData) {
@@ -1205,7 +1300,7 @@
       }
 
       const netBill = Math.max(0, currentCheckoutTotal - pointsDiscount);
-      document.getElementById('checkout-total-bill').textContent = `${netBill} ج.م ${pointsDiscount > 0 ? `(خصم ${pointsDiscount} ج.م نقاط)` : ''}`;
+      document.getElementById('checkout-total-bill').textContent = `${netBill} ${posSystemConfig.currency || 'ج.م'} ${pointsDiscount > 0 ? `(خصم ${pointsDiscount} ${posSystemConfig.currency || 'ج.م'} نقاط)` : ''}`;
 
       const totalPaid = cash + instapay + visa + wallet;
       const remaining = netBill - totalPaid;
@@ -1213,12 +1308,12 @@
       const remEl = document.getElementById('checkout-remaining');
       if (remaining < 0) {
         const changeOwed = Math.abs(remaining);
-        remEl.innerHTML = `<span class="text-emerald-400 font-black">الباقي كاش للعميل: ${changeOwed} ج.م 💵</span>`;
+        remEl.innerHTML = `<span class="text-emerald-400 font-black">الباقي كاش للعميل: ${changeOwed} ${posSystemConfig.currency || 'ج.م'} 💵</span>`;
       } else if (remaining === 0) {
         remEl.textContent = 'تم سداد المبلغ بالكامل 🎯';
         remEl.className = 'font-black font-mono text-emerald-400 text-sm';
       } else {
-        remEl.textContent = `${remaining} ج.م`;
+        remEl.textContent = `${remaining} ${posSystemConfig.currency || 'ج.م'}`;
         remEl.className = 'font-black font-mono text-amber-400 text-sm';
       }
     }
@@ -1265,13 +1360,19 @@
         pointsRedeemed = Math.min(currentCheckoutTotal, currentCustomerData.points || 0);
       }
 
+      const currentUser = JSON.parse(localStorage.getItem('currentUser') || localStorage.getItem('user') || '{}');
+
       try {
         const response = await fetch('/api/checkout', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             table_number: selectedTableNumber,
+            subtotal: currentCheckoutSubtotal,
+            total_amount: currentCheckoutTotal,
             payments,
+            items: cart,
+            cashier_name: currentUser.name || 'الكاشير',
             customer_phone: customerPhone || null,
             points_redeemed: pointsRedeemed,
             tip_amount: tipAmount
@@ -1280,7 +1381,7 @@
 
         const data = await response.json();
         if (response.ok && data.success) {
-          showToast('تم إغلاق الفاتورة وتسجيل الدفع ونقاط الولاء بنجاح!', true);
+          showToast('تم إغلاق الفاتورة وطباعة الإيصال وتسجيل الدفع بنجاح! 🖨️', true);
           closeCheckoutModal();
           cart = [];
           renderCartUI();
@@ -1324,7 +1425,9 @@
       window.addEventListener('offline', () => updateStatus(false));
       updateStatus(navigator.onLine);
     }
+    
     initNetworkMonitor();
+    loadPosConfig();
     fetchMenu();
   </script>
   <!-- Modifier Selection Modal -->

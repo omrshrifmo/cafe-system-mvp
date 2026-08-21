@@ -1,9 +1,36 @@
 {
   "version": 1,
-  "computedAt": "2026-08-19T11:24:12.929Z",
+  "computedAt": "2026-08-20T14:22:31.097Z",
   "skills": {
     "skill-feedback-adaptation": {
       "skill": "skill-feedback-adaptation",
+      "observations": 0,
+      "manualInvocations": 0,
+      "recommendationInvocations": 0,
+      "successCount": 0,
+      "reuseCount": 0,
+      "affinityScore": 0
+    },
+    "skill-usage-insights": {
+      "skill": "skill-usage-insights",
+      "observations": 0,
+      "manualInvocations": 0,
+      "recommendationInvocations": 0,
+      "successCount": 0,
+      "reuseCount": 0,
+      "affinityScore": 0
+    },
+    "extension-value-audit": {
+      "skill": "extension-value-audit",
+      "observations": 0,
+      "manualInvocations": 0,
+      "recommendationInvocations": 0,
+      "successCount": 0,
+      "reuseCount": 0,
+      "affinityScore": 0
+    },
+    "github-actions-ci": {
+      "skill": "github-actions-ci",
       "observations": 0,
       "manualInvocations": 0,
       "recommendationInvocations": 0,

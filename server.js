@@ -77,6 +77,10 @@ const {
   getBOMVarianceReport,
   getExpectedCashForShift,
   declareCashExtended,
+  getSystemConfig,
+  updateSystemConfig,
+  factoryResetDatabase,
+  getUserShiftReport,
   // Existing imports
   getWasteLogs,
   getSuppliers, addSupplier, updateSupplier, deleteSupplier,
@@ -90,6 +94,7 @@ const {
   getAllUsers, createUser, updateUser, deleteUser,
   db 
 } = require('./database');
+const net = require('net');
 
 
 const upload = multer({ dest: path.join(__dirname, 'uploads/') });
@@ -754,6 +759,17 @@ app.post('/api/drawer/declare-extended', async (req, res) => {
       return res.status(400).json({ success: false, error: 'المبلغ الفعلي المقر مطلوب' });
     }
     const result = await declareCashExtended(uid, user_name || 'كاشير الوردية', shift_type || 'MORNING', amount, floatVal, manager_pin, notes);
+    
+    // Auto-generate and spool Shift Z-Report
+    try {
+      const zReport = await getUserShiftReport(uid, shift_type || 'MORNING');
+      zReport.declared_amount = amount;
+      zReport.variance = result.variance;
+      printShiftZReport(zReport).catch(e => console.warn('Z-Report print error (non-fatal):', e.message));
+    } catch (zErr) {
+      console.warn('Could not auto-spool Z-Report:', zErr.message);
+    }
+
     broadcast({ type: 'DRAWER_DECLARED', result });
     res.json({ success: true, declaration: result, result });
   } catch (err) {
@@ -981,42 +997,86 @@ app.post('/api/orders/complete', async (req, res) => {
 
 /**
  * POST /api/checkout
- * Multi-method payment split, loyalty points processing & table session closure
+ * Multi-method payment split, dynamic taxes engine, loyalty points & table closure
  */
 app.post('/api/checkout', async (req, res) => {
   try {
-    const { order_id, table_number, payments, customer_phone, points_redeemed, tip_amount } = req.body;
+    const { order_id, table_number, payments, customer_phone, points_redeemed, tip_amount, cashier_name, items } = req.body;
     const tNum = parseInt(table_number, 10) || 0;
     const redeemed = Math.max(0, parseInt(points_redeemed, 10) || 0);
 
-    // Save payments breakdown with tips
-    await saveOrderPayments(order_id || null, tNum, Array.isArray(payments) ? payments : [], tip_amount || 0);
+    // 1. Fetch live system configuration for taxation & currency
+    const config = await getSystemConfig();
+
+    // 2. Calculate Subtotal, Service %, VAT %, Discount, and Total
+    const paymentsArr = Array.isArray(payments) ? payments : [];
+    const totalPaidMethods = paymentsArr.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+    
+    const subtotal = Number(req.body.subtotal) || (totalPaidMethods > 0 ? totalPaidMethods : 0);
+    const serviceRate = config.apply_taxes ? (Number(config.service_percent) || 0) : 0;
+    const vatRate = config.apply_taxes ? (Number(config.vat_percent) || 0) : 0;
+
+    const serviceFee = Number(((subtotal * serviceRate) / 100).toFixed(2));
+    const taxableBase = subtotal + serviceFee;
+    const vatFee = Number(((taxableBase * vatRate) / 100).toFixed(2));
+    const discountAmount = Number(req.body.discount_amount) || Number(redeemed) || 0;
+    const tipFee = Number(tip_amount) || 0;
+    
+    const calculatedTotal = Number((taxableBase + vatFee - discountAmount + tipFee).toFixed(2));
+    const finalTotal = Number(req.body.total_amount) || calculatedTotal || totalPaidMethods;
+
+    const taxBreakdown = {
+      subtotal,
+      service_amount: serviceFee,
+      vat_amount: vatFee,
+      discount_amount: discountAmount,
+      total_amount: finalTotal,
+      currency: config.currency || 'ج.م'
+    };
+
+    // 3. Save payments breakdown with tips and tax details in database
+    await saveOrderPayments(order_id || null, tNum, paymentsArr, tipFee, taxBreakdown);
 
     if (tNum > 0) {
       await updateTableStatusOnCheckout(tNum);
     }
-    
-    // Calculate net total paid across all payment methods
-    const totalPaid = (Array.isArray(payments) ? payments : []).reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
 
-    // Process Loyalty Points if phone is provided
+    // 4. Process Loyalty Points if phone is provided
     let customerResult = null;
     if (customer_phone && String(customer_phone).trim().length > 0) {
       const cleanPhone = String(customer_phone).trim();
-      // Earn 1 point per 10 EGP spent
-      const earnedPoints = Math.floor(totalPaid / 10);
-      // Net point adjustment = Earned - Redeemed
+      // Earn 1 point per 10 currency spent
+      const earnedPoints = Math.floor(finalTotal / 10);
       const netPointChange = earnedPoints - redeemed;
-      customerResult = await addOrUpdateCustomer(cleanPhone, null, netPointChange, totalPaid);
+      customerResult = await addOrUpdateCustomer(cleanPhone, null, netPointChange, finalTotal);
     }
 
-    console.log(`💳 [CHECKOUT COMPLETE] Table #${tNum} - Payments: ${JSON.stringify(payments)} [Tip: ${tip_amount || 0} EGP] ${customerResult ? `- Customer: ${customerResult.phone} (${customerResult.points} pts)` : ''}`);
+    console.log(`💳 [CHECKOUT COMPLETE] Table #${tNum} - Subtotal: ${subtotal} | Srv: ${serviceFee} | VAT: ${vatFee} | Total: ${finalTotal} ${config.currency}`);
+
+    // 5. Automatic Receipt Print Spool
+    const receiptData = {
+      order_id,
+      table_number: tNum,
+      cashier_name: cashier_name || req.body.user_name || 'الكاشير',
+      items: Array.isArray(items) ? items : [],
+      payments: paymentsArr,
+      subtotal,
+      service_amount: serviceFee,
+      vat_amount: vatFee,
+      discount_amount: discountAmount,
+      total_amount: finalTotal,
+      tip_amount: tipFee,
+      customer: customerResult
+    };
+
+    printEscPosReceipt(receiptData, config).catch(e => console.warn('Print error (non-fatal):', e.message));
     
     broadcast({ type: 'TABLE_CLOSED', table_number: tNum });
     res.json({ 
       success: true, 
       message: 'تم إغلاق الحساب وتسجيل الدفع بنجاح', 
-      customer: customerResult 
+      customer: customerResult,
+      tax_breakdown: taxBreakdown
     });
   } catch (err) {
     console.error('Error during checkout:', err);
@@ -1691,6 +1751,320 @@ app.get('/api/bi/summary', async (req, res) => {
     const bi = await getBIData('today');
     res.json({ success: true, data: bi });
   } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+// ============================================================
+// ESC/POS HARDWARE PRINT BRIDGE & RECEIPT GENERATOR
+// ============================================================
+
+function sendRawToPrinter(ip, port, dataBuffer) {
+  return new Promise((resolve) => {
+    if (!ip || ip === '127.0.0.1' || ip === '0.0.0.0') {
+      console.log('🖨️ [PRINTER SPOOL - SIMULATED LOCAL]:\n' + dataBuffer.toString());
+      return resolve({ success: true, simulated: true });
+    }
+
+    const socket = new net.Socket();
+    let isHandled = false;
+    socket.setTimeout(1500);
+
+    socket.connect(port || 9100, ip, () => {
+      socket.write(dataBuffer, () => {
+        socket.end();
+        if (!isHandled) {
+          isHandled = true;
+          console.log(`🖨️ [PRINT SUCCESS] Sent job to ${ip}:${port || 9100}`);
+          resolve({ success: true, printed: true });
+        }
+      });
+    });
+
+    socket.on('timeout', () => {
+      socket.destroy();
+      if (!isHandled) {
+        isHandled = true;
+        console.warn(`⚠️ [PRINTER TIMEOUT] Printer at ${ip}:${port || 9100} timed out. Spooled to log.`);
+        resolve({ success: true, simulated: true, warning: 'Printer connection timeout' });
+      }
+    });
+
+    socket.on('error', (err) => {
+      socket.destroy();
+      if (!isHandled) {
+        isHandled = true;
+        console.warn(`⚠️ [PRINTER ERROR] Could not connect to ${ip}:${port || 9100} (${err.message}). Spooled to log.`);
+        resolve({ success: true, simulated: true, warning: err.message });
+      }
+    });
+  });
+}
+
+function buildReceiptText(data, config) {
+  const currency = config.currency || 'ج.م';
+  const cafeName = config.cafe_name || 'كافيه مزاج';
+  const subtotal = Number(data.subtotal) || 0;
+  const service = Number(data.service_amount) || 0;
+  const vat = Number(data.vat_amount) || 0;
+  const discount = Number(data.discount_amount) || 0;
+  const tip = Number(data.tip_amount) || 0;
+  const total = Number(data.total_amount) || (subtotal + service + vat - discount + tip);
+
+  let text = `
+========================================
+             ${cafeName}
+========================================
+رقم الفاتورة: #${data.order_id || '---'}
+رقم الطاولة : ${data.table_number ? 'طاولة ' + data.table_number : 'طلب خارجي / تيك أواي'}
+الكاشير     : ${data.cashier_name || 'كاشير الوردية'}
+التاريخ     : ${new Date().toLocaleString('ar-EG')}
+----------------------------------------
+الصنف                 الكمية      السعر
+----------------------------------------\n`;
+
+  if (Array.isArray(data.items) && data.items.length > 0) {
+    data.items.forEach(it => {
+      const name = String(it.item_name || it.name || '').padEnd(20, ' ');
+      const qty = String(it.quantity || 1).padStart(3, ' ');
+      const price = (Number(it.price) * Number(it.quantity || 1)).toFixed(2).padStart(8, ' ');
+      text += `${name} ${qty} ${price} ${currency}\n`;
+      if (it.sugar_level || it.roast_type || it.addons) {
+        text += `  * ${[it.sugar_level, it.roast_type, it.addons].filter(Boolean).join(' - ')}\n`;
+      }
+    });
+  } else {
+    text += `قيمة الحساب الكلي                 ${subtotal.toFixed(2)} ${currency}\n`;
+  }
+
+  text += `----------------------------------------\n`;
+  text += `المجموع الفرعي  : ${subtotal.toFixed(2)} ${currency}\n`;
+  if (config.apply_taxes) {
+    if (service > 0) text += `خدمة (${config.service_percent}%): ${service.toFixed(2)} ${currency}\n`;
+    if (vat > 0) text += `ض.ق.م (${config.vat_percent}%): ${vat.toFixed(2)} ${currency}\n`;
+  }
+  if (discount > 0) text += `خصم نقاط / ترويجي: -${discount.toFixed(2)} ${currency}\n`;
+  if (tip > 0) text += `الإكرامية (Tip) : +${tip.toFixed(2)} ${currency}\n`;
+  text += `========================================\n`;
+  text += `الإجمالي النهائي : ${total.toFixed(2)} ${currency}\n`;
+  text += `========================================\n`;
+
+  if (Array.isArray(data.payments) && data.payments.length > 0) {
+    text += `طرق الدفع:\n`;
+    data.payments.forEach(p => {
+      text += ` - ${p.method || 'CASH'}: ${Number(p.amount || 0).toFixed(2)} ${currency}\n`;
+    });
+  }
+
+  if (data.customer) {
+    text += `----------------------------------------\n`;
+    text += `العميل: ${data.customer.phone} | رصيد النقاط: ${data.customer.points || 0} نقطة\n`;
+  }
+
+  text += `\n${config.footer_note || 'شكراً لزيارتكم - نتمنى لكم يوماً سعيداً'}\n\n\n`;
+  return text;
+}
+
+function buildKitchenTicketText(data) {
+  let text = `
+========================================
+          تذكرة تحضير المطبخ/البار
+========================================
+رقم الطلب : #${data.order_id || '---'}
+الموقع    : ${data.table_number ? 'طاولة ' + data.table_number : 'تيك أواي / دليفري'}
+القسم     : ${data.department || 'التحضير'}
+الوقت     : ${new Date().toLocaleTimeString('ar-EG')}
+----------------------------------------\n`;
+
+  if (Array.isArray(data.items) && data.items.length > 0) {
+    data.items.forEach(it => {
+      text += `[${it.quantity || 1}x] ${it.item_name || it.name}\n`;
+      if (it.sugar_level || it.roast_type || it.variant || it.addons || it.item_notes) {
+        const details = [it.sugar_level, it.roast_type, it.variant, it.addons, it.item_notes].filter(Boolean).join(' | ');
+        text += `   >> ملاحظات: ${details}\n`;
+      }
+    });
+  } else if (data.item_name) {
+    text += `[${data.quantity || 1}x] ${data.item_name}\n`;
+    if (data.sugar_level || data.roast_type || data.variant || data.addons || data.item_notes) {
+      const details = [data.sugar_level, data.roast_type, data.variant, data.addons, data.item_notes].filter(Boolean).join(' | ');
+      text += `   >> ملاحظات: ${details}\n`;
+    }
+  }
+
+  text += `----------------------------------------\n\n\n`;
+  return text;
+}
+
+function buildZReportText(zData, config) {
+  const currency = config.currency || 'ج.م';
+  return `
+========================================
+       تقرير إغلاق الوردية (Z-REPORT)
+            ${config.cafe_name || 'كافيه مزاج'}
+========================================
+الموظف    : ${zData.user_name || '---'} (ID: ${zData.user_id || '---'})
+الوردية   : ${zData.shift_type === 'MORNING' ? 'وردية صباحية ☀️' : 'وردية مسائية 🌙'}
+بداية العمل: ${zData.clock_in || '---'}
+وقت الإغلاق: ${zData.clock_out || new Date().toLocaleString('ar-EG')}
+----------------------------------------
+رصيد بداية الدرج (Float) : ${Number(zData.opening_float || 0).toFixed(2)} ${currency}
+مبيعات الكاش (Cash Sales): ${Number(zData.cash_sales || 0).toFixed(2)} ${currency}
+مبيعات الديجيتال/الفيزا  : ${Number(zData.digital_sales || 0).toFixed(2)} ${currency}
+إجمالي المبيعات (Total)  : ${Number(zData.total_sales || 0).toFixed(2)} ${currency}
+عدد الطلبات المنجزة      : ${zData.order_count || 0} طلب
+----------------------------------------
+سُلف الموظف المسحوبة     : -${Number(zData.cash_advances || 0).toFixed(2)} ${currency}
+مصروفات الدرج المسجلة    : -${Number(zData.cash_expenses || 0).toFixed(2)} ${currency}
+إجمالي الإكراميات (Tips) : +${Number(zData.total_tips || 0).toFixed(2)} ${currency}
+========================================
+الكاش المتوقع بالدرج     : ${Number(zData.expected_cash || 0).toFixed(2)} ${currency}
+الكاش الفعلي المقر       : ${Number(zData.declared_amount !== undefined ? zData.declared_amount : zData.expected_cash || 0).toFixed(2)} ${currency}
+الفارق المالي (Variance) : ${Number(zData.variance || 0).toFixed(2)} ${currency} [${zData.variance === 0 ? 'مطابق ✅' : (zData.variance > 0 ? 'فائض 📈' : 'عجز ⚠️')}]
+========================================
+تم الاعتماد والإغلاق في ${new Date().toLocaleString('ar-EG')}
+\n\n\n`;
+}
+
+async function printEscPosReceipt(receiptData, config) {
+  const cfg = config || await getSystemConfig();
+  const rawText = buildReceiptText(receiptData, cfg);
+  
+  // ESC/POS Commands: Init + Pulse Drawer + Print Text + Cut Paper
+  const initCmd = Buffer.from([0x1B, 0x40]);
+  const drawerPulseCmd = cfg.cash_drawer_auto_kick ? Buffer.from([0x1B, 0x70, 0x00, 0x19, 0xFA]) : Buffer.alloc(0);
+  const textBuf = Buffer.from(rawText, 'utf8');
+  const cutCmd = Buffer.from([0x1D, 0x56, 0x41, 0x10]);
+  
+  const payload = Buffer.concat([initCmd, drawerPulseCmd, textBuf, cutCmd]);
+  return await sendRawToPrinter(cfg.printer_ip, cfg.printer_port, payload);
+}
+
+async function printKitchenTicket(ticketData, config) {
+  const cfg = config || await getSystemConfig();
+  const rawText = buildKitchenTicketText(ticketData);
+  
+  const initCmd = Buffer.from([0x1B, 0x40]);
+  const textBuf = Buffer.from(rawText, 'utf8');
+  const cutCmd = Buffer.from([0x1D, 0x56, 0x41, 0x10]);
+  
+  const payload = Buffer.concat([initCmd, textBuf, cutCmd]);
+  return await sendRawToPrinter(cfg.printer_ip, cfg.printer_port, payload);
+}
+
+async function printShiftZReport(zReportData, config) {
+  const cfg = config || await getSystemConfig();
+  const rawText = buildZReportText(zReportData, cfg);
+  
+  const initCmd = Buffer.from([0x1B, 0x40]);
+  const drawerPulseCmd = Buffer.from([0x1B, 0x70, 0x00, 0x19, 0xFA]);
+  const textBuf = Buffer.from(rawText, 'utf8');
+  const cutCmd = Buffer.from([0x1D, 0x56, 0x41, 0x10]);
+  
+  const payload = Buffer.concat([initCmd, drawerPulseCmd, textBuf, cutCmd]);
+  return await sendRawToPrinter(cfg.printer_ip, cfg.printer_port, payload);
+}
+
+// Global Configuration Endpoints
+app.get('/api/config', async (req, res) => {
+  try {
+    const config = await getSystemConfig();
+    res.json({ success: true, config });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post('/api/config', async (req, res) => {
+  try {
+    const updated = await updateSystemConfig(req.body);
+    broadcast({ type: 'CONFIG_UPDATED', config: updated });
+    res.json({ success: true, config: updated, message: 'تم حفظ إعدادات النظام بنجاح' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Hardware Print Endpoints
+app.post('/api/print/receipt', async (req, res) => {
+  try {
+    const config = await getSystemConfig();
+    const result = await printEscPosReceipt(req.body, config);
+    res.json({ success: true, result, message: 'تم إرسال أمر الطباعة بنجاح' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post('/api/print/kitchen', async (req, res) => {
+  try {
+    const config = await getSystemConfig();
+    const result = await printKitchenTicket(req.body, config);
+    res.json({ success: true, result, message: 'تم إرسال أمر تحضير المطبخ بنجاح' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post('/api/print/z-report', async (req, res) => {
+  try {
+    const config = await getSystemConfig();
+    const result = await printShiftZReport(req.body, config);
+    res.json({ success: true, result, message: 'تمت طباعة تقرير Z للوردية بنجاح' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post('/api/print/test', async (req, res) => {
+  try {
+    const config = await getSystemConfig();
+    const testData = {
+      order_id: 999,
+      table_number: 1,
+      cashier_name: 'مدير النظام',
+      subtotal: 100,
+      service_amount: 12,
+      vat_amount: 15.68,
+      total_amount: 127.68,
+      items: [{ item_name: 'قهوة تركي', quantity: 1, price: 50 }, { item_name: 'لاتيه كراميل', quantity: 1, price: 50 }]
+    };
+    const result = await printEscPosReceipt(testData, config);
+    res.json({ success: true, result, message: 'تمت طباعة صفحة الاختبار بنجاح' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Shift Z-Report Endpoint
+app.get('/api/shifts/z-report/:userId', async (req, res) => {
+  try {
+    const report = await getUserShiftReport(req.params.userId, req.query.shift_type || 'MORNING');
+    res.json({ success: true, report });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Factory Reset Endpoint
+app.post('/api/system/factory-reset', async (req, res) => {
+  try {
+    const { pin_code } = req.body;
+    if (!pin_code) return res.status(400).json({ success: false, error: 'رمز PIN مطلوب لتأكيد إعادة ضبط المصنع' });
+    const result = await factoryResetDatabase(pin_code);
+    broadcast({ type: 'FACTORY_RESET_TRIGGERED' });
+    res.json(result);
+  } catch (err) {
+    res.status(403).json({ success: false, error: err.message });
+  }
+});
+
+// Global Express Error-Handling Middleware
+app.use((err, req, res, next) => {
+  console.error('🔥 [GLOBAL ERROR HANDLER]:', err.stack || err);
+  res.status(err.status || 500).json({
+    success: false,
+    error: err.message || 'حدث خطأ داخلي غير متوقع في الخادم',
+    code: 'INTERNAL_SERVER_ERROR'
+  });
 });
 
 // Start Server

@@ -52,6 +52,47 @@ db.serialize(() => {
   db.run(`ALTER TABLE orders ADD COLUMN user_name TEXT`, () => {});
   db.run(`ALTER TABLE orders ADD COLUMN shift_type TEXT DEFAULT 'MORNING'`, () => {});
 
+  // System Configuration Table (Global dynamic taxation, hardware IP, currency)
+  db.run(`
+    CREATE TABLE IF NOT EXISTS system_config (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `, () => {
+    const defaultConfig = [
+      ['currency', 'ج.م'],
+      ['vat_percent', '14'],
+      ['service_percent', '12'],
+      ['apply_taxes', 'true'],
+      ['printer_ip', '192.168.1.100'],
+      ['printer_port', '9100'],
+      ['cafe_name', 'كافيه مزاج'],
+      ['cash_drawer_auto_kick', 'true'],
+      ['header_note', 'أهلاً بكم في كافيه مزاج'],
+      ['footer_note', 'شكراً لزيارتكم - نتمنى لكم يوماً سعيداً']
+    ];
+    defaultConfig.forEach(([k, v]) => {
+      db.run(`INSERT OR IGNORE INTO system_config (key, value) VALUES (?, ?)`, [k, v]);
+    });
+  });
+
+  // Performance Indexes for Database Scalability & Concurrency
+  db.run(`CREATE INDEX IF NOT EXISTS idx_orders_created_at ON orders(created_at)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_orders_kds_status ON orders(kds_status)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_shifts_user_id ON shifts(user_id)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_order_payments_created ON order_payments(created_at)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_order_payments_order_id ON order_payments(order_id)`);
+
+  // Order Payments Tax Breakdown Column Migrations
+  db.run(`ALTER TABLE order_payments ADD COLUMN subtotal REAL DEFAULT 0`, () => {});
+  db.run(`ALTER TABLE order_payments ADD COLUMN service_amount REAL DEFAULT 0`, () => {});
+  db.run(`ALTER TABLE order_payments ADD COLUMN vat_amount REAL DEFAULT 0`, () => {});
+  db.run(`ALTER TABLE order_payments ADD COLUMN discount_amount REAL DEFAULT 0`, () => {});
+  db.run(`ALTER TABLE order_payments ADD COLUMN total_amount REAL DEFAULT 0`, () => {});
+  db.run(`ALTER TABLE order_payments ADD COLUMN currency TEXT DEFAULT 'ج.م'`, () => {});
+
   // Universal Audit Logs Table
   db.run(`
     CREATE TABLE IF NOT EXISTS audit_logs (
@@ -374,10 +415,14 @@ db.serialize(() => {
     CREATE TABLE IF NOT EXISTS employee_advances (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       employee_name TEXT NOT NULL,
+      employee_id INTEGER,
       amount REAL DEFAULT 0,
-      issued_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      issued_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
+  db.run(`ALTER TABLE employee_advances ADD COLUMN employee_id INTEGER`, () => {});
+  db.run(`ALTER TABLE employee_advances ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP`, () => {});
 
   // Daily Expenses Table (مصروفات اليومية)
   db.run(`
@@ -698,30 +743,43 @@ function seedDatabaseIfEmpty() {
 }
 
 /**
- * Seed initial users and standard RBAC roles
+ * Seed initial users and standard RBAC roles (Cafe Mazaj Production Staff & Universal Defaults)
  */
 function seedUsersIfEmpty() {
-  db.get(`SELECT COUNT(*) as count FROM users`, [], (err, row) => {
-    if (!err && (!row || row.count === 0)) {
-      const stmt = db.prepare(`INSERT OR REPLACE INTO users (name, role, pin_code) VALUES (?, ?, ?)`);
-      stmt.run('باريستا', 'BARISTA', '1111');
-      stmt.run('معد شيشة', 'SHIASH', '2222');
-      stmt.run('شيف المطبخ', 'CHEF', '3333');
-      stmt.run('ويتر الصالة', 'WAITER', '4444');
-      stmt.run('مدير الصالة', 'HALL_MANAGER', '4400');
-      stmt.run('مساعد كاشير', 'OP_ASSISTANT_CASHIER', '5555');
-      stmt.run('مدير العمليات', 'OP_MANAGER', '6666');
-      stmt.run('المالك', 'OWNER', '7777');
-      stmt.finalize(() => {
-        console.log('✅ Users table seeded with updated RBAC roles & PINs.');
-      });
-    } else {
-      // Migrate existing PINs to updated role names if legacy roles exist
-      db.run(`UPDATE users SET role = 'OP_ASSISTANT_CASHIER' WHERE role = 'CASHIER' OR pin_code = '5555'`);
-      db.run(`UPDATE users SET role = 'OP_MANAGER' WHERE role = 'MANAGER' OR pin_code = '6666'`);
-      db.run(`UPDATE users SET role = 'OWNER' WHERE role = 'ADMIN' OR pin_code = '7777'`);
-      db.run(`INSERT OR IGNORE INTO users (name, role, pin_code) VALUES ('مدير الصالة', 'HALL_MANAGER', '4400')`);
-    }
+  const staffList = [
+    // Official Cafe Mazaj Staff PINs
+    ['أحمد (ويتر/جوكر)', 'WAITER', '1001'],
+    ['هاجر/بيبو (باريستا)', 'BARISTA', '1002'],
+    ['أسماء (مسؤول شيشة)', 'SHIASH', '1003'],
+    ['شيف المطبخ', 'CHEF', '1004'],
+    ['أمل (ويتر)', 'WAITER', '1005'],
+    ['إبراهيم (مدير صالة)', 'HALL_MANAGER', '1006'],
+    ['أحمد كركر (كاشير)', 'OP_ASSISTANT_CASHIER', '1007'],
+    ['وائل (مدير عمليات)', 'OP_MANAGER', '1008'],
+    ['فاطمة (مالك)', 'OWNER', '1009'],
+    ['وائل (مالك)', 'OWNER', '1010'],
+    ['عمر (مسؤول نظام)', 'ADMIN', '1011'],
+    ['شعراوي (مدير تكاليف BOM)', 'OP_MANAGER', '1012'],
+    // Universal Default PINs
+    ['باريستا', 'BARISTA', '1111'],
+    ['معد شيشة', 'SHIASH', '2222'],
+    ['شيف المطبخ', 'CHEF', '3333'],
+    ['ويتر الصالة', 'WAITER', '4444'],
+    ['مدير الصالة', 'HALL_MANAGER', '4400'],
+    ['مساعد كاشير', 'OP_ASSISTANT_CASHIER', '5555'],
+    ['مدير العمليات', 'OP_MANAGER', '6666'],
+    ['المالك', 'OWNER', '7777'],
+    ['مسؤول النظام', 'ADMIN', '8888']
+  ];
+
+  db.serialize(() => {
+    const stmt = db.prepare(`INSERT OR IGNORE INTO users (name, role, pin_code) VALUES (?, ?, ?)`);
+    staffList.forEach(([name, role, pin]) => {
+      stmt.run(name, role, pin);
+    });
+    stmt.finalize(() => {
+      console.log('✅ Users table seeded with Cafe Mazaj production staff and standard RBAC roles.');
+    });
   });
 }
 
@@ -1104,56 +1162,61 @@ function getInventory() {
 }
 
 /**
- * Save multi-method payment splits for an order or table session, with tips
+ * Save multi-method payment splits for an order or table session, with tips and dynamic tax breakdown
  */
-function saveOrderPayments(orderId, tableNumber, payments = [], tipAmount = 0) {
+function saveOrderPayments(orderId, tableNumber, payments = [], tipAmount = 0, taxBreakdown = {}) {
   return new Promise((resolve, reject) => {
     db.serialize(() => {
-      db.run('BEGIN TRANSACTION', (err) => {
-        if (err) return reject(err);
+      const subtotal = Number(taxBreakdown.subtotal) || 0;
+      const serviceAmount = Number(taxBreakdown.service_amount) || 0;
+      const vatAmount = Number(taxBreakdown.vat_amount) || 0;
+      const discountAmount = Number(taxBreakdown.discount_amount) || 0;
+      const totalAmount = Number(taxBreakdown.total_amount) || 0;
+      const currency = taxBreakdown.currency || 'ج.م';
 
-        const insertSql = `INSERT INTO order_payments (order_id, method, amount, tip_amount) VALUES (?, ?, ?, ?)`;
-        let pending = payments.length;
-        let insertErr = null;
-        const tipNum = Number(tipAmount) || 0;
+      const insertSql = `
+        INSERT INTO order_payments (
+          order_id, method, amount, tip_amount, 
+          subtotal, service_amount, vat_amount, discount_amount, total_amount, currency
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `;
+      let pending = payments.length;
+      let insertErr = null;
+      const tipNum = Number(tipAmount) || 0;
 
-        if (pending === 0) {
-          if (tableNumber > 0) {
-            db.run(`UPDATE table_sessions SET status = 'CLOSED' WHERE table_number = ?`, [tableNumber]);
-          }
-          if (tipNum > 0) {
-            db.run(insertSql, [orderId || null, 'CASH', 0, tipNum]);
-          }
-          db.run('COMMIT', (err) => {
-            if (err) return reject(err);
-            resolve(true);
-          });
-          return;
+      if (pending === 0) {
+        if (tableNumber > 0) {
+          db.run(`UPDATE table_sessions SET status = 'CLOSED' WHERE table_number = ?`, [tableNumber]);
+          db.run(`UPDATE orders SET status = 'CLOSED' WHERE table_number = ?`, [tableNumber]);
         }
+        if (tipNum > 0 || totalAmount > 0) {
+          db.run(insertSql, [orderId || null, 'CASH', totalAmount, tipNum, subtotal, serviceAmount, vatAmount, discountAmount, totalAmount, currency]);
+        }
+        return resolve(true);
+      }
 
-        payments.forEach((p, idx) => {
-          const m = (p.method || 'CASH').toUpperCase();
-          const amt = Number(p.amount) || 0;
-          const entryTip = (idx === 0) ? tipNum : 0;
-          db.run(insertSql, [orderId || null, m, amt, entryTip], (err) => {
-            if (err && !insertErr) insertErr = err;
-            pending--;
+      payments.forEach((p, idx) => {
+        const m = (p.method || 'CASH').toUpperCase();
+        const amt = Number(p.amount) || 0;
+        const entryTip = (idx === 0) ? tipNum : 0;
+        const entrySub = (idx === 0) ? subtotal : 0;
+        const entrySrv = (idx === 0) ? serviceAmount : 0;
+        const entryVat = (idx === 0) ? vatAmount : 0;
+        const entryDisc = (idx === 0) ? discountAmount : 0;
+        const entryTot = (idx === 0) ? (totalAmount || amt) : amt;
 
-            if (pending === 0) {
-              if (insertErr) {
-                db.run('ROLLBACK');
-                return reject(insertErr);
-              }
-              if (tableNumber > 0) {
-                db.run(`UPDATE table_sessions SET status = 'CLOSED' WHERE table_number = ?`, [tableNumber]);
-                db.run(`UPDATE orders SET status = 'CLOSED' WHERE table_number = ?`, [tableNumber]);
-              }
-              db.run('COMMIT', (err) => {
-                if (err) return reject(err);
-                resolve(true);
-              });
+        db.run(insertSql, [orderId || null, m, amt, entryTip, entrySub, entrySrv, entryVat, entryDisc, entryTot, currency], (err) => {
+          if (err && !insertErr) insertErr = err;
+          pending--;
+
+          if (pending === 0) {
+            if (insertErr) return reject(insertErr);
+            if (tableNumber > 0) {
+              db.run(`UPDATE table_sessions SET status = 'CLOSED' WHERE table_number = ?`, [tableNumber]);
+              db.run(`UPDATE orders SET status = 'CLOSED' WHERE table_number = ?`, [tableNumber]);
             }
-          });
+            resolve(true);
+          }
         });
       });
     });
@@ -3308,8 +3371,178 @@ function declareCashExtended(userId, userName, shiftType, declaredCash, openingF
   });
 }
 
+function getSystemConfig() {
+  return new Promise((resolve, reject) => {
+    db.all(`SELECT key, value FROM system_config`, [], (err, rows) => {
+      if (err) return reject(err);
+      const config = {
+        currency: 'ج.م',
+        vat_percent: 14,
+        service_percent: 12,
+        apply_taxes: true,
+        printer_ip: '192.168.1.100',
+        printer_port: 9100,
+        cafe_name: 'كافيه مزاج',
+        cash_drawer_auto_kick: true,
+        header_note: 'أهلاً بكم في كافيه مزاج',
+        footer_note: 'شكراً لزيارتكم - نتمنى لكم يوماً سعيداً'
+      };
+      (rows || []).forEach(r => {
+        if (r.key === 'vat_percent' || r.key === 'service_percent' || r.key === 'printer_port') {
+          config[r.key] = parseFloat(r.value) || 0;
+        } else if (r.key === 'apply_taxes' || r.key === 'cash_drawer_auto_kick') {
+          config[r.key] = r.value === 'true' || r.value === '1';
+        } else {
+          config[r.key] = r.value;
+        }
+      });
+      resolve(config);
+    });
+  });
+}
+
+function updateSystemConfig(configObj = {}) {
+  return new Promise((resolve, reject) => {
+    db.serialize(() => {
+      const stmt = db.prepare(`INSERT INTO system_config (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP) ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=CURRENT_TIMESTAMP`);
+      for (const [key, value] of Object.entries(configObj)) {
+        if (value !== undefined && value !== null) {
+          stmt.run(String(key), String(value));
+        }
+      }
+      stmt.finalize((err) => {
+        if (err) return reject(err);
+        getSystemConfig().then(resolve).catch(reject);
+      });
+    });
+  });
+}
+
+function factoryResetDatabase(adminPin) {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const user = await loginWithPin(adminPin);
+      if (!user || (user.role !== 'OWNER' && user.role !== 'ADMIN')) {
+        return reject(new Error('رمز PIN غير مصرح به لإجراء إعادة ضبط المصنع'));
+      }
+
+      db.serialize(() => {
+        db.run('DELETE FROM orders');
+        db.run('DELETE FROM order_payments');
+        db.run('DELETE FROM table_sessions');
+        db.run('DELETE FROM waste_log');
+        db.run('DELETE FROM material_transfers');
+        db.run('DELETE FROM penalties');
+        db.run('DELETE FROM complaints');
+        db.run('DELETE FROM drawer_declarations');
+        db.run('DELETE FROM employee_advances');
+        db.run('DELETE FROM daily_expenses');
+        db.run('DELETE FROM shifts');
+        db.run('DELETE FROM customer_feedback');
+        db.run('DELETE FROM customers');
+        db.run('DELETE FROM purchases');
+        db.run('DELETE FROM reservations');
+        db.run('DELETE FROM shareholder_transactions');
+        db.run(`UPDATE tables SET status = 'VACANT', custom_name = NULL, customer_name = NULL, customer_phone = NULL`);
+        db.run(`UPDATE inventory SET current_stock = 1000`);
+        
+        logAudit(user.id, 'FACTORY_RESET', 'system', 0, null, { reset_by: user.name, timestamp: new Date().toISOString() });
+        resolve({ success: true, message: 'تمت إعادة ضبط المصنع ومسح كافة البيانات بنجاح' });
+      });
+    } catch (e) {
+      reject(e);
+    }
+  });
+}
+
+function getUserShiftReport(userId, shiftType = 'MORNING') {
+  return new Promise((resolve, reject) => {
+    // 1. Fetch user info
+    db.get(`SELECT id, name, role FROM users WHERE id = ?`, [userId], (err, user) => {
+      if (err) return reject(err);
+      if (!user) return reject(new Error('المستخدم غير موجود'));
+
+      // 2. Fetch latest active or today's shift clock-in
+      db.get(
+        `SELECT id, clock_in, clock_out, shift_type FROM shifts WHERE user_id = ? AND date(clock_in) = date('now', 'localtime') ORDER BY id DESC LIMIT 1`,
+        [userId],
+        (err, shiftRow) => {
+          if (err) return reject(err);
+
+          const clockInTime = shiftRow?.clock_in || (new Date().toISOString().split('T')[0] + ' 00:00:00');
+          const clockOutTime = shiftRow?.clock_out || null;
+          const activeShift = shiftType || shiftRow?.shift_type || 'MORNING';
+
+          // 3. Aggregate cash & digital sales specifically for orders handled by this user since clockInTime
+          const salesSql = `
+            SELECT 
+              COALESCE(SUM(CASE WHEN op.method = 'CASH' THEN op.amount ELSE 0 END), 0) as cash_sales,
+              COALESCE(SUM(CASE WHEN op.method != 'CASH' THEN op.amount ELSE 0 END), 0) as digital_sales,
+              COALESCE(SUM(op.amount), 0) as total_sales,
+              COALESCE(SUM(op.tip_amount), 0) as total_tips,
+              COUNT(DISTINCT o.id) as order_count
+            FROM order_payments op
+            JOIN orders o ON op.order_id = o.id
+            WHERE (o.user_id = ? OR o.waiter_id = ? OR (o.user_name = ? AND o.user_name IS NOT NULL))
+              AND op.created_at >= ?
+          `;
+          db.get(salesSql, [userId, userId, user.name, clockInTime], (err, salesRow) => {
+            if (err) return reject(err);
+
+            const cashSales = salesRow?.cash_sales || 0;
+            const digitalSales = salesRow?.digital_sales || 0;
+            const totalSales = salesRow?.total_sales || 0;
+            const totalTips = salesRow?.total_tips || 0;
+            const orderCount = salesRow?.order_count || 0;
+
+            // 4. Advances and expenses logged today
+            const advSql = `SELECT COALESCE(SUM(amount), 0) as total_advances FROM employee_advances WHERE (employee_name = ? OR (employee_id IS NOT NULL AND employee_id = ?)) AND date(issued_at) = date('now', 'localtime')`;
+            db.get(advSql, [user.name, userId], (err, advRow) => {
+              if (err) return reject(err);
+              const cashAdvances = advRow?.total_advances || 0;
+
+              const expSql = `SELECT COALESCE(SUM(amount), 0) as total_expenses FROM daily_expenses WHERE date(created_at) = date('now', 'localtime')`;
+              db.get(expSql, [], (err, expRow) => {
+                if (err) return reject(err);
+                const cashExpenses = expRow?.total_expenses || 0;
+
+                const openingFloat = 500.0;
+                const expectedCash = openingFloat + cashSales - cashAdvances - cashExpenses;
+
+                resolve({
+                  user_id: user.id,
+                  user_name: user.name,
+                  user_role: user.role,
+                  shift_id: shiftRow?.id || null,
+                  clock_in: clockInTime,
+                  clock_out: clockOutTime,
+                  shift_type: activeShift,
+                  opening_float: openingFloat,
+                  cash_sales: cashSales,
+                  digital_sales: digitalSales,
+                  total_sales: totalSales,
+                  total_tips: totalTips,
+                  cash_advances: cashAdvances,
+                  cash_expenses: cashExpenses,
+                  expected_cash: Math.max(0, expectedCash),
+                  order_count: orderCount,
+                  generated_at: new Date().toLocaleString('ar-EG')
+                });
+              });
+            });
+          });
+        }
+      );
+    });
+  });
+}
+
 module.exports = {
   db,
+  getSystemConfig,
+  updateSystemConfig,
+  factoryResetDatabase,
+  getUserShiftReport,
   getMenu,
   addMenuItem,
   updateMenuBulk,

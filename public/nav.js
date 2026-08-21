@@ -44,6 +44,7 @@
     {
       groupTitle: 'التقارير والإدارة المالية',
       items: [
+        { title: 'إعدادات النظام والضرائب', path: '/settings.html', icon: '⚙️', roles: ['OWNER', 'ADMIN'] },
         { title: 'تقفيل الوردية (EOD)', path: '/eod.html', icon: '📊', roles: ['OWNER', 'OP_MANAGER', 'OP_ASSISTANT_CASHIER', 'ADMIN', 'MANAGER', 'CASHIER'] },
         { title: 'مؤشرات الأداء (BI)', path: '/bi.html', icon: '📈', roles: ['OWNER', 'OP_MANAGER', 'ADMIN', 'MANAGER'] },
         { title: 'حسابات الشركاء', path: '/shareholders.html', icon: '💎', roles: ['OWNER', 'ADMIN'] },
@@ -51,6 +52,25 @@
       ]
     }
   ];
+
+  // Auto-Register PWA Service Worker & Manifest
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW registration note:', err));
+    });
+  }
+  if (!document.querySelector('link[rel="manifest"]')) {
+    const manifestLink = document.createElement('link');
+    manifestLink.rel = 'manifest';
+    manifestLink.href = '/manifest.json';
+    document.head.appendChild(manifestLink);
+  }
+  if (!document.querySelector('meta[name="theme-color"]')) {
+    const metaTheme = document.createElement('meta');
+    metaTheme.name = 'theme-color';
+    metaTheme.content = '#0f172a';
+    document.head.appendChild(metaTheme);
+  }
 
   function injectGlobalStyles() {
     if (document.getElementById('mazaj-global-styles')) return;

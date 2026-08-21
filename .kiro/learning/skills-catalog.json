@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-08-19T11:24:12.775Z",
+  "generatedAt": "2026-08-20T14:22:30.905Z",
   "workspacePath": "/home/omrshrifmo/cafe-system-mvp",
   "branch": "main",
   "skills": [
@@ -96,7 +96,7 @@
       "matchedGlobs": [
         "**/.github/**/*.md"
       ],
-      "installedInWorkspace": false,
+      "installedInWorkspace": true,
       "availableInGlobal": false,
       "inLibrary": true,
       "requiredForProfileInit": false
@@ -276,7 +276,7 @@
         "**/.claude/learning/task-skill-proposals.json",
         "**/.claude/learning/skill-adoption.jsonl"
       ],
-      "installedInWorkspace": false,
+      "installedInWorkspace": true,
       "availableInGlobal": false,
       "inLibrary": true,
       "requiredForProfileInit": false

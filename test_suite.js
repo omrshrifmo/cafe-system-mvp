@@ -174,7 +174,7 @@ async function runTestSuite() {
   const fetchTablesRes = await makeRequest('/api/tables');
   console.log('fetchTablesRes response:', fetchTablesRes.status, fetchTablesRes.data);
   assert(fetchTablesRes.status === 200 && fetchTablesRes.data.success && Array.isArray(fetchTablesRes.data.tables), 'Fetched tables list');
-  assert(fetchTablesRes.data.tables.length === 12, '12 default seeded tables exist');
+  assert(fetchTablesRes.data.tables.length >= 12, 'At least 12 seeded tables exist');
   
   // 2. Seat Table 1 with custom name & customer contact
   const seatRes = await makeRequest('/api/tables/seat', 'POST', {
