@@ -8,16 +8,18 @@
   <script src="/nav.js"></script>
   <style>
     body {
-      font-family: system-ui, -apple-system, sans-serif;
+      font-family: 'Tajawal', system-ui, -apple-system, sans-serif;
       background-color: #0f172a;
       color: #f8fafc;
       user-select: none;
     }
     .tool-card {
-      transition: transform 0.1s ease, border-color 0.1s ease;
+      transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
     }
     .tool-card:hover {
       border-color: #f59e0b;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
     }
     .tool-card:active {
       transform: scale(0.98);
@@ -48,111 +50,156 @@
     </div>
   </div>
 
-  <main class="flex-1 max-w-6xl w-full mx-auto p-6 flex flex-col gap-6">
+  <!-- Main Content Container -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 py-6 space-y-6">
 
-    <!-- Shift Management Section -->
-    <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg flex flex-col sm:flex-row items-center justify-between gap-4">
-      <div class="flex items-center gap-4">
-        <div id="shiftIcon" class="w-12 h-12 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-2xl">
-          ⏰
+    <!-- KPI Strip for Management -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-md flex items-center gap-3.5">
+        <div class="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center text-2xl">
+          💰
         </div>
         <div>
-          <div class="text-sm text-slate-400 font-semibold">إدارة الورديات وتنسيق الحضور:</div>
-          <div id="shiftStatusText" class="text-lg font-bold text-slate-200 mt-0.5">جارٍ تحميل حالة ورديتك...</div>
+          <div class="text-xs font-bold text-slate-400">إيرادات اليوم</div>
+          <div id="kpiRevenue" class="text-lg font-black text-emerald-400">0 ج.م</div>
         </div>
       </div>
 
-      <button id="clockBtn" onclick="toggleShift()" class="w-full sm:w-auto px-6 py-3 rounded-lg font-bold text-sm border flex items-center justify-center gap-2 shadow-md bg-amber-600 hover:bg-amber-500 text-slate-950 border-amber-500">
-        <span id="clockBtnText">تسجيل حضور ⏰</span>
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-md flex items-center gap-3.5">
+        <div class="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center text-2xl">
+          🪑
+        </div>
+        <div>
+          <div class="text-xs font-bold text-slate-400">طاولات مشغولة</div>
+          <div id="kpiTables" class="text-lg font-black text-indigo-300">0 طاولة</div>
+        </div>
+      </div>
+
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-md flex items-center gap-3.5">
+        <div class="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center text-2xl">
+          📦
+        </div>
+        <div>
+          <div class="text-xs font-bold text-slate-400">تنبيهات النواقص</div>
+          <div id="kpiLowStock" class="text-lg font-black text-emerald-400">✅ لا تنبيهات</div>
+        </div>
+      </div>
+
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-md flex items-center gap-3.5">
+        <div class="w-12 h-12 rounded-xl bg-sky-500/10 border border-sky-500/20 text-sky-400 flex items-center justify-center text-2xl">
+          👥
+        </div>
+        <div>
+          <div class="text-xs font-bold text-slate-400">موظفون نشطون</div>
+          <div id="kpiStaff" class="text-lg font-black text-sky-300">1 موظف</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Active Shift Check-in Card -->
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-lg flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-4 text-center sm:text-right">
+        <div id="shiftIcon" class="w-12 h-12 rounded-xl bg-slate-800 border border-slate-700 text-slate-400 flex items-center justify-center text-2xl shrink-0">
+          ⏳
+        </div>
+        <div>
+          <h2 class="text-sm font-black text-white">حالة تسجيل الوردية</h2>
+          <p id="shiftStatusText" class="text-xs text-slate-400 mt-0.5">جاري التحقق من الوردية...</p>
+        </div>
+      </div>
+      <button id="clockBtn" onclick="toggleShift()" class="w-full sm:w-auto px-6 py-2.5 rounded-xl font-black text-xs border flex items-center justify-center gap-2 shadow-md transition-all">
+        <span id="clockBtnText">تسجيل الحضور ⏰</span>
       </button>
     </div>
 
-    <!-- Live KPI Stats Strip -->
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-      <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 flex items-center gap-3">
-        <div class="w-10 h-10 bg-emerald-500/20 rounded-xl flex items-center justify-center text-xl">💰</div>
-        <div>
-          <div class="text-xs text-slate-400">إيرادات اليوم</div>
-          <div id="kpiRevenue" class="text-lg font-black text-emerald-400">...</div>
-        </div>
-      </div>
-      <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 flex items-center gap-3">
-        <div class="w-10 h-10 bg-amber-500/20 rounded-xl flex items-center justify-center text-xl">🪑</div>
-        <div>
-          <div class="text-xs text-slate-400">طاولات مفتوحة</div>
-          <div id="kpiTables" class="text-lg font-black text-amber-400">...</div>
-        </div>
-      </div>
-      <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 flex items-center gap-3">
-        <div class="w-10 h-10 bg-red-500/20 rounded-xl flex items-center justify-center text-xl">⚠️</div>
-        <div>
-          <div class="text-xs text-slate-400">تنبيهات المخزون</div>
-          <div id="kpiLowStock" class="text-lg font-black text-red-400">...</div>
-        </div>
-      </div>
-      <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 flex items-center gap-3">
-        <div class="w-10 h-10 bg-sky-500/20 rounded-xl flex items-center justify-center text-xl">👤</div>
-        <div>
-          <div class="text-xs text-slate-400">موظفون نشطون</div>
-          <div id="kpiStaff" class="text-lg font-black text-sky-400">...</div>
-        </div>
-      </div>
+    <!-- Tools Grid Header -->
+    <div class="flex items-center justify-between pt-2">
+      <h2 class="text-sm font-black text-white flex items-center gap-2">
+        <span>⚡</span>
+        <span>الأدوات والشاشات المتاحة</span>
+      </h2>
+      <span id="toolCount" class="px-2.5 py-0.5 bg-slate-800 border border-slate-700 rounded-lg text-slate-400 text-xs font-bold font-mono">0 أدوات</span>
     </div>
 
-    <!-- Authorized Tools Grid Section -->
-    <div>
-      <div class="flex items-center justify-between mb-4">
-        <h2 class="text-lg font-bold text-slate-200 flex items-center gap-2">
-          <span>🛠️</span> الأدوات والشاشات المتاحة لدورك الوظيفي
-        </h2>
-        <span id="toolCount" class="text-xs font-semibold text-slate-400 bg-slate-800 border border-slate-700 px-2.5 py-1 rounded-full">
-          0 أدوات
-        </span>
-      </div>
-
-      <div id="toolsGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        <!-- Rendered dynamically -->
-      </div>
+    <!-- Tools Grid -->
+    <div id="toolsGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 pb-8">
+      <!-- Injected via JavaScript -->
     </div>
+
   </main>
-
-
-  <footer class="bg-slate-900 border-t border-slate-800 text-center py-3 text-xs text-slate-500">
-    كافيه مزاج Enterprise ERP &copy; 2026 - جميع الحقوق محفوظة
-  </footer>
 
   <script>
     let currentUser = null;
     let currentShift = null;
 
-    // Translation maps
     const roleLabels = {
+      SUPER_ADMIN: "مسؤول النظام الرئيسي",
+      OWNER: "مالك المنشأة",
+      OP_MANAGER: "مدير العمليات",
+      BOM_MANAGER: "مدير التكاليف و BOM",
+      HALL_MANAGER: "مدير الصالة",
+      OP_ASSISTANT_CASHIER: "كاشير الصالة",
+      CASHIER: "كاشير الصالة",
+      WAITER: "ويتر الصالة",
       BARISTA: "باريستا الكافيه",
       SHIASH: "معد الشيشة",
       CHEF: "شيف المطبخ",
-      WAITER: "ويتر الصالة",
-      CASHIER: "كاشير الصالة",
-      MANAGER: "مدير الكافيه",
-      OWNER: "مالك المنشأة",
-      ADMIN: "مدير النظام"
+      JOKER: "جوكر شامل",
+      ADMIN: "مدير النظام",
+      MANAGER: "مدير الكافيه"
     };
 
-    function initPortal() {
-      const userStr = localStorage.getItem('currentUser');
-      if (!userStr) {
-        window.location.href = 'index.html';
-        return;
+    const ALL_TOOLS = [
+      { name: "نقطة البيع (POS)", url: "/pos.html", icon: "💳", roles: ['SUPER_ADMIN','OWNER','OP_MANAGER','ADMIN','MANAGER','OP_ASSISTANT_CASHIER','HALL_MANAGER','WAITER','JOKER','CASHIER'] },
+      { name: "إدارة وتوزيع الطاولات", url: "/tables.html", icon: "🪑", roles: ['SUPER_ADMIN','OWNER','OP_MANAGER','ADMIN','MANAGER','OP_ASSISTANT_CASHIER','HALL_MANAGER','WAITER','JOKER','CASHIER'] },
+      { name: "شاشة البارستا KDS", url: "/kds.html", icon: "☕", roles: ['SUPER_ADMIN','OWNER','OP_MANAGER','ADMIN','MANAGER','BARISTA','JOKER'] },
+      { name: "شاشة المطبخ KDS", url: "/kitchen.html", icon: "🍳", roles: ['SUPER_ADMIN','OWNER','OP_MANAGER','ADMIN','MANAGER','CHEF','JOKER'] },
+      { name: "شاشة الشيشة KDS", url: "/shisha.html", icon: "💨", roles: ['SUPER_ADMIN','OWNER','OP_MANAGER','ADMIN','MANAGER','SHIASH','JOKER'] },
+      { name: "شاشة الويتر والرانر", url: "/runner.html", icon: "🏃", roles: ['SUPER_ADMIN','OWNER','OP_MANAGER','ADMIN','MANAGER','HALL_MANAGER','WAITER','JOKER','BARISTA','SHIASH','CHEF'] },
+      { name: "مدير القائمة الموحد", url: "/menu-manager.html", icon: "🍽️", roles: ['SUPER_ADMIN','OWNER','OP_MANAGER','ADMIN','MANAGER','BOM_MANAGER'] },
+      { name: "المخزون ومطابقة BOM", url: "/inventory.html", icon: "📦", roles: ['SUPER_ADMIN','OWNER','OP_MANAGER','ADMIN','MANAGER','BOM_MANAGER'] },
+      { name: "فواتير المشتريات", url: "/purchasing.html", icon: "🛒", roles: ['SUPER_ADMIN','OWNER','OP_MANAGER','ADMIN','MANAGER','BOM_MANAGER'] },
+      { name: "دليل الموردين", url: "/suppliers.html", icon: "🚚", roles: ['SUPER_ADMIN','OWNER','OP_MANAGER','ADMIN','MANAGER','BOM_MANAGER'] },
+      { name: "العملاء والولاء (CRM)", url: "/crm.html", icon: "👥", roles: ['SUPER_ADMIN','OWNER','OP_MANAGER','ADMIN','MANAGER','OP_ASSISTANT_CASHIER','CASHIER'] },
+      { name: "إدارة الحجوزات", url: "/reservations.html", icon: "📅", roles: ['SUPER_ADMIN','OWNER','OP_MANAGER','ADMIN','MANAGER','HALL_MANAGER','WAITER','JOKER'] },
+      { name: "الموارد البشرية والرواتب", url: "/hr.html", icon: "💼", roles: ['SUPER_ADMIN','OWNER','OP_MANAGER','ADMIN','MANAGER'] },
+      { name: "معايير الجودة والـ QA", url: "/qa.html", icon: "🛡️", roles: ['SUPER_ADMIN','OWNER','OP_MANAGER','ADMIN','MANAGER','BOM_MANAGER'] },
+      { name: "تقفيل الوردية (EOD)", url: "/eod.html", icon: "📊", roles: ['SUPER_ADMIN','OWNER','OP_MANAGER','ADMIN','MANAGER','OP_ASSISTANT_CASHIER','CASHIER'] },
+      { name: "مؤشرات الأداء (BI)", url: "/bi.html", icon: "📈", roles: ['SUPER_ADMIN','OWNER','OP_MANAGER','ADMIN','MANAGER'] },
+      { name: "حسابات الشركاء", url: "/shareholders.html", icon: "💎", roles: ['SUPER_ADMIN','OWNER','ADMIN'] },
+      { name: "إعدادات النظام والضرائب", url: "/settings.html", icon: "⚙️", roles: ['SUPER_ADMIN','OWNER','ADMIN'] }
+    ];
+
+    async function initPortal() {
+      try {
+        const res = await fetch('/api/auth/me');
+        if (!res.ok) {
+          window.location.href = '/index.html';
+          return;
+        }
+        const data = await res.json();
+        if (data.success && data.user) {
+          currentUser = data.user;
+          localStorage.setItem('currentUser', JSON.stringify(data.user));
+        } else {
+          window.location.href = '/index.html';
+          return;
+        }
+      } catch (e) {
+        const cached = localStorage.getItem('currentUser');
+        if (cached) currentUser = JSON.parse(cached);
+        else { window.location.href = '/index.html'; return; }
       }
 
-      currentUser = JSON.parse(userStr);
       document.getElementById('userName').textContent = currentUser.name || "مستخدم";
       document.getElementById('userRole').textContent = roleLabels[currentUser.role] || currentUser.role;
 
-      const toolsStr = localStorage.getItem('userTools');
-      const tools = toolsStr ? JSON.parse(toolsStr) : [];
+      const userRole = currentUser.role || 'WAITER';
+      const tools = ALL_TOOLS.filter(t => t.roles.includes(userRole));
       renderTools(tools);
 
       fetchShiftStatus();
+      initPortalKPIs();
     }
 
     function renderTools(tools) {
@@ -162,7 +209,7 @@
 
       if (tools.length === 0) {
         grid.innerHTML = `
-          <div class="col-span-full text-center py-12 text-slate-500 bg-slate-900 border border-slate-800 rounded-xl">
+          <div class="col-span-full text-center py-12 text-slate-500 bg-slate-900 border border-slate-800 rounded-2xl">
             لا توجد أدوات مخصصة لدورك الحالي.
           </div>
         `;
@@ -172,14 +219,14 @@
       tools.forEach(tool => {
         const card = document.createElement('a');
         card.href = tool.url;
-        card.className = "tool-card bg-slate-900 border border-slate-800 rounded-xl p-5 flex flex-col items-center justify-center text-center gap-3 hover:bg-slate-850 cursor-pointer shadow-md";
+        card.className = "tool-card bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center justify-center text-center gap-2.5 hover:bg-slate-800/80 cursor-pointer shadow-md";
         card.innerHTML = `
-          <div class="w-14 h-14 bg-slate-800 border border-slate-700 rounded-2xl flex items-center justify-center text-3xl">
+          <div class="w-12 h-12 bg-slate-800/90 border border-slate-700/80 rounded-xl flex items-center justify-center text-2xl shadow-inner">
             ${tool.icon || '📌'}
           </div>
           <div>
-            <div class="font-bold text-slate-100 text-base mb-1">${tool.name}</div>
-            <div class="text-xs text-amber-400 font-semibold flex items-center justify-center gap-1">
+            <div class="font-black text-slate-100 text-xs mb-1">${tool.name}</div>
+            <div class="text-[10px] text-amber-400 font-bold flex items-center justify-center gap-1">
               <span>افتح الشاشة</span>
               <span>←</span>
             </div>
@@ -190,11 +237,9 @@
     }
 
     async function fetchShiftStatus() {
-      if (!currentUser || !currentUser.id) return;
       try {
-        const res = await fetch(`/api/shifts/user/${currentUser.id}`);
+        const res = await fetch('/api/shifts/status');
         const data = await res.json();
-
         const statusText = document.getElementById('shiftStatusText');
         const clockBtn = document.getElementById('clockBtn');
         const clockBtnText = document.getElementById('clockBtnText');
@@ -203,26 +248,23 @@
         if (data.success && data.shift && data.shift.status === 'ACTIVE') {
           currentShift = data.shift;
           const clockInTime = new Date(data.shift.clock_in).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
-          statusText.innerHTML = `<span class="text-emerald-400 font-bold">ورديتك نشطة حالياً 🟢</span> <span class="text-xs text-slate-400">(تسجيل الحضور: ${clockInTime})</span>`;
-          shiftIcon.className = "w-12 h-12 rounded-xl bg-emerald-950 border border-emerald-800 text-emerald-400 flex items-center justify-center text-2xl";
-          clockBtn.className = "w-full sm:w-auto px-6 py-3 rounded-lg font-bold text-sm border flex items-center justify-center gap-2 shadow-md bg-rose-950 hover:bg-rose-900 text-rose-300 border-rose-800";
-          clockBtnText.textContent = "تسجيل انصراف (Clock Out) ⏱️";
+          statusText.innerHTML = `<span class="text-emerald-400 font-bold">ورديتك نشطة حالياً 🟢</span> <span class="text-xs text-slate-400">(حضور: ${clockInTime})</span>`;
+          shiftIcon.className = "w-12 h-12 rounded-xl bg-emerald-950/60 border border-emerald-800 text-emerald-400 flex items-center justify-center text-2xl shrink-0";
+          clockBtn.className = "w-full sm:w-auto px-6 py-2.5 rounded-xl font-bold text-xs border flex items-center justify-center gap-2 shadow-md bg-rose-950 hover:bg-rose-900 text-rose-300 border-rose-800";
+          clockBtnText.textContent = "تسجيل انصراف ⏱️";
         } else {
           currentShift = null;
           statusText.innerHTML = `<span class="text-rose-400 font-bold">غير مسجل حضور حالياً 🔴</span>`;
-          shiftIcon.className = "w-12 h-12 rounded-xl bg-slate-800 border border-slate-700 text-slate-400 flex items-center justify-center text-2xl";
-          clockBtn.className = "w-full sm:w-auto px-6 py-3 rounded-lg font-bold text-sm border flex items-center justify-center gap-2 shadow-md bg-amber-600 hover:bg-amber-500 text-slate-950 border-amber-500";
-          clockBtnText.textContent = "تسجيل حضور (Clock In) ⏰";
+          shiftIcon.className = "w-12 h-12 rounded-xl bg-slate-800 border border-slate-700 text-slate-400 flex items-center justify-center text-2xl shrink-0";
+          clockBtn.className = "w-full sm:w-auto px-6 py-2.5 rounded-xl font-bold text-xs border flex items-center justify-center gap-2 shadow-md bg-amber-500 hover:bg-amber-400 text-slate-950 border-amber-500 font-black";
+          clockBtnText.textContent = "تسجيل حضور ⏰";
         }
-      } catch (err) {
-        console.error("Error fetching shift status:", err);
-      }
+      } catch (err) {}
     }
 
     async function toggleShift() {
       if (!currentUser || !currentUser.id) return;
       const endpoint = currentShift ? '/api/shifts/clock-out' : '/api/shifts/clock-in';
-
       try {
         const res = await fetch(endpoint, {
           method: 'POST',
@@ -233,70 +275,50 @@
         if (data.success) {
           await fetchShiftStatus();
         } else {
-          alert(data.error || "تعذر إتمام عملية الحضور/الانصراف");
+          alert(data.error || "تعذر إتمام عملية الوردية");
         }
       } catch (err) {
         alert("حدث خطأ أثناء الاتصال بالخادم");
       }
     }
 
-    function logout() {
-      localStorage.removeItem('currentUser');
-      localStorage.removeItem('userTools');
-      localStorage.removeItem('activeShift');
-      window.location.href = 'index.html';
-    }
-
     async function loadKPIs() {
       try {
-        // Today's revenue
-        const salesRes = await fetch('/api/sales/summary');
-        if (salesRes.ok) {
-          const d = await salesRes.json();
-          const revenue = d.today_revenue || d.total_revenue || 0;
-          document.getElementById('kpiRevenue').textContent = revenue.toFixed(0) + ' ج';
+        const repRes = await fetch('/api/reports/eod');
+        if (repRes.ok) {
+          const d = await repRes.json();
+          const rev = (d.report && d.report.total_revenue) || (d.summary && d.summary.total_revenue) || 0;
+          document.getElementById('kpiRevenue').textContent = Number(rev).toFixed(0) + ' ج.م';
         }
-      } catch(e) {}
+      } catch (e) {}
+
       try {
-        // Open tables
-        const tabRes = await fetch('/api/tables/status');
+        const tabRes = await fetch('/api/tables');
         if (tabRes.ok) {
           const d = await tabRes.json();
-          const open = (d.tables || []).filter(t => t.status === 'OCCUPIED').length;
+          const open = (d.tables || []).filter(t => t.status === 'OCCUPIED' || t.status === 'SEATED').length;
           document.getElementById('kpiTables').textContent = open + ' طاولة';
         }
-      } catch(e) { document.getElementById('kpiTables').textContent = '—'; }
+      } catch (e) {}
+
       try {
-        // Low stock alerts
-        const invRes = await fetch('/api/reports/low-stock');
+        const invRes = await fetch('/api/inventory');
         if (invRes.ok) {
           const d = await invRes.json();
-          const count = (d.items || []).length;
-          document.getElementById('kpiLowStock').textContent = count > 0 ? count + ' صنف' : '✅ لا تنبيهات';
-          document.getElementById('kpiLowStock').className = `text-lg font-black ${count > 0 ? 'text-red-400' : 'text-emerald-400'}`;
+          const items = d.inventory || d.items || [];
+          const low = items.filter(i => (i.current_stock_microunits / 1000000.0) <= (i.min_limit || 5)).length;
+          document.getElementById('kpiLowStock').textContent = low > 0 ? low + ' أصناف' : '✅ لا تنبيهات';
+          document.getElementById('kpiLowStock').className = `text-lg font-black ${low > 0 ? 'text-rose-400' : 'text-emerald-400'}`;
         }
-      } catch(e) { document.getElementById('kpiLowStock').textContent = '—'; }
-      try {
-        // Active staff (users on active shifts)
-        const shiftRes = await fetch('/api/shifts/active');
-        if (shiftRes.ok) {
-          const d = await shiftRes.json();
-          document.getElementById('kpiStaff').textContent = (d.active_count || 0) + ' موظف';
-        }
-      } catch(e) { document.getElementById('kpiStaff').textContent = '—'; }
+      } catch (e) {}
     }
 
     function initPortalKPIs() {
-      // Only load KPIs for managers/owners/admins
-      const elevated = ['MANAGER','OP_MANAGER','OWNER','ADMIN'];
+      const elevated = ['SUPER_ADMIN', 'OWNER', 'OP_MANAGER', 'ADMIN', 'MANAGER'];
       if (currentUser && elevated.includes(currentUser.role)) {
         loadKPIs();
-        setInterval(loadKPIs, 60000);
+        setInterval(loadKPIs, 30000);
       } else {
-        ['kpiRevenue','kpiTables','kpiLowStock','kpiStaff'].forEach(id => {
-          const el = document.getElementById(id);
-          if (el) el.closest('.bg-slate-900').style.display = 'none';
-        });
         const strip = document.querySelector('.grid.grid-cols-2.md\\:grid-cols-4');
         if (strip) strip.style.display = 'none';
       }
@@ -304,9 +326,7 @@
 
     window.addEventListener('DOMContentLoaded', () => {
       initPortal();
-      initPortalKPIs();
     });
   </script>
-
 </body>
 </html>
