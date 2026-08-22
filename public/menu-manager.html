@@ -382,7 +382,7 @@
               ${item.name_en ? `<p class="text-slate-500 text-xs mb-1">${item.name_en}</p>` : ''}
               ${item.description ? `<p class="text-slate-400 text-xs mb-2 line-clamp-1">${item.description}</p>` : ''}
               <div class="flex items-center justify-between mb-3">
-                <span class="text-amber-400 font-black text-lg">${(item.base_price || 0).toFixed(0)} <span class="text-xs text-slate-400 font-normal">ج</span></span>
+                <span class="text-amber-400 font-black text-lg">${(item.price || (item.price_minor ? item.price_minor / 100 : 0)).toFixed(0)} <span class="text-xs text-slate-400 font-normal">ج</span></span>
                 <span class="text-xs ${item.is_available ? 'text-emerald-400' : 'text-red-400'} font-bold">${item.is_available ? '✅ متاح' : '🚫 غير متاح'}</span>
               </div>
               <div class="flex gap-1 flex-wrap mb-3">
@@ -426,7 +426,7 @@
       document.getElementById('itemModalTitle').textContent = '✏️ تعديل الصنف';
       document.getElementById('itemName').value = item.name || '';
       document.getElementById('itemNameEn').value = item.name_en || '';
-      document.getElementById('itemPrice').value = item.base_price || 0;
+      document.getElementById('itemPrice').value = item.price || (item.price_minor ? item.price_minor / 100 : 0);
       document.getElementById('itemDescription').value = item.description || '';
       document.getElementById('itemCategory').value = item.category_id || '';
       document.getElementById('itemDepartment').value = item.department || 'BARISTA';
@@ -497,7 +497,7 @@
         name,
         name_en: document.getElementById('itemNameEn').value.trim(),
         description: document.getElementById('itemDescription').value.trim(),
-        base_price: parseFloat(document.getElementById('itemPrice').value) || 0,
+        price: parseFloat(document.getElementById('itemPrice').value) || 0,
         category_id: parseInt(document.getElementById('itemCategory').value) || null,
         department: document.getElementById('itemDepartment').value,
         is_available: document.getElementById('itemAvailable').checked ? 1 : 0,
