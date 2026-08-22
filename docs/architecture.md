@@ -51,7 +51,7 @@ Mazaj Cafe Operations Platform is a high-availability, local-first, server-autho
 ### 2.1 Storage Layer (`src/db/`)
 - **Engine**: SQLite 3 in Write-Ahead Logging (`PRAGMA journal_mode = WAL;`) and synchronous normal mode (`PRAGMA synchronous = NORMAL;`).
 - **Transaction Coordinator (`src/db/transaction.js`)**: Implements an in-memory promise mutex queue (`txQueue = txQueue.then(...)`) ensuring strictly serialized, non-interleaved, deadlock-free transactional execution.
-- **Migration Engine (`src/db/migrator.js`)**: Versioned SQL migrations (`001_core_schema.sql` through `004_outbox_and_idempotency.sql`) with MD5 checksum validation, historical tracking in `schema_migrations`, and schema column harmonizers for zero-downtime upgrades.
+- **Migration Engine (`src/db/migrator.js`)**: Versioned SQL migrations (`001_core_schema.sql` through `005_canonical_prices.sql`) with MD5 checksum validation, historical tracking in `schema_migrations`, and schema column harmonizers for zero-downtime upgrades.
 
 ### 2.2 Domain Business Services (`src/domain/`)
 - **Auth (`src/domain/auth/`)**: Salted bcrypt PIN verification (work factor 10), cryptographically random 64-character session tokens hashed with SHA-256 and salt, role-based permission matrix.

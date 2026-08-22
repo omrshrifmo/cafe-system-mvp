@@ -110,6 +110,7 @@ async function getUserShiftReport(userId, shiftType = 'MORNING') {
   const expectedCash = openingFloat + cashSales - cashAdvances - cashExpenses;
 
   return {
+    success: true,
     user_id: user.id,
     user_name: user.name,
     user_role: user.role,

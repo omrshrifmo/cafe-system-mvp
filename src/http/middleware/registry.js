@@ -16,10 +16,10 @@ const routeRegistry = [
   { method: 'GET', pathRegex: /^\/api\/auth\/me$/, permission: 'authenticated' },
   
   // Menu & Catalog (Public Read, Write requires menu:write)
-  { method: 'GET', pathRegex: /^\/api\/menu\//, permission: 'public' },
-  { method: 'POST', pathRegex: /^\/api\/menu\//, permission: 'menu:write' },
-  { method: 'PUT', pathRegex: /^\/api\/menu\//, permission: 'menu:write' },
-  { method: 'DELETE', pathRegex: /^\/api\/menu\//, permission: 'menu:write' },
+  { method: 'GET', pathRegex: /^\/api\/menu(\/.*)?$/, permission: 'public' },
+  { method: 'POST', pathRegex: /^\/api\/menu(\/.*)?$/, permission: 'menu:write' },
+  { method: 'PUT', pathRegex: /^\/api\/menu(\/.*)?$/, permission: 'menu:write' },
+  { method: 'DELETE', pathRegex: /^\/api\/menu(\/.*)?$/, permission: 'menu:write' },
 
   // Orders & POS (Granular permissions checked in route handlers)
   { method: 'ALL', pathRegex: /^\/api\/orders/, permission: 'authenticated' },
@@ -59,12 +59,17 @@ const routeRegistry = [
   { method: 'ALL', pathRegex: /^\/api\/crm/, permission: 'orders:write' },
   
   // Printers
-  { method: 'ALL', pathRegex: /^\/api\/print/, permission: 'orders:write' }
+  { method: 'ALL', pathRegex: /^\/api\/print/, permission: 'orders:write' },
+  
+  // Admin & System Configuration
+  { method: 'ALL', pathRegex: /^\/api\/admin/, permission: 'system:settings' }
 ];
 
 function enforceRegistry(req, res, next) {
   // Only apply to /api/ routes
   if (!req.path.startsWith('/api/')) return next();
+  
+  console.log('enforceRegistry req.path:', req.path, 'req.originalUrl:', req.originalUrl);
   
   const match = routeRegistry.find(r => 
     (r.method === 'ALL' || r.method === req.method) && r.pathRegex.test(req.path)

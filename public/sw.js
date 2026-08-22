@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cafe-os-v2';
+const CACHE_NAME = 'cafe-os-v3';
 const STATIC_ASSETS = [
   '/',
   '/pos.html',

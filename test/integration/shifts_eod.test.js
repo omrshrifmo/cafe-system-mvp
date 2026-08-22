@@ -27,6 +27,11 @@ describe('Shifts & Blind Cash Declaration Integration Tests', () => {
     const meRes = await request(app)
       .get('/api/shifts/me')
       .set('Cookie', [`session_token=${cashierToken}`]);
+    
+    if (meRes.status !== 200 || !(meRes.body.expected_cash >= 0)) {
+      console.error('meRes.body in shifts_eod.test.js:', meRes.body);
+    }
+    
     assert.strictEqual(meRes.status, 200);
     assert.ok(meRes.body.expected_cash >= 0);
 

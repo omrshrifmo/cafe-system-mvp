@@ -7,23 +7,23 @@
 
 (function () {
   // Navigation Route Configuration Grouped by Domain
-  const ALL_PRIVILEGED = ['SUPER_ADMIN', 'OWNER', 'OP_MANAGER', 'ADMIN', 'MANAGER'];
+  const ALL_PRIVILEGED = ['SUPER_ADMIN', 'OWNER', 'OP_MANAGER'];
   const navGroups = [
     {
       groupTitle: 'الصالة ونقطة البيع',
       items: [
-        { title: 'نقطة البيع (POS)', path: '/pos.html', icon: '💳', roles: [...ALL_PRIVILEGED, 'OP_ASSISTANT_CASHIER', 'HALL_MANAGER', 'WAITER', 'JOKER', 'CASHIER'] },
-        { title: 'إدارة وتوزيع الطاولات', path: '/tables.html', icon: '🪑', roles: [...ALL_PRIVILEGED, 'OP_ASSISTANT_CASHIER', 'HALL_MANAGER', 'WAITER', 'JOKER', 'CASHIER'] },
-        { title: 'إدارة الحجوزات', path: '/reservations.html', icon: '📅', roles: [...ALL_PRIVILEGED, 'HALL_MANAGER', 'WAITER', 'JOKER'] },
-        { title: 'شاشة الويتر والرانر', path: '/runner.html', icon: '🏃', roles: [...ALL_PRIVILEGED, 'HALL_MANAGER', 'WAITER', 'JOKER', 'BARISTA', 'SHIASH', 'CHEF'] }
+        { title: 'نقطة البيع (POS)', path: '/pos.html', icon: '💳', roles: [...ALL_PRIVILEGED, 'HALL_MANAGER', 'WAITER', 'CASHIER'] },
+        { title: 'إدارة وتوزيع الطاولات', path: '/tables.html', icon: '🪑', roles: [...ALL_PRIVILEGED, 'HALL_MANAGER', 'WAITER', 'CASHIER'] },
+        { title: 'إدارة الحجوزات', path: '/reservations.html', icon: '📅', roles: [...ALL_PRIVILEGED, 'HALL_MANAGER'] },
+        { title: 'شاشة الويتر والرانر', path: '/runner.html', icon: '🏃', roles: [...ALL_PRIVILEGED, 'HALL_MANAGER', 'WAITER', 'RUNNER'] }
       ]
     },
     {
       groupTitle: 'شاشات التحضير KDS',
       items: [
-        { title: 'شاشة البارستا', path: '/kds.html', icon: '☕', roles: [...ALL_PRIVILEGED, 'BARISTA', 'JOKER'] },
-        { title: 'شاشة المطبخ', path: '/kitchen.html', icon: '🍳', roles: [...ALL_PRIVILEGED, 'CHEF', 'JOKER'] },
-        { title: 'شاشة الشيشة', path: '/shisha.html', icon: '💨', roles: [...ALL_PRIVILEGED, 'SHIASH', 'JOKER'] }
+        { title: 'شاشة البارستا', path: '/kds.html', icon: '☕', roles: [...ALL_PRIVILEGED, 'BARISTA'] },
+        { title: 'شاشة المطبخ', path: '/kitchen.html', icon: '🍳', roles: [...ALL_PRIVILEGED, 'CHEF'] },
+        { title: 'شاشة الشيشة', path: '/shisha.html', icon: '💨', roles: [...ALL_PRIVILEGED, 'SHISHA'] }
       ]
     },
     {
@@ -38,19 +38,19 @@
     {
       groupTitle: 'العملاء والموارد البشرية',
       items: [
-        { title: 'العملاء والولاء (CRM)', path: '/crm.html', icon: '👥', roles: [...ALL_PRIVILEGED, 'OP_ASSISTANT_CASHIER', 'CASHIER'] },
-        { title: 'الموارد البشرية والرواتب', path: '/hr.html', icon: '💼', roles: ALL_PRIVILEGED },
-        { title: 'معايير الجودة والـ QA', path: '/qa.html', icon: '🛡️', roles: [...ALL_PRIVILEGED, 'BOM_MANAGER'] }
+        { title: 'العملاء والولاء (CRM)', path: '/crm.html', icon: '👥', roles: [...ALL_PRIVILEGED, 'HALL_MANAGER', 'CASHIER'] },
+        { title: 'الموارد البشرية والرواتب', path: '/hr.html', icon: '💼', roles: [...ALL_PRIVILEGED, 'HR_PAYROLL'] },
+        { title: 'معايير الجودة والـ QA', path: '/qa.html', icon: '🛡️', roles: [...ALL_PRIVILEGED, 'BOM_MANAGER', 'QA'] }
       ]
     },
     {
       groupTitle: 'التقارير والإدارة المالية',
       items: [
-        { title: 'إعدادات النظام والضرائب', path: '/settings.html', icon: '⚙️', roles: ['SUPER_ADMIN', 'OWNER', 'ADMIN'] },
-        { title: 'تقفيل الوردية (EOD)', path: '/eod.html', icon: '📊', roles: [...ALL_PRIVILEGED, 'OP_ASSISTANT_CASHIER', 'CASHIER'] },
-        { title: 'مؤشرات الأداء (BI)', path: '/bi.html', icon: '📈', roles: ALL_PRIVILEGED },
-        { title: 'حسابات الشركاء', path: '/shareholders.html', icon: '💎', roles: ['SUPER_ADMIN', 'OWNER', 'ADMIN'] },
-        { title: 'البوابة الرئيسية', path: '/portal.html', icon: '🏠', roles: [...ALL_PRIVILEGED, 'BOM_MANAGER', 'OP_ASSISTANT_CASHIER', 'HALL_MANAGER', 'WAITER', 'JOKER', 'BARISTA', 'SHIASH', 'CHEF', 'CASHIER'] }
+        { title: 'إعدادات النظام والضرائب', path: '/settings.html', icon: '⚙️', roles: ['SUPER_ADMIN', 'OWNER'] },
+        { title: 'تقفيل الوردية (EOD)', path: '/eod.html', icon: '📊', roles: [...ALL_PRIVILEGED, 'CASHIER'] },
+        { title: 'مؤشرات الأداء (BI)', path: '/bi.html', icon: '📈', roles: [...ALL_PRIVILEGED, 'READ_ONLY'] },
+        { title: 'حسابات الشركاء', path: '/shareholders.html', icon: '💎', roles: ['SUPER_ADMIN', 'OWNER'] },
+        { title: 'البوابة الرئيسية', path: '/portal.html', icon: '🏠', roles: [...ALL_PRIVILEGED, 'BOM_MANAGER', 'HALL_MANAGER', 'WAITER', 'RUNNER', 'BARISTA', 'SHISHA', 'CHEF', 'CASHIER', 'HR_PAYROLL', 'QA', 'READ_ONLY'] }
       ]
     }
   ];
@@ -245,8 +245,20 @@
 
     // 1. Verify authenticated server session
     let authenticatedUser = null;
+    let appMode = 'LIVE';
     try {
       const res = await fetch('/api/auth/me');
+      
+      appMode = res.headers.get('X-App-Mode') || 'LIVE';
+      
+      if (res.status === 403) {
+        const data = await res.json();
+        if (data.code === 'NEEDS_ONBOARDING') {
+          window.location.replace('/setup.html');
+          return;
+        }
+      }
+
       if (res.ok) {
         const data = await res.json();
         if (data.success && data.user) {
@@ -314,7 +326,9 @@
     }
 
     // Top Unified Header Bar HTML (Height: 46px)
+    const demoBannerHtml = appMode === 'DEMO' ? `<div class="w-full bg-rose-600 text-white text-[10px] font-black text-center py-0.5 tracking-widest z-[100] relative">وضع التجربة (DEMO MODE) - جميع الإجراءات هنا معزولة عن بيانات النظام الفعلي</div>` : '';
     const topBarHTML = `
+      ${demoBannerHtml}
       <header class="h-[46px] bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-4 flex items-center justify-between text-xs text-slate-300 shrink-0 z-50 select-none shadow-md">
         <div class="flex items-center gap-3">
           <button onclick="window.MazajNav.toggleSidebar()" id="sidebar-toggle-btn" title="طي/توسيع القائمة الجانبية (Ctrl+B)" class="hidden md:flex w-7 h-7 bg-slate-800 hover:bg-slate-700 text-amber-400 rounded-lg text-xs font-black items-center justify-center border border-slate-700 cursor-pointer transition-colors shadow-sm">

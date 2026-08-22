@@ -1,1 +1,222 @@
-{"integrity_check": "ok"}
+{
+  "database": "cafe.db",
+  "timestamp": "2026-08-22T18:32:22.670Z",
+  "integrity_check": "ok",
+  "tables_count": 43,
+  "table_stats": {
+    "audit_logs": {
+      "rowCount": 459
+    },
+    "complaints": {
+      "rowCount": 15
+    },
+    "customer_feedback": {
+      "rowCount": 1
+    },
+    "customers": {
+      "rowCount": 4
+    },
+    "daily_expenses": {
+      "rowCount": 1
+    },
+    "drawer_declarations": {
+      "rowCount": 28
+    },
+    "employee_advances": {
+      "rowCount": 18
+    },
+    "idempotency_keys": {
+      "rowCount": 13
+    },
+    "inventory": {
+      "rowCount": 6
+    },
+    "inventory_items": {
+      "rowCount": 6
+    },
+    "inventory_ledger": {
+      "rowCount": 551
+    },
+    "item_addons": {
+      "rowCount": 0
+    },
+    "item_variants": {
+      "rowCount": 0
+    },
+    "material_transfers": {
+      "rowCount": 5
+    },
+    "menu_categories": {
+      "rowCount": 7
+    },
+    "menu_items": {
+      "rowCount": 13
+    },
+    "menu_prices": {
+      "rowCount": 13
+    },
+    "order_items": {
+      "rowCount": 215
+    },
+    "order_payments": {
+      "rowCount": 47
+    },
+    "order_sessions": {
+      "rowCount": 31
+    },
+    "orders": {
+      "rowCount": 86
+    },
+    "outbox_events": {
+      "rowCount": 293
+    },
+    "payment_reversals": {
+      "rowCount": 0
+    },
+    "payments": {
+      "rowCount": 33
+    },
+    "penalties": {
+      "rowCount": 18
+    },
+    "print_jobs": {
+      "rowCount": 252
+    },
+    "purchase_items": {
+      "rowCount": 0
+    },
+    "purchases": {
+      "rowCount": 12
+    },
+    "recipe_ingredients": {
+      "rowCount": 8
+    },
+    "recipe_versions": {
+      "rowCount": 4
+    },
+    "recipes": {
+      "rowCount": 8
+    },
+    "reservations": {
+      "rowCount": 1
+    },
+    "schema_migrations": {
+      "rowCount": 5
+    },
+    "shareholder_ledger": {
+      "rowCount": 2
+    },
+    "shifts": {
+      "rowCount": 7
+    },
+    "staff_allowances": {
+      "rowCount": 10
+    },
+    "suppliers": {
+      "rowCount": 2
+    },
+    "system_config": {
+      "rowCount": 10
+    },
+    "table_sessions": {
+      "rowCount": 7
+    },
+    "tables": {
+      "rowCount": 14
+    },
+    "user_sessions": {
+      "rowCount": 174
+    },
+    "users": {
+      "rowCount": 21
+    },
+    "waste_log": {
+      "rowCount": 45
+    }
+  },
+  "migrations_applied": [
+    {
+      "version": "001_core_schema.sql",
+      "checksum": "a8c24165f9f04ba7ff96ee4fd2e19545",
+      "execution_time_ms": 13,
+      "applied_at": "2026-08-21 18:25:05",
+      "status": "SUCCESS"
+    },
+    {
+      "version": "002_canonical_catalog.sql",
+      "checksum": "77bd4338ee852d76890e9b3767dcea65",
+      "execution_time_ms": 4,
+      "applied_at": "2026-08-21 18:25:05",
+      "status": "SUCCESS"
+    },
+    {
+      "version": "003_orders_and_accounting.sql",
+      "checksum": "17e08042c36ef27259bf9bfdece9104e",
+      "execution_time_ms": 15,
+      "applied_at": "2026-08-21 18:25:32",
+      "status": "SUCCESS"
+    },
+    {
+      "version": "004_outbox_and_idempotency.sql",
+      "checksum": "cdd4c5455e68c8debdc48ef697253aed",
+      "execution_time_ms": 5,
+      "applied_at": "2026-08-21 18:25:32",
+      "status": "SUCCESS"
+    },
+    {
+      "version": "005_canonical_prices.sql",
+      "checksum": "6fe8cb4904019b5f623cfd81515e402b",
+      "execution_time_ms": 8,
+      "applied_at": "2026-08-22 03:48:00",
+      "status": "SUCCESS"
+    }
+  ],
+  "monetary_totals": {
+    "order_sessions": {
+      "session_count": 31,
+      "total_subtotal_minor": 981500,
+      "total_service_minor": 17820,
+      "total_tax_minor": 23287,
+      "total_discount_minor": 0,
+      "total_tip_minor": 0,
+      "total_revenue_minor": 1022607
+    },
+    "payments": {
+      "payment_count": 33,
+      "total_paid_minor": 189607,
+      "cash_minor": 156607,
+      "visa_minor": 33000,
+      "instapay_minor": 0,
+      "wallet_minor": 0
+    },
+    "legacy_order_payments": {
+      "legacy_payment_count": 47,
+      "legacy_paid_total": 4896.08
+    },
+    "legacy_orders": {
+      "order_count": 86,
+      "legacy_order_total": 2005
+    }
+  },
+  "inventory_totals": {
+    "canonical_items": {
+      "item_count": 6,
+      "total_stock_microunits": 24870050000,
+      "total_valuation_minor": 0
+    },
+    "legacy_inventory": {
+      "legacy_item_count": 6,
+      "legacy_total_stock": 24870.050000000007
+    }
+  },
+  "payroll_totals": {
+    "users": {
+      "user_count": 21,
+      "total_hourly_rate": 960
+    },
+    "shifts": {
+      "shift_count": 0,
+      "total_shift_hours": 0
+    }
+  }
+}

@@ -3,7 +3,16 @@
  */
 const express = require('express');
 const router = express.Router();
-const { getAllTables, seatTable, requestTableCheck, vacateTable, moveTable } = require('../../domain/tables/service');
+const {
+  getAllTables,
+  getTableSessionDetails,
+  upsertTable,
+  updateTableLifecycle,
+  seatTable,
+  requestTableCheck,
+  vacateTable,
+  moveTable
+} = require('../../domain/tables/service');
 const { requireAuth } = require('../middleware/auth');
 const { requirePermission } = require('../middleware/permissions');
 const { getQuery } = require('../../db/connection');
@@ -37,6 +46,40 @@ router.get('/tables', requireAuth, async (req, res, next) => {
       success: true,
       tables
     });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Get table session details and active orders
+router.get('/tables/:number/session', requireAuth, async (req, res, next) => {
+  try {
+    const details = await getTableSessionDetails(req.params.number);
+    res.json({
+      success: true,
+      ...details
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Upsert / Create custom table
+router.post('/tables', requireAuth, requirePermission('tables:write'), async (req, res, next) => {
+  try {
+    const result = await upsertTable(req.body);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Update table lifecycle status
+router.put('/tables/:number/lifecycle', requireAuth, async (req, res, next) => {
+  try {
+    const { status, waiter_id } = req.body;
+    const result = await updateTableLifecycle(req.params.number, status, req.user ? req.user.id : null, waiter_id);
+    res.json(result);
   } catch (err) {
     next(err);
   }

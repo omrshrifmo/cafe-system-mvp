@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>كافيه مزاج - نظام الكاشير السريع</title>
+  <title>كافيه مزاج - نظام الكاشير ونقطة البيع وإدارة الطاولات</title>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="/nav.js"></script>
@@ -29,97 +29,149 @@
     }
     /* Custom scrollbar for fast scrolling */
     ::-webkit-scrollbar {
-      width: 4px;
-      height: 4px;
+      width: 5px;
+      height: 5px;
     }
     ::-webkit-scrollbar-track {
       background: rgba(15, 23, 42, 0.8);
     }
     ::-webkit-scrollbar-thumb {
-      background: rgba(245, 158, 11, 0.5);
+      background: rgba(245, 158, 11, 0.4);
       border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(245, 158, 11, 0.7);
     }
   </style>
 </head>
 <body class="bg-slate-950 text-slate-100 h-screen max-h-screen flex flex-col overflow-hidden selection:bg-amber-500 selection:text-black">
 
-  <!-- Page Action Header -->
-  <div class="shrink-0 bg-slate-900/90 border-b border-slate-800 px-4 py-2.5 flex items-center justify-between shadow-md z-20">
+  <!-- Top Action Header -->
+  <header class="shrink-0 bg-slate-900/95 border-b border-slate-800 px-4 py-2.5 flex items-center justify-between shadow-md z-20">
     <div class="flex items-center gap-2.5">
       <div class="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 text-lg shadow-inner">
         💻
       </div>
       <div>
-        <h1 class="text-base font-black text-white leading-none">شاشة الكاشير السريع (POS)</h1>
-        <p class="text-[10px] text-slate-400 font-semibold leading-tight">تسجيل الطلبات، الطاولات، الحسابات، والخصومات</p>
+        <div class="flex items-center gap-2">
+          <h1 class="text-base font-black text-white leading-none">نقطة البيع والكاشير (POS)</h1>
+          <span class="px-2 py-0.5 text-[10px] font-mono font-bold rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30">كافيه مزاج</span>
+        </div>
+        <p class="text-[10px] text-slate-400 font-semibold leading-tight mt-0.5">إدارة طلبات الطاولات، الحسابات الفورية، والتحصيل</p>
       </div>
     </div>
 
-    <!-- Quick Actions -->
-    <div class="flex items-center gap-2.5">
-      <div id="net-status-indicator" class="flex items-center gap-1.5 px-2.5 py-1 bg-slate-950 rounded-xl border border-slate-800 text-[11px] font-bold" title="حالة الاتصال بالسيرفر والشبكة">
+    <!-- Quick Navigation & Connection Status -->
+    <div class="flex items-center gap-2">
+      <div id="net-status-indicator" class="flex items-center gap-1.5 px-2.5 py-1 bg-slate-950 rounded-xl border border-slate-800 text-[11px] font-bold" title="حالة الاتصال">
         <span id="net-status-dot" class="w-2 h-2 rounded-full bg-emerald-500"></span>
         <span id="net-status-text" class="text-emerald-400">متصل</span>
       </div>
-      <a href="/tables.html" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl border border-slate-700 flex items-center gap-1 transition-colors">
-        <span>🪑</span>
+
+      <div class="hidden sm:flex items-center gap-1 px-2.5 py-1 bg-slate-950 rounded-xl border border-slate-800 text-xs font-mono font-bold text-amber-400">
+        <span>⏰</span>
+        <span id="live-clock">--:--:--</span>
+      </div>
+
+      <button onclick="openTableMapModal()" class="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black rounded-xl flex items-center gap-1.5 transition-colors shadow-lg cursor-pointer">
+        <span>🗺️</span>
         <span>خريطة الصالة</span>
+      </button>
+
+      <a href="/kds.html" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl border border-slate-700 flex items-center gap-1 transition-colors">
+        <span>🍳</span>
+        <span class="hidden md:inline">شاشة المطبخ (KDS)</span>
       </a>
-      <a href="/menu-manager.html" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-400 text-xs font-bold rounded-xl border border-amber-500/30 flex items-center gap-1 transition-colors">
-        <span>🍽️</span>
-        <span>المنيو والأسعار</span>
+
+      <a href="/eod.html" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl border border-slate-700 flex items-center gap-1 transition-colors">
+        <span>💰</span>
+        <span class="hidden md:inline">تقفيل الوردية</span>
       </a>
     </div>
-  </div>
+  </header>
 
-  <!-- Toast Notification Area -->
-  <div id="pos-toast-container" class="fixed top-14 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-1 pointer-events-none"></div>
+  <!-- Toast Notification Container -->
+  <div id="pos-toast-container" class="fixed top-14 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-1.5 pointer-events-none"></div>
 
-  <!-- Main Non-Overlapping Layout Split -->
-  <main class="max-w-7xl w-full mx-auto p-2 md:p-3 flex-1 min-h-0 overflow-hidden">
-    
+  <!-- Main Grid Layout -->
+  <main class="w-full flex-1 min-h-0 overflow-hidden p-2 md:p-3">
     <div class="grid grid-cols-1 md:grid-cols-12 gap-2.5 items-stretch w-full h-full min-h-0">
       
-      <!-- Right Side: Current Ticket / Cart Section (Self-contained Flex Scroll) -->
+      <!-- Right Side: Order Ticket & Active Table Bill Section (4 cols on lg, 5 on md) -->
       <section class="md:col-span-5 lg:col-span-4 md:order-2 bg-slate-900 border border-amber-500/40 rounded-2xl p-3 flex flex-col justify-between shadow-xl h-full min-h-0 overflow-hidden">
-        <div class="flex flex-col h-full min-h-0">
-          <!-- Ticket Header -->
-          <div class="shrink-0 flex items-center justify-between border-b border-slate-800 pb-2 mb-2">
-            <div class="flex items-center gap-1.5">
-              <span class="text-xl">🧾</span>
-              <div>
-                <h2 class="text-base font-black text-white leading-none">الفاتورة الحالية</h2>
-                <p class="text-[10px] text-amber-400 font-semibold">Current Ticket</p>
-              </div>
+        
+        <!-- Header: Selected Table & Active Status -->
+        <div class="shrink-0 flex items-center justify-between border-b border-slate-800 pb-2 mb-2">
+          <div class="flex items-center gap-1.5">
+            <span class="text-xl" id="ticket-table-icon">🪑</span>
+            <div>
+              <h2 id="ticket-table-title" class="text-sm font-black text-white leading-none">طلب مباشر (بدون طاولة)</h2>
+              <p id="ticket-table-subtitle" class="text-[10px] text-amber-400 font-semibold mt-0.5">سفري / كاشير فوري</p>
             </div>
+          </div>
+          <div class="flex items-center gap-1">
+            <button 
+              onclick="printTableCheckBill()" 
+              id="ticket-print-btn"
+              title="طباعة إيصال الشيك / الحساب"
+              class="px-2 py-1 bg-slate-800 hover:bg-sky-950/80 text-slate-300 hover:text-sky-300 border border-slate-700 rounded-lg text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors">
+              <span>📜</span>
+              <span>شيك</span>
+            </button>
             <button 
               onclick="clearCart()"
-              class="px-2.5 py-1 bg-slate-800 hover:bg-rose-950/60 text-slate-400 hover:text-rose-400 border border-slate-700 rounded-lg text-xs font-bold flex items-center gap-1 cursor-pointer">
+              title="مسح الأصناف الجديدة من السلة"
+              class="px-2 py-1 bg-slate-800 hover:bg-rose-950/60 text-slate-400 hover:text-rose-400 border border-slate-700 rounded-lg text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors">
               <span>🗑️</span>
-              <span>مسح السلة</span>
+              <span>مسح</span>
             </button>
-          </div>
-
-          <!-- Cart Items Container (Internal Scrollable) -->
-          <div id="cart-items-container" class="flex-1 min-h-0 overflow-y-auto space-y-1.5 pr-1">
-            <div id="empty-cart-msg" class="py-12 text-center text-slate-500 flex flex-col items-center justify-center">
-              <span class="text-3xl mb-1 opacity-50">🛒</span>
-              <p class="text-xs font-bold">السلة فارغة حالياً</p>
-              <p class="text-[10px] opacity-75 mt-0.5">اضغط الأصناف لإضافتها فوراً</p>
-            </div>
           </div>
         </div>
 
-        <!-- Ticket Summary & Action Button -->
-        <div class="shrink-0 mt-2 pt-2 border-t border-slate-800 space-y-1">
-          <div class="flex items-center justify-between px-1 text-xs">
-            <span class="font-bold text-slate-400">عدد الأصناف:</span>
-            <span id="cart-total-qty" class="font-black text-amber-400 font-mono text-sm">0</span>
+        <!-- Scrollable Ticket Body: Active Table Orders + New Pending Items -->
+        <div class="flex-1 min-h-0 overflow-y-auto space-y-2 pr-1" id="ticket-scroll-container">
+          
+          <!-- Section 1: Active Table Orders (Already in Kitchen/Bar) -->
+          <div id="active-table-orders-section" class="hidden space-y-1.5">
+            <div class="flex items-center justify-between px-1 text-[11px] font-black text-amber-400 bg-amber-500/10 py-1 px-2 rounded-lg border border-amber-500/20">
+              <span class="flex items-center gap-1">
+                <span>📋</span>
+                <span>الطلبات المسجلة بالطاولة</span>
+                <span id="active-orders-count-badge" class="px-1.5 py-0.2 text-[9px] bg-amber-500 text-slate-950 rounded-full font-mono font-bold">0</span>
+              </span>
+              <span id="active-orders-subtotal" class="font-mono text-white font-bold">0 ج.م</span>
+            </div>
+            <div id="active-table-items-container" class="space-y-1">
+              <!-- Injected dynamically -->
+            </div>
           </div>
 
-          <div id="cart-subtotal-row" class="flex items-center justify-between px-1 text-xs text-slate-400">
-            <span>المجموع الفرعي:</span>
-            <span id="cart-subtotal-price" class="font-bold font-mono">0 ج.م</span>
+          <!-- Section 2: New Pending Items in Cart -->
+          <div id="new-cart-items-section" class="space-y-1.5">
+            <div id="new-cart-header" class="hidden flex items-center justify-between px-1 text-[11px] font-black text-emerald-400 bg-emerald-500/10 py-1 px-2 rounded-lg border border-emerald-500/20">
+              <span class="flex items-center gap-1">
+                <span>✨</span>
+                <span>أصناف جديدة قيد الإضافة</span>
+                <span id="new-cart-count-badge" class="px-1.5 py-0.2 text-[9px] bg-emerald-500 text-slate-950 rounded-full font-mono font-bold">0</span>
+              </span>
+              <span id="new-cart-subtotal" class="font-mono text-white font-bold">0 ج.م</span>
+            </div>
+            <div id="cart-items-container" class="space-y-1.5">
+              <div id="empty-cart-msg" class="py-10 text-center text-slate-500 flex flex-col items-center justify-center">
+                <span class="text-3xl mb-1 opacity-50">🛒</span>
+                <p class="text-xs font-bold text-slate-400">السلة فارغة حالياً</p>
+                <p class="text-[10px] text-slate-500 mt-0.5">اضغط على أي صنف من القائمة لإضافته فوراً</p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Ticket Summary & Financial Breakdown -->
+        <div class="shrink-0 mt-2 pt-2 border-t border-slate-800 space-y-1">
+          <div class="flex items-center justify-between px-1 text-xs text-slate-400">
+            <span>المجموع الفرعي (Subtotal):</span>
+            <span id="cart-subtotal-price" class="font-bold font-mono text-white">0 ج.م</span>
           </div>
 
           <div id="cart-tax-breakdown-row" class="text-[11px] text-slate-400 space-y-0.5 border-t border-slate-800/60 pt-1">
@@ -133,124 +185,308 @@
             </div>
           </div>
 
-          <!-- Total Price Calculation -->
-          <div class="flex items-center justify-between px-2 py-1.5 bg-slate-950 rounded-xl border border-slate-800 mt-1">
-            <span class="text-xs font-black text-white">إجمالي الفاتورة:</span>
+          <!-- Total Bill Calculation -->
+          <div class="flex items-center justify-between px-2.5 py-2 bg-slate-950 rounded-xl border border-slate-800 mt-1">
+            <div>
+              <span class="text-xs font-black text-white block leading-none">إجمالي الحساب:</span>
+              <span id="ticket-total-items-desc" class="text-[9px] text-slate-400 font-semibold">0 صنف</span>
+            </div>
             <div class="flex items-baseline gap-1">
-              <span id="cart-total-price" class="text-xl font-black text-amber-400 font-mono">0</span>
-              <span id="cart-currency-label" class="text-xs font-bold text-slate-400">ج.م</span>
+              <span id="cart-total-price" class="text-2xl font-black text-amber-400 font-mono">0</span>
+              <span class="currency-symbol text-xs font-bold text-slate-400">ج.م</span>
             </div>
           </div>
 
-          <!-- Action Buttons: إرسال الطلبات & دفع الحساب -->
+          <!-- Action Buttons: Send Orders & Checkout -->
           <div class="grid grid-cols-2 gap-2 pt-1">
             <button 
               id="send-orders-btn"
               onclick="sendCartOrders()"
               disabled
-              class="py-2.5 px-3 bg-amber-500 hover:bg-amber-400 disabled:opacity-30 disabled:pointer-events-none text-slate-950 font-black rounded-xl text-sm shadow-md flex items-center justify-center gap-1 cursor-pointer">
+              class="py-2.5 px-3 bg-amber-500 hover:bg-amber-400 disabled:opacity-30 disabled:pointer-events-none text-slate-950 font-black rounded-xl text-xs shadow-md flex items-center justify-center gap-1 cursor-pointer transition-all">
               <span>🚀</span>
-              <span id="send-btn-text">إرسال (0)</span>
+              <span id="send-btn-text">إرسال للمطبخ (0)</span>
             </button>
 
             <button 
               id="checkout-btn"
               onclick="openCheckoutModal()"
-              class="py-2.5 px-3 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-xl text-sm shadow-md flex items-center justify-center gap-1 cursor-pointer">
+              class="py-2.5 px-3 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-xl text-xs shadow-md flex items-center justify-center gap-1 cursor-pointer transition-all">
               <span>💳</span>
-              <span>دفع الحساب</span>
+              <span>سداد الفاتورة</span>
             </button>
           </div>
         </div>
       </section>
 
-      <!-- Left Side: Menu Grid & Table Selector (Vertical Scroll Container) -->
+      <!-- Left Side: Table Selector & Menu Grid (8 cols on lg, 7 on md) -->
       <section class="md:col-span-7 lg:col-span-8 md:order-1 flex flex-col gap-2.5 h-full min-h-0 overflow-y-auto pr-1">
         
-        <!-- Table Grid Bar (Tables 1-20 & Seated Timer) -->
-        <div class="shrink-0 bg-slate-900 border border-slate-800 rounded-2xl p-3 shadow-sm">
-          <div class="flex items-center justify-between mb-2">
+        <!-- Table Selection & Management Bar -->
+        <div class="shrink-0 bg-slate-900 border border-slate-800 rounded-2xl p-2.5 shadow-sm">
+          <div class="flex items-center justify-between mb-2 flex-wrap gap-1.5">
             <div class="flex items-center gap-2">
-              <span class="text-xl">🪑</span>
+              <span class="text-lg">🪑</span>
               <div>
-                <h2 class="text-sm font-black text-white leading-tight">إدارة الطاولات والتوقيت الحي</h2>
+                <div class="flex items-center gap-1.5">
+                  <h2 class="text-xs font-black text-white leading-tight">شريط اختيار الطاولات</h2>
+                  <span id="tables-stat-summary" class="text-[10px] text-slate-400 font-bold bg-slate-950 px-2 py-0.5 rounded-lg border border-slate-800">0 طاولة</span>
+                </div>
                 <p class="text-[10px] text-amber-400 font-semibold" id="selected-table-info">الطاولة المحددة: طلب مباشر (بدون طاولة)</p>
               </div>
             </div>
-            <div class="flex items-center gap-1.5 flex-wrap">
-              <button onclick="openTableSeatingModal()" class="px-2.5 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/50 rounded-lg text-xs font-bold cursor-pointer flex items-center gap-1">
+
+            <!-- Quick Table Action Buttons -->
+            <div class="flex items-center gap-1 flex-wrap">
+              <button onclick="openTableMapModal()" class="px-2.5 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 rounded-lg text-xs font-bold cursor-pointer flex items-center gap-1">
+                <span>🗺️</span>
+                <span>خريطة الصالة</span>
+              </button>
+
+              <button onclick="openTableSeatingModal()" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg text-xs font-bold cursor-pointer flex items-center gap-1">
                 <span>🪑</span>
-                <span>تسجيل جلوس / اسم مخصص</span>
+                <span>جلوس / اسم</span>
               </button>
-              <button onclick="requestTableCheckAction()" id="request-check-btn" class="px-2.5 py-1 bg-sky-950/80 hover:bg-sky-900 text-sky-300 border border-sky-500/40 rounded-lg text-xs font-bold cursor-pointer flex items-center gap-1">
+
+              <button onclick="requestTableCheckAction()" id="request-check-btn" class="px-2 py-1 bg-sky-950/80 hover:bg-sky-900 text-sky-300 border border-sky-500/40 rounded-lg text-xs font-bold cursor-pointer flex items-center gap-1">
                 <span>📜</span>
-                <span>طلب الحساب</span>
+                <span>طلب شيك</span>
               </button>
-              <button onclick="openMoveTableModal()" id="move-table-btn" class="hidden px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg text-xs font-bold cursor-pointer">
-                نقل 🔀
+
+              <button onclick="openMoveTableModal()" id="move-table-btn" class="hidden px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg text-xs font-bold cursor-pointer">
+                <span>🔀</span> نقل
               </button>
-              <button onclick="vacateCurrentTable()" id="close-table-btn" class="hidden px-2.5 py-1 bg-rose-950/60 hover:bg-rose-900 text-rose-300 border border-rose-500/40 rounded-lg text-xs font-bold cursor-pointer">
-                مغادرة الضيف 🚪
+
+              <button onclick="vacateCurrentTable()" id="close-table-btn" class="hidden px-2 py-1 bg-rose-950/60 hover:bg-rose-900 text-rose-300 border border-rose-500/40 rounded-lg text-xs font-bold cursor-pointer">
+                <span>🚪</span> إخلاء
               </button>
-              <button onclick="selectTable(0)" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-lg border border-slate-700 cursor-pointer">
-                طلب مباشر (بدون طاولة)
+
+              <button onclick="selectTable(0)" id="direct-order-btn" class="px-2.5 py-1 bg-amber-500 text-slate-950 text-xs font-black rounded-lg border border-amber-400 cursor-pointer shadow">
+                🛍️ طلب مباشر (سفري)
               </button>
             </div>
           </div>
 
-          <!-- Tables Grid 1-20 (Horizontal scroll container) -->
-          <div id="tables-grid" class="flex gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
+          <!-- Tables Grid (Horizontal scroll container with clear badges) -->
+          <div id="tables-grid" class="flex gap-1.5 overflow-x-auto pb-1.5 scrollbar-thin">
             <!-- Rendered via JS -->
           </div>
 
           <!-- Smart Upsell Alert Banner -->
-          <div id="smart-upsell-alert" class="hidden mt-2.5 p-2 rounded-xl bg-rose-950/90 border border-rose-500/80 text-rose-200 text-xs font-black flex items-center justify-between shadow-md">
+          <div id="smart-upsell-alert" class="hidden mt-2 p-2 rounded-xl bg-rose-950/90 border border-rose-500/80 text-rose-200 text-xs font-black flex items-center justify-between shadow-md">
             <span class="flex items-center gap-1.5">
               <span class="text-base">💡</span>
-              <span>اقتراح مبيعات: الطاولة جالس منذ أكثر من 45 دقيقة والحساب أقل من 150 ج.م — عرض تجديد شيشة أو حلى!</span>
+              <span>اقتراح مبيعات: الطاولة جالس منذ أكثر من 45 دقيقة والحساب أقل من 150 ج.م — اقترح تجديد شيشة أو حلى!</span>
             </span>
           </div>
         </div>
 
-        <!-- Category Banner Header -->
-        <div class="shrink-0 bg-slate-900 border border-slate-800 rounded-2xl p-3 flex items-center justify-between shadow-sm">
-          <div>
-            <h2 class="text-base font-black text-white">كافيه مزاج - قائمة الطلبات السريعة</h2>
-            <p class="text-slate-400 text-[11px]">اضغط على الصنف للإضافة الفورية إلى الفاتورة</p>
+        <!-- Menu Categories & Search Bar -->
+        <div class="shrink-0 bg-slate-900 border border-slate-800 rounded-2xl p-2.5 flex items-center justify-between flex-wrap gap-2 shadow-sm">
+          <div class="flex items-center gap-2 flex-1 min-w-[200px]">
+            <div class="relative flex-1">
+              <input 
+                type="text" 
+                id="menu-search-input" 
+                oninput="handleMenuSearch(this.value)" 
+                placeholder="🔍 ابحث عن أي مشروب، صنف، أو شيشة..." 
+                class="w-full px-3 py-1.5 bg-slate-950 border border-slate-700 rounded-xl text-white text-xs placeholder:text-slate-500 focus:border-amber-500 focus:outline-none" />
+              <button 
+                id="clear-search-btn" 
+                onclick="clearMenuSearch()" 
+                class="hidden absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs font-bold">✕</button>
+            </div>
           </div>
+
+          <!-- Category Filter Tabs -->
+          <div class="flex items-center gap-1 overflow-x-auto pb-0.5 scrollbar-thin" id="category-filter-tabs">
+            <button onclick="filterMenuCategory('ALL')" id="cat-tab-ALL" class="px-2.5 py-1 rounded-xl text-xs font-black bg-amber-500 text-slate-950 cursor-pointer shadow">
+              🌟 الكل
+            </button>
+            <button onclick="filterMenuCategory('BARISTA')" id="cat-tab-BARISTA" class="px-2.5 py-1 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 cursor-pointer">
+              ☕ باريستا ومشروبات
+            </button>
+            <button onclick="filterMenuCategory('KITCHEN')" id="cat-tab-KITCHEN" class="px-2.5 py-1 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 cursor-pointer">
+              🥪 مطبخ وساندوتشات
+            </button>
+            <button onclick="filterMenuCategory('SHISHA')" id="cat-tab-SHISHA" class="px-2.5 py-1 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 cursor-pointer">
+              💨 شيشة ومعسلات
+            </button>
+          </div>
+
           <button 
             onclick="openCustomItemModal()"
-            class="px-3 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl text-xs flex items-center gap-1 shadow-md cursor-pointer">
+            class="px-2.5 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/50 font-bold rounded-xl text-xs flex items-center gap-1 cursor-pointer">
             <span>✨</span>
-            <span>عنصر مخصص (Custom Item)</span>
+            <span>صنف مخصص</span>
           </button>
         </div>
 
-        <!-- Tight Menu Grid (gap-2, p-2 button padding) -->
+        <!-- Tight Menu Grid -->
         <div id="menu-grid" class="shrink-0 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 w-full">
           <!-- Dynamic Menu Items Rendered Here -->
         </div>
 
         <!-- Recent Sent Orders Log -->
-        <div class="shrink-0 bg-slate-900 border border-slate-800 rounded-2xl p-3 shadow-sm">
+        <div class="shrink-0 bg-slate-900 border border-slate-800 rounded-2xl p-2.5 shadow-sm">
           <div class="flex items-center justify-between mb-2">
             <h3 class="font-bold text-xs text-slate-200 flex items-center gap-1">
-              <span>📋</span> سجل الطلبات المرسلة
+              <span>📋</span> سجل الطلبات المرسلة حديثاً
             </h3>
             <span id="order-count" class="text-[10px] font-bold px-2 py-0.5 bg-slate-800 rounded-full text-slate-400 border border-slate-700">0 طلبات</span>
           </div>
-          <div id="recent-orders" class="space-y-1 max-h-36 overflow-y-auto pr-1">
-            <p class="text-slate-500 text-xs text-center py-2">لا توجد طلبات حديثة مرسلة حتى الآن.</p>
+          <div id="recent-orders" class="space-y-1 max-h-32 overflow-y-auto pr-1">
+            <p class="text-slate-500 text-xs text-center py-2">لا توجد طلبات مرسلة حديثاً خلال هذه الجلسة.</p>
           </div>
         </div>
 
       </section>
 
     </div>
-
   </main>
 
-  <!-- Table Seating & Custom Naming Modal -->
+  <!-- ==================== MODALS ==================== -->
+
+  <!-- 1. Full Floor Table Map Modal (خريطة الصالة التفاعلية) -->
+  <div id="table-map-modal" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-center justify-center hidden p-3 md:p-6">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-5xl h-[85vh] flex flex-col shadow-2xl overflow-hidden text-right">
+      
+      <!-- Modal Header -->
+      <div class="shrink-0 px-5 py-3.5 border-b border-slate-800 flex items-center justify-between bg-slate-950/60">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center text-xl font-bold border border-amber-500/30">
+            🗺️
+          </div>
+          <div>
+            <h3 class="text-base font-black text-white">خريطة صالة كافيه مزاج</h3>
+            <p class="text-xs text-slate-400">اختر الطاولة لفتح حسابها ومتابعة طلباتها في الكاشير</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <!-- Stats Pills -->
+          <div class="hidden md:flex items-center gap-2 bg-slate-900 px-3 py-1 rounded-xl border border-slate-800 text-xs font-mono">
+            <span class="text-slate-400">إجمالي: <strong id="modal-stat-total" class="text-white">0</strong></span>
+            <span class="text-slate-600">|</span>
+            <span class="text-emerald-400">متاحة: <strong id="modal-stat-vacant">0</strong></span>
+            <span class="text-slate-600">|</span>
+            <span class="text-blue-400">مشغولة: <strong id="modal-stat-occupied">0</strong></span>
+            <span class="text-slate-600">|</span>
+            <span class="text-rose-400">طلب حساب: <strong id="modal-stat-check">0</strong></span>
+          </div>
+
+          <button onclick="openCustomTableModal()" class="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl text-xs font-black flex items-center gap-1 cursor-pointer">
+            <span>➕</span>
+            <span>إعداد طاولة مخصصة</span>
+          </button>
+
+          <button onclick="closeTableMapModal()" class="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center font-bold text-sm cursor-pointer">✕</button>
+        </div>
+      </div>
+
+      <!-- Zone Filter & Search Bar in Modal -->
+      <div class="shrink-0 px-5 py-2.5 border-b border-slate-800 bg-slate-950/40 flex items-center justify-between flex-wrap gap-2">
+        <div class="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-thin" id="modal-zone-tabs">
+          <button onclick="filterModalZone('ALL')" id="modal-zone-ALL" class="px-3 py-1 rounded-xl text-xs font-black bg-amber-500 text-slate-950 cursor-pointer shadow">
+            🌟 جميع المناطق
+          </button>
+          <button onclick="filterModalZone('INDOOR_1')" id="modal-zone-INDOOR_1" class="px-3 py-1 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 cursor-pointer">
+            🏢 صالة داخلية 1
+          </button>
+          <button onclick="filterModalZone('INDOOR_2')" id="modal-zone-INDOOR_2" class="px-3 py-1 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 cursor-pointer">
+            🏢 صالة داخلية 2
+          </button>
+          <button onclick="filterModalZone('INDOOR_3')" id="modal-zone-INDOOR_3" class="px-3 py-1 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 cursor-pointer">
+            🏢 صالة داخلية 3
+          </button>
+          <button onclick="filterModalZone('OUTDOOR_RIGHT')" id="modal-zone-OUTDOOR_RIGHT" class="px-3 py-1 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 cursor-pointer">
+            🌳 تراس يمين
+          </button>
+          <button onclick="filterModalZone('OUTDOOR_LEFT')" id="modal-zone-OUTDOOR_LEFT" class="px-3 py-1 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 cursor-pointer">
+            🌳 تراس يسار
+          </button>
+          <button onclick="filterModalZone('OUTDOOR_GATE')" id="modal-zone-OUTDOOR_GATE" class="px-3 py-1 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 cursor-pointer">
+            🚪 البوابة
+          </button>
+        </div>
+
+        <!-- Direct fast table picker -->
+        <button onclick="selectTable(0); closeTableMapModal();" class="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-amber-400 border border-amber-500/30 rounded-xl text-xs font-bold cursor-pointer">
+          🛍️ فتح طلب مباشر بدون طاولة
+        </button>
+      </div>
+
+      <!-- Tables Grid Display in Modal -->
+      <div class="flex-1 overflow-y-auto p-4 min-h-0 bg-slate-950/20">
+        <div id="modal-tables-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+          <!-- Injected dynamically -->
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="shrink-0 px-5 py-2.5 border-t border-slate-800 bg-slate-950 flex items-center justify-between text-xs text-slate-500">
+        <span>اضغط على أي طاولة لاختيارها والبدء في تسجيل الطلبات أو محاسبتها فوراً</span>
+        <button onclick="closeTableMapModal()" class="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-bold cursor-pointer">إغلاق الخريطة</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Custom Table Setup Modal -->
+  <div id="custom-table-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md p-5 shadow-2xl text-right">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-2.5 mb-3">
+        <div class="flex items-center gap-2">
+          <span class="text-xl">🪑</span>
+          <h3 class="text-sm font-black text-amber-400">إعداد وتخصيص طاولة جديدة</h3>
+        </div>
+        <button onclick="closeCustomTableModal()" class="w-7 h-7 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center font-bold text-xs cursor-pointer">✕</button>
+      </div>
+
+      <form onsubmit="submitCustomTable(event)" class="space-y-3 text-xs">
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block font-bold text-slate-300 mb-1">رقم الطاولة (Table #):</label>
+            <input type="number" id="modal-table-number" required placeholder="مثال: 12" class="w-full px-3 py-1.5 bg-slate-950 border border-slate-700 rounded-xl text-white font-mono font-black focus:border-amber-500 focus:outline-none" />
+          </div>
+          <div>
+            <label class="block font-bold text-slate-300 mb-1">السعة (عدد المقاعد):</label>
+            <input type="number" id="modal-table-capacity" value="4" min="1" max="50" class="w-full px-3 py-1.5 bg-slate-950 border border-slate-700 rounded-xl text-white font-mono font-bold focus:border-amber-500 focus:outline-none" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-300 mb-1">اسم مخصص للطاولة (اختياري):</label>
+          <input type="text" id="modal-table-name" placeholder="مثال: VIP ركن العائلات / طاولة 12" class="w-full px-3 py-1.5 bg-slate-950 border border-slate-700 rounded-xl text-white focus:border-amber-500 focus:outline-none" />
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-300 mb-1">منطقة وموقع الطاولة (Zone):</label>
+          <select id="modal-table-zone" required class="w-full px-3 py-1.5 bg-slate-950 border border-slate-700 rounded-xl text-white focus:border-amber-500 focus:outline-none">
+            <option value="INDOOR_1">صالة داخلية 1 (INDOOR_1)</option>
+            <option value="INDOOR_2">صالة داخلية 2 (INDOOR_2)</option>
+            <option value="INDOOR_3">صالة داخلية 3 (INDOOR_3)</option>
+            <option value="OUTDOOR_RIGHT">تراس خارجي يمين (OUTDOOR_RIGHT)</option>
+            <option value="OUTDOOR_LEFT">تراس خارجي يسار (OUTDOOR_LEFT)</option>
+            <option value="OUTDOOR_GATE">البوابة والمدخل (OUTDOOR_GATE)</option>
+          </select>
+        </div>
+
+        <div class="border-t border-slate-800/80 pt-2">
+          <label class="block font-bold text-slate-300 mb-1">ربط عميل مخصص (CRM / ضيف):</label>
+          <div class="grid grid-cols-2 gap-2">
+            <input type="text" id="modal-cust-name" placeholder="اسم العميل (اختياري)" class="w-full px-3 py-1.5 bg-slate-950 border border-slate-700 rounded-xl text-white focus:border-amber-500 focus:outline-none" />
+            <input type="tel" id="modal-cust-phone" placeholder="هاتف العميل" class="w-full px-3 py-1.5 bg-slate-950 border border-slate-700 rounded-xl text-white focus:border-amber-500 focus:outline-none" />
+          </div>
+        </div>
+
+        <button type="submit" class="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl text-xs shadow-lg cursor-pointer mt-2">
+          حفظ وتفعيل الطاولة 🪑
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- 3. Table Seating & Custom Naming Modal -->
   <div id="table-seating-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
     <div class="bg-slate-900 border border-amber-500/50 rounded-2xl max-w-md w-full p-4 shadow-2xl">
       <div class="flex items-center justify-between border-b border-slate-800 pb-2 mb-3">
@@ -318,7 +554,36 @@
     </div>
   </div>
 
-  <!-- Custom Item Modal -->
+  <!-- 4. Move Table Modal -->
+  <div id="move-table-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+    <div class="bg-slate-900 border border-amber-500/50 rounded-2xl max-w-sm w-full p-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-2 mb-3">
+        <h3 class="font-extrabold text-sm text-white flex items-center gap-1">
+          <span>🔀</span> نقل الطاولة وتغيير الحجز
+        </h3>
+        <button onclick="closeMoveTableModal()" class="text-slate-400 hover:text-white font-bold text-base cursor-pointer">✕</button>
+      </div>
+
+      <form onsubmit="submitMoveTable(event)" class="space-y-3">
+        <div>
+          <label class="block text-xs font-bold text-slate-300 mb-1">من الطاولة الحالية:</label>
+          <input type="text" id="move-from-table" readonly class="w-full px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-xl text-amber-400 font-mono font-black text-xs" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-300 mb-1">إلى الطاولة الجديدة (1-50):</label>
+          <input type="number" id="move-to-table" required min="1" max="50" placeholder="مثال: 5" class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-white font-mono font-bold text-xs focus:border-amber-500 focus:outline-none" />
+        </div>
+
+        <div class="pt-2 border-t border-slate-800 flex items-center justify-end gap-2">
+          <button type="button" onclick="closeMoveTableModal()" class="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold cursor-pointer">إلغاء</button>
+          <button type="submit" class="px-5 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl text-xs font-black cursor-pointer">نقل الحساب والطلبات</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 5. Custom Item Modal -->
   <div id="custom-item-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
     <div class="bg-slate-900 border border-amber-500/50 rounded-2xl max-w-sm w-full p-4 shadow-2xl">
       <div class="flex items-center justify-between border-b border-slate-800 pb-2 mb-3">
@@ -369,36 +634,7 @@
     </div>
   </div>
 
-  <!-- Move Table Modal -->
-  <div id="move-table-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
-    <div class="bg-slate-900 border border-amber-500/50 rounded-2xl max-w-sm w-full p-4 shadow-2xl">
-      <div class="flex items-center justify-between border-b border-slate-800 pb-2 mb-3">
-        <h3 class="font-extrabold text-sm text-white flex items-center gap-1">
-          <span>🔀</span> نقل الطاولة وتغيير الحجز
-        </h3>
-        <button onclick="closeMoveTableModal()" class="text-slate-400 hover:text-white font-bold text-base cursor-pointer">✕</button>
-      </div>
-
-      <form onsubmit="submitMoveTable(event)" class="space-y-3">
-        <div>
-          <label class="block text-xs font-bold text-slate-300 mb-1">من الطاولة الحالية:</label>
-          <input type="text" id="move-from-table" readonly class="w-full px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-xl text-amber-400 font-mono font-black text-xs" />
-        </div>
-
-        <div>
-          <label class="block text-xs font-bold text-slate-300 mb-1">إلى الطاولة الجديدة (1-20):</label>
-          <input type="number" id="move-to-table" required min="1" max="20" placeholder="مثال: 5" class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-white font-mono font-bold text-xs focus:border-amber-500 focus:outline-none" />
-        </div>
-
-        <div class="pt-2 border-t border-slate-800 flex items-center justify-end gap-2">
-          <button type="button" onclick="closeMoveTableModal()" class="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold cursor-pointer">إلغاء</button>
-          <button type="submit" class="px-5 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl text-xs font-black cursor-pointer">نقل الحساب والطلبات</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- Checkout Modal (Multi-Method Payment Split + Loyalty Points) -->
+  <!-- 6. Checkout Modal (Multi-Method Payment Split + Loyalty Points) -->
   <div id="checkout-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[100] flex items-center justify-center hidden p-4">
     <div class="bg-slate-900 border border-emerald-500/50 rounded-2xl max-w-md w-full p-5 shadow-2xl">
       <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-3">
@@ -430,7 +666,10 @@
       </div>
 
       <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 mb-3 flex items-center justify-between">
-        <span class="text-xs font-bold text-slate-300">إجمالي المبلغ المطلوب:</span>
+        <div>
+          <span class="text-xs font-bold text-slate-300 block" id="checkout-target-label">المبلغ المطلوب:</span>
+          <span class="text-[10px] text-slate-500" id="checkout-breakdown-desc">المجموع + الضريبة والخدمة</span>
+        </div>
         <span id="checkout-total-bill" class="text-2xl font-black text-emerald-400 font-mono">0 ج.م</span>
       </div>
 
@@ -459,8 +698,8 @@
         </div>
 
         <div class="flex items-center gap-2">
-          <button type="button" onclick="autofillPayment('CASH')" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-[11px] font-bold border border-slate-700">دفع كاش بالكامل</button>
-          <button type="button" onclick="autofillPayment('INSTAPAY')" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-emerald-300 rounded-lg text-[11px] font-bold border border-slate-700">دفع InstaPay بالكامل</button>
+          <button type="button" onclick="autofillPayment('CASH')" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-[11px] font-bold border border-slate-700 cursor-pointer">دفع كاش بالكامل</button>
+          <button type="button" onclick="autofillPayment('INSTAPAY')" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-emerald-300 rounded-lg text-[11px] font-bold border border-slate-700 cursor-pointer">دفع InstaPay بالكامل</button>
         </div>
 
         <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between text-xs">
@@ -476,42 +715,143 @@
     </div>
   </div>
 
+  <!-- 7. Modifier Selection Modal -->
+  <div id="modifier-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 max-w-sm w-full space-y-4 shadow-2xl text-right">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+        <h3 id="modifier-item-title" class="text-base font-bold text-amber-400">تخصيص المشروب</h3>
+        <button onclick="closeModifierModal()" class="text-slate-400 hover:text-white font-bold text-lg cursor-pointer">✕</button>
+      </div>
+
+      <!-- Sugar Selection -->
+      <div class="space-y-1.5">
+        <label class="text-xs font-extrabold text-slate-300 block">درجة السكر (Sugar Level):</label>
+        <div class="grid grid-cols-2 gap-1.5 text-xs font-bold">
+          <button type="button" onclick="selectSugar('مظبوط')" class="sugar-btn p-2 bg-amber-500/20 border border-amber-500 text-amber-300 rounded-lg">مظبوط</button>
+          <button type="button" onclick="selectSugar('سادة')" class="sugar-btn p-2 bg-slate-800 border border-slate-700 text-slate-300 rounded-lg">سادة</button>
+          <button type="button" onclick="selectSugar('زيادة')" class="sugar-btn p-2 bg-slate-800 border border-slate-700 text-slate-300 rounded-lg">زيادة</button>
+          <button type="button" onclick="selectSugar('سكر خارجي')" class="sugar-btn p-2 bg-slate-800 border border-slate-700 text-slate-300 rounded-lg">سكر خارجي</button>
+        </div>
+      </div>
+
+      <!-- Roast Selection -->
+      <div class="space-y-1.5">
+        <label class="text-xs font-extrabold text-slate-300 block">درجة التحويجة / البن (Roast Type):</label>
+        <div class="grid grid-cols-3 gap-1.5 text-xs font-bold">
+          <button type="button" onclick="selectRoast('افتراضي')" class="roast-btn p-1.5 bg-amber-500/20 border border-amber-500 text-amber-300 rounded-lg">افتراضي</button>
+          <button type="button" onclick="selectRoast('فاتح')" class="roast-btn p-1.5 bg-slate-800 border border-slate-700 text-slate-300 rounded-lg">فاتح</button>
+          <button type="button" onclick="selectRoast('وسط')" class="roast-btn p-1.5 bg-slate-800 border border-slate-700 text-slate-300 rounded-lg">وسط</button>
+          <button type="button" onclick="selectRoast('غامق')" class="roast-btn p-1.5 bg-slate-800 border border-slate-700 text-slate-300 rounded-lg">غامق</button>
+          <button type="button" onclick="selectRoast('محوج')" class="roast-btn p-1.5 bg-slate-800 border border-slate-700 text-slate-300 rounded-lg">محوج</button>
+        </div>
+      </div>
+
+      <div class="pt-2 flex gap-2">
+        <button onclick="confirmItemWithModifiers()" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm rounded-xl border border-emerald-400/30 cursor-pointer">
+          تأكيد وإضافة للطلب 🛒
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Footer -->
-  <footer class="border-t border-slate-800 bg-slate-950 py-2 text-center text-[11px] text-slate-500">
-    كافيه مزاج &copy; 2026 - نظام الكاشير عالي السرعة (Zero Latency POS)
+  <footer class="shrink-0 border-t border-slate-800 bg-slate-950 py-1.5 text-center text-[10px] text-slate-500">
+    كافيه مزاج &copy; 2026 - نظام إدارة الطاولات والكاشير الحي (Realtime POS & Tables Engine)
   </footer>
 
+  <!-- ==================== SCRIPT ==================== -->
   <script>
+    // System Constants & Map Config
+    const ZONE_NAMES = {
+      'ALL': 'جميع المناطق',
+      'INDOOR_1': 'صالة داخلية 1',
+      'INDOOR_2': 'صالة داخلية 2',
+      'INDOOR_3': 'صالة داخلية 3',
+      'OUTDOOR_RIGHT': 'تراس يمين',
+      'OUTDOOR_LEFT': 'تراس يسار',
+      'OUTDOOR_GATE': 'البوابة والمدخل'
+    };
+
     // Live Clock
     function updateClock() {
       const now = new Date();
-      document.getElementById('live-clock').textContent = now.toLocaleTimeString('ar-EG');
+      const el = document.getElementById('live-clock');
+      if (el) el.textContent = now.toLocaleTimeString('ar-EG');
     }
     setInterval(updateClock, 1000);
     updateClock();
 
-    // Local JS Cart State, Table Sessions & Order Logs
-    let cart = [];
-    const recentOrdersLog = [];
+    // Application State
+    let cart = []; // New pending items to add to table or direct order
+    let activeTableOrders = []; // Items already ordered/in kitchen for selected table
+    let activeTableTotals = null; // Server authoritative totals for active table
+    let recentOrdersLog = [];
     let menuItems = [];
-    let selectedTableNumber = 0;
+    let selectedTableNumber = 0; // 0 = Direct / No table
     let tablesMap = new Map();
+    let currentCategoryFilter = 'ALL';
+    let currentSearchQuery = '';
+    let currentModalZoneFilter = 'ALL';
+    let ws = null;
 
-    // Table Lifecycle & Seating Functions
+    let posSystemConfig = {
+      currency: 'ج.م',
+      vat_percent: 14,
+      service_percent: 12,
+      apply_taxes: true
+    };
+
+    // Toast Helper
+    function showToast(message, isSuccess = true) {
+      const container = document.getElementById('pos-toast-container');
+      const toast = document.createElement('div');
+      toast.className = `px-4 py-2 rounded-xl border text-xs font-bold flex items-center gap-2 shadow-2xl transition-all ${
+        isSuccess ? 'bg-emerald-950 text-emerald-300 border-emerald-500/50' : 'bg-rose-950 text-rose-300 border-rose-500/50'
+      }`;
+      toast.innerHTML = `<span>${isSuccess ? '✅' : '⚠️'}</span><span>${message}</span>`;
+      container.appendChild(toast);
+      setTimeout(() => toast.remove(), 2500);
+    }
+
+    // Load POS Configuration
+    async function loadPosConfig() {
+      try {
+        const res = await fetch('/api/config');
+        const data = await res.json();
+        if (data.success && data.config) {
+          posSystemConfig = data.config;
+          document.querySelectorAll('.currency-symbol').forEach(el => el.textContent = posSystemConfig.currency || 'ج.م');
+          const srvRateEl = document.getElementById('cart-service-rate');
+          const vatRateEl = document.getElementById('cart-vat-rate');
+          if (srvRateEl) srvRateEl.textContent = posSystemConfig.service_percent;
+          if (vatRateEl) vatRateEl.textContent = posSystemConfig.vat_percent;
+          renderCartUI();
+        }
+      } catch (err) {
+        console.warn('Could not load pos config:', err);
+      }
+    }
+
+    // Fetch All Tables List
     async function fetchTableSessions() {
       try {
         const res = await fetch('/api/tables');
         const data = await res.json();
         if (res.ok && data.success && Array.isArray(data.tables)) {
           tablesMap.clear();
-          data.tables.forEach(t => tablesMap.set(t.table_number, t));
+          data.tables.forEach(t => tablesMap.set(Number(t.table_number), t));
           renderTablesGrid();
+          renderModalTablesGrid();
+          updateTablesSummaryStats();
 
-          // Auto-select table if query param ?table=X exists
+          // Auto-select table if query param ?table=X exists on initial load
           const urlParams = new URLSearchParams(window.location.search);
           const tableParam = urlParams.get('table');
-          if (tableParam && !selectedTableNumber) {
+          if (tableParam && selectedTableNumber === 0) {
             selectTable(parseInt(tableParam, 10));
+          } else if (selectedTableNumber > 0) {
+            // Refresh current selected table's active session
+            fetchSelectedTableSession(selectedTableNumber, false);
           }
         }
       } catch (err) {
@@ -519,13 +859,89 @@
       }
     }
 
+    // Fetch Active Order Session for Selected Table
+    async function fetchSelectedTableSession(tableNumber, shouldShowToast = false) {
+      if (!tableNumber || tableNumber === 0) {
+        activeTableOrders = [];
+        activeTableTotals = null;
+        renderCartUI();
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/tables/${tableNumber}/session`);
+        const data = await res.json();
+        if (res.ok && data.success) {
+          activeTableOrders = data.items || [];
+          activeTableTotals = data.totals || null;
+          if (data.table) {
+            tablesMap.set(tableNumber, { ...(tablesMap.get(tableNumber) || {}), ...data.table });
+          }
+          renderCartUI();
+          renderTablesGrid();
+          if (shouldShowToast && activeTableOrders.length > 0) {
+            showToast(`تم تحميل ${activeTableOrders.length} طلب لطاولة ${tableNumber}`, true);
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching table session:', err);
+      }
+    }
+
+    // Update Summary Count in Header
+    function updateTablesSummaryStats() {
+      const total = tablesMap.size;
+      let vacant = 0;
+      let occupied = 0;
+      let check = 0;
+
+      tablesMap.forEach(t => {
+        if (t.status === 'VACANT') vacant++;
+        else if (t.status === 'CHECK_REQUESTED') check++;
+        else occupied++;
+      });
+
+      const sumEl = document.getElementById('tables-stat-summary');
+      if (sumEl) sumEl.textContent = `${total} طاولات (${occupied} مشغولة)`;
+
+      const modTotal = document.getElementById('modal-stat-total');
+      const modVacant = document.getElementById('modal-stat-vacant');
+      const modOccupied = document.getElementById('modal-stat-occupied');
+      const modCheck = document.getElementById('modal-stat-check');
+
+      if (modTotal) modTotal.textContent = total;
+      if (modVacant) modVacant.textContent = vacant;
+      if (modOccupied) modOccupied.textContent = occupied;
+      if (modCheck) modCheck.textContent = check;
+    }
+
+    // Render Quick Tables Bar
     function renderTablesGrid() {
       const container = document.getElementById('tables-grid');
+      if (!container) return;
       container.innerHTML = '';
 
-      // Get all known tables or fallback to 1-12
-      const allTableKeys = new Set([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
-      tablesMap.forEach((_, k) => allTableKeys.add(Number(k)));
+      // Direct Order Button (Table 0)
+      const directBtn = document.createElement('button');
+      const isDirectSelected = selectedTableNumber === 0;
+      directBtn.onclick = () => selectTable(0);
+      directBtn.className = `px-3 py-1.5 rounded-xl border text-xs flex flex-col items-center justify-center min-w-[95px] shrink-0 cursor-pointer transition-all ${
+        isDirectSelected 
+          ? 'bg-amber-500 text-slate-950 border-amber-300 font-black shadow-lg scale-105' 
+          : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
+      }`;
+      directBtn.innerHTML = `
+        <span class="font-extrabold flex items-center gap-1">🛍️ سفري مباشر</span>
+        <span class="text-[9px] opacity-75">بدون طاولة</span>
+      `;
+      container.appendChild(directBtn);
+
+      // Collect table keys (default 1-20 or all registered)
+      const allTableKeys = new Set();
+      for (let i = 1; i <= 20; i++) allTableKeys.add(i);
+      tablesMap.forEach((_, k) => {
+        if (k > 0) allTableKeys.add(Number(k));
+      });
       const sortedKeys = Array.from(allTableKeys).sort((a, b) => a - b);
 
       sortedKeys.forEach(i => {
@@ -533,20 +949,21 @@
         const isSelected = selectedTableNumber === i;
         
         let statusBadge = '<span class="text-[9px] opacity-60">🟢 خالية</span>';
-        let bgClass = 'bg-slate-800 text-slate-300 border-slate-700';
+        let bgClass = 'bg-slate-900/90 text-slate-300 border-slate-800 hover:border-slate-700';
 
-        if (tbl.status === 'SEATED' || tbl.status === 'OPENED' || tbl.status === 'OCCUPIED') {
+        if (tbl.status === 'SEATED' || tbl.status === 'OPENED' || tbl.status === 'OCCUPIED' || tbl.status === 'ORDERED' || tbl.status === 'WAITER_APPROACHED') {
           const mins = tbl.seated_minutes || 0;
-          statusBadge = `<span class="text-[9px] font-mono text-emerald-300 font-black">🔵 جالس (${mins}د)</span>`;
-          bgClass = mins > 45 ? 'bg-amber-950/90 border-amber-500/80 text-amber-200' : 'bg-emerald-950/80 border-emerald-500/60 text-emerald-300';
+          const amt = tbl.active_total_amount ? `${tbl.active_total_amount}ج` : '';
+          statusBadge = `<span class="text-[9px] font-mono text-emerald-300 font-black">🔵 ${mins}د ${amt}</span>`;
+          bgClass = mins > 45 ? 'bg-amber-950/80 border-amber-500/70 text-amber-200' : 'bg-emerald-950/70 border-emerald-500/50 text-emerald-200';
         } else if (tbl.status === 'CHECK_REQUESTED') {
           const mins = tbl.check_requested_minutes || 0;
-          statusBadge = `<span class="text-[9px] font-mono text-rose-300 font-black">🔴 طلب حساب (${mins}د)</span>`;
-          bgClass = 'bg-rose-950/90 border-rose-400 text-rose-200 font-bold animate-pulse';
+          const amt = tbl.active_total_amount ? `${tbl.active_total_amount}ج` : '';
+          statusBadge = `<span class="text-[9px] font-mono text-rose-300 font-black">🔴 شيك ${amt}</span>`;
+          bgClass = 'bg-rose-950/90 border-rose-500 text-rose-200 font-bold animate-pulse';
         } else if (tbl.status === 'PAID') {
-          const mins = tbl.paid_minutes || 0;
-          statusBadge = `<span class="text-[9px] font-mono text-purple-300 font-black">🟣 تم الدفع (${mins}د)</span>`;
-          bgClass = 'bg-purple-950/90 border-purple-400 text-purple-200 font-bold';
+          statusBadge = '<span class="text-[9px] font-mono text-purple-300 font-black">🟣 تم الدفع</span>';
+          bgClass = 'bg-purple-950/80 border-purple-500/50 text-purple-200 font-bold';
         }
 
         if (isSelected) {
@@ -554,7 +971,7 @@
         }
 
         const displayName = tbl.custom_name ? `ط ${i} - ${tbl.custom_name}` : `طاولة ${i}`;
-        const custName = tbl.customer_name ? `<span class="text-[9px] font-bold text-amber-300 truncate max-w-[80px]">👤 ${tbl.customer_name}</span>` : '';
+        const custName = tbl.customer_name ? `<span class="text-[8px] font-bold text-amber-300 truncate max-w-[80px]">👤 ${tbl.customer_name}</span>` : '';
 
         const btn = document.createElement('button');
         btn.onclick = () => selectTable(i);
@@ -573,53 +990,176 @@
       const infoElem = document.getElementById('selected-table-info');
       const closeBtn = document.getElementById('close-table-btn');
       const moveBtn = document.getElementById('move-table-btn');
+      const reqCheckBtn = document.getElementById('request-check-btn');
       const upsellBanner = document.getElementById('smart-upsell-alert');
+      const ticketTitle = document.getElementById('ticket-table-title');
+      const ticketSubtitle = document.getElementById('ticket-table-subtitle');
+      const ticketIcon = document.getElementById('ticket-table-icon');
 
       if (selectedTableNumber === 0) {
-        infoElem.textContent = 'الطاولة المحددة: طلب مباشر (بدون طاولة)';
-        closeBtn.classList.add('hidden');
-        moveBtn.classList.add('hidden');
-        upsellBanner.classList.add('hidden');
+        if (infoElem) infoElem.textContent = 'الطاولة المحددة: طلب مباشر (بدون طاولة / سفري)';
+        if (ticketTitle) ticketTitle.textContent = 'طلب مباشر (بدون طاولة)';
+        if (ticketSubtitle) ticketSubtitle.textContent = 'سفري / كاشير فوري';
+        if (ticketIcon) ticketIcon.textContent = '🛍️';
+        if (closeBtn) closeBtn.classList.add('hidden');
+        if (moveBtn) moveBtn.classList.add('hidden');
+        if (upsellBanner) upsellBanner.classList.add('hidden');
       } else {
-        const tbl = tablesMap.get(selectedTableNumber);
-        if (tbl) {
-          const nameTxt = tbl.custom_name ? ` (${tbl.custom_name})` : '';
-          const custTxt = tbl.customer_name ? ` — العميل: ${tbl.customer_name}` : '';
-          const timeTxt = tbl.seated_minutes ? ` [جالس منذ ${tbl.seated_minutes} دقيقة]` : '';
-          
-          infoElem.textContent = `طاولة ${selectedTableNumber}${nameTxt}${custTxt}${timeTxt} — الحالة: ${tbl.status}`;
-          closeBtn.classList.remove('hidden');
-          moveBtn.classList.remove('hidden');
+        const tbl = tablesMap.get(selectedTableNumber) || { table_number: selectedTableNumber, status: 'VACANT' };
+        const nameTxt = tbl.custom_name ? ` (${tbl.custom_name})` : '';
+        const custTxt = tbl.customer_name ? ` — العميل: ${tbl.customer_name}` : '';
+        const timeTxt = tbl.seated_minutes ? ` [جالس منذ ${tbl.seated_minutes} د]` : '';
+        const zoneTxt = tbl.zone ? ` [${ZONE_NAMES[tbl.zone] || tbl.zone}]` : '';
 
-          if (tbl.seated_minutes > 45 && tbl.active_total_amount < 150) {
-            upsellBanner.classList.remove('hidden');
-          } else {
-            upsellBanner.classList.add('hidden');
-          }
+        if (infoElem) infoElem.textContent = `طاولة ${selectedTableNumber}${nameTxt}${zoneTxt}${custTxt}${timeTxt} — الحالة: ${tbl.status || 'VACANT'}`;
+        if (ticketTitle) ticketTitle.textContent = `طاولة ${selectedTableNumber}${nameTxt}`;
+        if (ticketSubtitle) ticketSubtitle.textContent = `${ZONE_NAMES[tbl.zone] || 'صالة'} ${custTxt ? `• ${tbl.customer_name}` : ''} • ${tbl.status || 'متاحة'}`;
+        if (ticketIcon) ticketIcon.textContent = '🪑';
+        
+        if (closeBtn) closeBtn.classList.remove('hidden');
+        if (moveBtn) moveBtn.classList.remove('hidden');
+
+        if (tbl.seated_minutes > 45 && (tbl.active_total_amount || 0) < 150) {
+          if (upsellBanner) upsellBanner.classList.remove('hidden');
+        } else {
+          if (upsellBanner) upsellBanner.classList.add('hidden');
         }
       }
     }
 
+    // Select Table Action
     function selectTable(num) {
       selectedTableNumber = num;
       renderTablesGrid();
-      if (num > 0) {
-        showToast(`تم اختيار طاولة ${num}`, true);
-      } else {
-        showToast('تم اختيار طلب مباشر بدون طاولة', true);
-      }
+      fetchSelectedTableSession(num, true);
     }
 
-    // Open Custom Seating Modal
+    // Open Table Map Modal
+    function openTableMapModal() {
+      renderModalTablesGrid();
+      document.getElementById('table-map-modal').classList.remove('hidden');
+    }
+
+    function closeTableMapModal() {
+      document.getElementById('table-map-modal').classList.add('hidden');
+    }
+
+    function filterModalZone(zone) {
+      currentModalZoneFilter = zone;
+      ['ALL', 'INDOOR_1', 'INDOOR_2', 'INDOOR_3', 'OUTDOOR_RIGHT', 'OUTDOOR_LEFT', 'OUTDOOR_GATE'].forEach(z => {
+        const btn = document.getElementById(`modal-zone-${z}`);
+        if (btn) {
+          btn.className = z === zone 
+            ? 'px-3 py-1 rounded-xl text-xs font-black bg-amber-500 text-slate-950 cursor-pointer shadow'
+            : 'px-3 py-1 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 cursor-pointer';
+        }
+      });
+      renderModalTablesGrid();
+    }
+
+    // Render Modal Table Cards
+    function renderModalTablesGrid() {
+      const container = document.getElementById('modal-tables-grid');
+      if (!container) return;
+      container.innerHTML = '';
+
+      // Collect all tables
+      const allTablesList = [];
+      const keys = new Set();
+      for (let i = 1; i <= 20; i++) keys.add(i);
+      tablesMap.forEach((t, k) => {
+        if (k > 0) keys.add(Number(k));
+      });
+
+      Array.from(keys).sort((a, b) => a - b).forEach(k => {
+        const t = tablesMap.get(k) || { table_number: k, status: 'VACANT', capacity: 4, zone: 'INDOOR_1' };
+        if (currentModalZoneFilter === 'ALL' || t.zone === currentModalZoneFilter) {
+          allTablesList.push(t);
+        }
+      });
+
+      if (allTablesList.length === 0) {
+        container.innerHTML = '<div class="col-span-full py-16 text-center text-slate-500 text-xs font-bold">لا توجد طاولات مسجلة في هذه المنطقة</div>';
+        return;
+      }
+
+      allTablesList.forEach(t => {
+        const status = t.status || 'VACANT';
+        let statusBg = 'bg-slate-900 border-slate-800 hover:border-amber-500/50';
+        let statusBadge = 'bg-slate-800 text-emerald-400 border-emerald-500/30';
+        let statusText = '🟢 متاحة';
+
+        if (status === 'SEATED' || status === 'OPENED' || status === 'OCCUPIED' || status === 'ORDERED' || status === 'WAITER_APPROACHED') {
+          statusBg = 'bg-slate-900 border-blue-500/50 hover:border-blue-400';
+          statusBadge = 'bg-blue-500/20 text-blue-300 border-blue-500/30';
+          statusText = '🔵 مشغولة';
+        } else if (status === 'CHECK_REQUESTED') {
+          statusBg = 'bg-rose-950/50 border-rose-500 animate-pulse';
+          statusBadge = 'bg-rose-500/20 text-rose-300 border-rose-500/40';
+          statusText = '🔴 طلب حساب 🧾';
+        } else if (status === 'PAID') {
+          statusBg = 'bg-purple-950/40 border-purple-500/50';
+          statusBadge = 'bg-purple-500/20 text-purple-300 border-purple-500/40';
+          statusText = '🟣 مسددة';
+        }
+
+        const isCurrentSelected = selectedTableNumber === t.table_number;
+        if (isCurrentSelected) {
+          statusBg = 'bg-slate-900 border-2 border-amber-400 shadow-xl';
+        }
+
+        const card = document.createElement('div');
+        card.className = `${statusBg} border rounded-2xl p-3 flex flex-col justify-between cursor-pointer transition-all shadow-md`;
+        card.onclick = () => {
+          selectTable(t.table_number);
+          closeTableMapModal();
+        };
+
+        const zoneName = ZONE_NAMES[t.zone] || t.zone || 'صالة داخلية';
+        const seatedTime = t.seated_minutes ? `<span class="text-[10px] text-amber-400 font-mono font-bold">⏱️ منذ ${t.seated_minutes}د</span>` : '';
+        const activeAmt = t.active_total_amount ? `<span class="text-[11px] text-emerald-400 font-mono font-black">💰 ${t.active_total_amount} ج.م</span>` : '';
+
+        card.innerHTML = `
+          <div>
+            <div class="flex items-center justify-between border-b border-slate-800 pb-1.5 mb-2">
+              <div class="flex items-center gap-1.5">
+                <span class="text-xs font-mono font-black text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">#${t.table_number}</span>
+                <span class="text-[10px] text-slate-400">👥 ${t.capacity || 4}</span>
+              </div>
+              <span class="text-[9px] font-bold px-2 py-0.5 rounded-full border ${statusBadge}">${statusText}</span>
+            </div>
+
+            <h4 class="text-xs font-extrabold text-white truncate">${t.custom_name || `طاولة رقم ${t.table_number}`}</h4>
+            <p class="text-[10px] text-slate-400 mt-0.5">📍 ${zoneName}</p>
+
+            ${t.customer_name ? `
+              <div class="mt-2 p-1.5 bg-slate-950 rounded-xl border border-slate-800 text-[10px] text-slate-300 flex items-center justify-between">
+                <span>👤 ${t.customer_name}</span>
+                <span class="font-mono text-amber-400 text-[9px]">${t.customer_phone || ''}</span>
+              </div>
+            ` : ''}
+          </div>
+
+          <div class="mt-3 pt-2 border-t border-slate-800 flex items-center justify-between">
+            ${seatedTime || '<span class="text-[10px] text-slate-500">جاهزة للجلوس</span>'}
+            ${activeAmt}
+          </div>
+        `;
+
+        container.appendChild(card);
+      });
+    }
+
+    // Seating & Custom Name Modal Logic
     function openTableSeatingModal(tableNum = null) {
       const num = tableNum || selectedTableNumber;
       if (!num || num === 0) {
-        showToast('يرجى اختيار طاولة أولاً لتعيين البيانات', false);
+        showToast('يرجى اختيار طاولة أولاً لتعيين بيانات الجلوس', false);
         return;
       }
 
       document.getElementById('seat-table-number').value = num;
-      document.getElementById('seating-modal-title').textContent = `تعديل جلسة واسم الطاولة رقم ${num}`;
+      document.getElementById('seating-modal-title').textContent = `تسجيل جلوس وتعديل بيانات طاولة #${num}`;
       
       const tbl = tablesMap.get(num);
       if (tbl) {
@@ -660,7 +1200,7 @@
         });
         const data = await res.json();
         if (res.ok && data.success) {
-          showToast(`تم تسجيل جلوس ورقم الطاولة ${num} بنجاح!`, true);
+          showToast(`تم تسجيل جلوس وتحديث طاولة #${num} بنجاح! 🪑`, true);
           closeTableSeatingModal();
           selectTable(num);
           fetchTableSessions();
@@ -672,10 +1212,57 @@
       }
     }
 
+    // Custom Table Creation Modal Logic
+    function openCustomTableModal() {
+      document.getElementById('custom-table-modal').classList.remove('hidden');
+    }
+
+    function closeCustomTableModal() {
+      document.getElementById('custom-table-modal').classList.add('hidden');
+    }
+
+    async function submitCustomTable(e) {
+      e.preventDefault();
+      const tableNumber = document.getElementById('modal-table-number').value;
+      const customName = document.getElementById('modal-table-name').value;
+      const zone = document.getElementById('modal-table-zone').value;
+      const capacity = document.getElementById('modal-table-capacity').value;
+      const customerName = document.getElementById('modal-cust-name').value;
+      const customerPhone = document.getElementById('modal-cust-phone').value;
+
+      try {
+        const res = await fetch('/api/tables', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            table_number: parseInt(tableNumber, 10),
+            custom_name: customName || `طاولة ${tableNumber}`,
+            zone: zone,
+            capacity: parseInt(capacity, 10) || 4,
+            customer_name: customerName || null,
+            customer_phone: customerPhone || null
+          })
+        });
+
+        const data = await res.json();
+        if (res.ok && data.success) {
+          showToast(`تم إعداد طاولة #${tableNumber} بنجاح 🪑`, true);
+          closeCustomTableModal();
+          fetchTableSessions();
+          selectTable(parseInt(tableNumber, 10));
+        } else {
+          showToast(data.error || 'خطأ في إعداد الطاولة', false);
+        }
+      } catch (e) {
+        showToast('خطأ بالاتصال بالسيرفر', false);
+      }
+    }
+
+    // Vacate Table Action
     async function vacateCurrentTable() {
       const num = selectedTableNumber;
       if (!num || num === 0) return;
-      if (!confirm(`هل أنت تأكد من إخلاء ومغادرة الضيف للطاولة رقم ${num}؟`)) return;
+      if (!confirm(`هل أنت متأكد من تفريغ وإخلاء طاولة #${num} ومغادرة الضيف؟`)) return;
 
       try {
         const res = await fetch('/api/tables/vacate', {
@@ -685,15 +1272,21 @@
         });
         const data = await res.json();
         if (res.ok && data.success) {
-          showToast(`تم تفريغ الطاولة ${num} وإعادتها لمتاحة 🟢`, true);
+          showToast(`تم إخلاء طاولة #${num} وإعادتها لمتاحة 🟢`, true);
           closeTableSeatingModal();
+          activeTableOrders = [];
+          activeTableTotals = null;
           fetchTableSessions();
+          renderCartUI();
+        } else {
+          showToast(data.error || 'فشل إخلاء الطاولة', false);
         }
       } catch (err) {
         showToast('خطأ بالاتصال بالسيرفر', false);
       }
     }
 
+    // Request Check Action
     async function requestTableCheckAction() {
       const num = selectedTableNumber;
       if (!num || num === 0) {
@@ -709,8 +1302,9 @@
         });
         const data = await res.json();
         if (res.ok && data.success) {
-          showToast(`تم طلب الحساب وطباعة إيصال الشيك للطاولة ${num} 📜`, true);
+          showToast(`تم طلب الشيك وإرسال الإشعار لطاولة #${num} 📜`, true);
           fetchTableSessions();
+          printTableCheckBill();
         }
       } catch (err) {
         showToast('خطأ بطلب الحساب', false);
@@ -720,7 +1314,7 @@
     // Move Table Modal Logic
     function openMoveTableModal() {
       if (selectedTableNumber === 0) return;
-      document.getElementById('move-from-table').value = `طاولة ${selectedTableNumber}`;
+      document.getElementById('move-from-table').value = `طاولة #${selectedTableNumber}`;
       document.getElementById('move-to-table').value = '';
       document.getElementById('move-table-modal').classList.remove('hidden');
     }
@@ -733,7 +1327,7 @@
       e.preventDefault();
       const toTable = Number(document.getElementById('move-to-table').value);
       if (!toTable || toTable === selectedTableNumber) return;
-      if (!confirm(`هل أنت تأكد من نقل جميع الطلبات من الطاولة #${selectedTableNumber} إلى الطاولة #${toTable}؟`)) return;
+      if (!confirm(`هل أنت متأكد من نقل جميع الطلبات من طاولة #${selectedTableNumber} إلى طاولة #${toTable}؟`)) return;
 
       try {
         const res = await fetch('/api/tables/move', {
@@ -743,9 +1337,9 @@
         });
         const data = await res.json();
         if (res.ok && data.success) {
-          showToast(`تم نقل الطاولة إلى #${toTable} بنجاح!`, true);
+          showToast(`تم نقل الحساب والطلبات إلى طاولة #${toTable} بنجاح! 🔀`, true);
           closeMoveTableModal();
-          selectedTableNumber = toTable;
+          selectTable(toTable);
           fetchTableSessions();
         } else {
           showToast(data.error || 'حدث خطأ أثناء نقل الطاولة', false);
@@ -755,56 +1349,37 @@
       }
     }
 
-    async function closeCurrentTableSession() {
-      if (selectedTableNumber === 0) return;
+    // Print Guest Check Bill
+    async function printTableCheckBill() {
+      const num = selectedTableNumber;
+      const itemsToPrint = [...activeTableOrders, ...cart];
+      if (itemsToPrint.length === 0) {
+        showToast('لا توجد طلبات لطباعة الشيك', false);
+        return;
+      }
+
+      const currentUser = JSON.parse(localStorage.getItem('currentUser') || localStorage.getItem('user') || '{}');
       try {
-        const res = await fetch('/api/tables/close', {
+        await fetch('/api/print/kitchen', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ table_number: selectedTableNumber })
+          body: JSON.stringify({
+            table_number: num,
+            items: itemsToPrint,
+            waiter_name: currentUser.name || 'الكاشير'
+          })
         });
-        const data = await res.json();
-        if (res.ok && data.success) {
-          showToast(`تم إغلاق طاولة ${selectedTableNumber} بنجاح`, true);
-          selectedTableNumber = 0;
-          await fetchTableSessions();
-        }
-      } catch (err) {
-        showToast('فشل إغلاق حجز الطاولة', false);
+        showToast(`تم إرسال أمر طباعة إيصال الشيك لطاولة #${num || 'سفري'} 🖨️`, true);
+      } catch (e) {
+        showToast('تمت محاولة الطباعة', true);
       }
     }
 
-    // Refresh Table Sessions every 10 seconds
-    setInterval(fetchTableSessions, 10000);
-    fetchTableSessions();
-
-    // Instant Toast Notification
-    function showToast(message, isSuccess = true) {
-      const container = document.getElementById('pos-toast-container');
-      const toast = document.createElement('div');
-      toast.className = `px-4 py-2 rounded-xl border text-xs font-bold flex items-center gap-2 ${
-        isSuccess ? 'bg-emerald-950 text-emerald-300 border-emerald-500/50' : 'bg-rose-950 text-rose-300 border-rose-500/50'
-      }`;
-      toast.innerHTML = `<span>${isSuccess ? '✅' : '⚠️'}</span><span>${message}</span>`;
-      container.appendChild(toast);
-
-      setTimeout(() => toast.remove(), 2200);
-    }
-
-    // Icon helper for menu items
-    function getItemIcon(name, category) {
-      if (name.includes('لاتيه')) return '🥛';
-      if (name.includes('اسبريسو') || name.includes('قهوة')) return '☕';
-      if (name.includes('شيشة') || category === 'SHISHA') return '💨';
-      if (name.includes('ساندوتش') || category === 'KITCHEN') return '🥪';
-      return '🍹';
-    }
-
-    // Fetch Dynamic Menu with robust flattening, loading, error, and retry states
+    // Fetch Dynamic Menu
     async function fetchMenu() {
       const grid = document.getElementById('menu-grid');
       if (grid) {
-        grid.innerHTML = '<div class="col-span-full py-8 text-center text-slate-400 font-bold text-sm">جاري تحميل قائمة الطعام... ☕</div>';
+        grid.innerHTML = '<div class="col-span-full py-8 text-center text-slate-400 font-bold text-xs">جاري تحميل قائمة الطعام والمشروبات... ☕</div>';
       }
       try {
         const response = await fetch('/api/menu');
@@ -839,68 +1414,118 @@
           renderMenuGrid();
         } else {
           if (grid) {
-            grid.innerHTML = '<div class="col-span-full py-8 text-center text-rose-400 font-bold text-sm">تعذر جلب القائمة <button onclick="fetchMenu()" class="mr-2 px-3 py-1 bg-amber-500 text-slate-950 rounded-lg text-xs">إعادة المحاولة</button></div>';
+            grid.innerHTML = '<div class="col-span-full py-8 text-center text-rose-400 font-bold text-xs">تعذر جلب القائمة <button onclick="fetchMenu()" class="mr-2 px-3 py-1 bg-amber-500 text-slate-950 rounded-lg text-xs font-bold">إعادة المحاولة</button></div>';
           }
           showToast('فشل في جلب قائمة الطعام', false);
         }
       } catch (err) {
         console.error('Failed to fetch menu:', err);
         if (grid) {
-          grid.innerHTML = '<div class="col-span-full py-8 text-center text-rose-400 font-bold text-sm">خطأ بالاتصال بالسيرفر <button onclick="fetchMenu()" class="mr-2 px-3 py-1 bg-amber-500 text-slate-950 rounded-lg text-xs">إعادة المحاولة</button></div>';
+          grid.innerHTML = '<div class="col-span-full py-8 text-center text-rose-400 font-bold text-xs">خطأ بالاتصال بالسيرفر <button onclick="fetchMenu()" class="mr-2 px-3 py-1 bg-amber-500 text-slate-950 rounded-lg text-xs font-bold">إعادة المحاولة</button></div>';
         }
-        showToast('خطأ بالاتصال بالسيرفر', false);
       }
     }
 
-    // Render Compact Menu Buttons Grid
+    // Filter Menu By Category & Search
+    function filterMenuCategory(cat) {
+      currentCategoryFilter = cat;
+      ['ALL', 'BARISTA', 'KITCHEN', 'SHISHA'].forEach(c => {
+        const tab = document.getElementById(`cat-tab-${c}`);
+        if (tab) {
+          tab.className = c === cat 
+            ? 'px-2.5 py-1 rounded-xl text-xs font-black bg-amber-500 text-slate-950 cursor-pointer shadow' 
+            : 'px-2.5 py-1 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 cursor-pointer';
+        }
+      });
+      renderMenuGrid();
+    }
+
+    function handleMenuSearch(val) {
+      currentSearchQuery = val.trim().toLowerCase();
+      const clearBtn = document.getElementById('clear-search-btn');
+      if (clearBtn) clearBtn.classList.toggle('hidden', currentSearchQuery === '');
+      renderMenuGrid();
+    }
+
+    function clearMenuSearch() {
+      const input = document.getElementById('menu-search-input');
+      if (input) input.value = '';
+      currentSearchQuery = '';
+      const clearBtn = document.getElementById('clear-search-btn');
+      if (clearBtn) clearBtn.classList.add('hidden');
+      renderMenuGrid();
+    }
+
+    // Icon helper
+    function getItemIcon(name, category) {
+      if (name.includes('لاتيه')) return '🥛';
+      if (name.includes('اسبريسو') || name.includes('قهوة') || name.includes('موكا') || name.includes('شاي')) return '☕';
+      if (name.includes('شيشة') || category === 'SHISHA') return '💨';
+      if (name.includes('ساندوتش') || name.includes('برجر') || category === 'KITCHEN') return '🥪';
+      if (name.includes('وافل') || name.includes('كيك') || name.includes('حلى')) return '🍰';
+      return '🍹';
+    }
+
+    // Render Compact Menu Grid
     function renderMenuGrid() {
       const grid = document.getElementById('menu-grid');
       if (!grid) return;
       grid.innerHTML = '';
 
-      // Permanent Custom Item Button on Menu Grid
+      // Custom Item Button
       const customBtn = document.createElement('button');
       customBtn.onclick = openCustomItemModal;
-      customBtn.className = 'bg-amber-500/10 border-2 border-amber-500/60 rounded-xl p-2 flex flex-col items-center justify-between text-center min-h-[110px] cursor-pointer hover:bg-amber-500/20 transition-colors';
+      customBtn.className = 'bg-amber-500/10 border-2 border-dashed border-amber-500/60 rounded-xl p-2 flex flex-col items-center justify-between text-center min-h-[105px] cursor-pointer hover:bg-amber-500/20 transition-all';
       customBtn.innerHTML = `
-        <div class="w-10 h-10 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center text-xl font-bold">
+        <div class="w-9 h-9 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center text-lg font-bold">
           ✨
         </div>
         <div class="my-1">
-          <span class="block text-sm font-black text-amber-300">عنصر مخصص</span>
-          <span class="block text-[10px] font-semibold text-slate-400">إدخال يدوي</span>
+          <span class="block text-xs font-black text-amber-300">عنصر مخصص</span>
+          <span class="block text-[9px] font-semibold text-slate-400">إدخال سعر يدوي</span>
         </div>
-        <div class="w-full py-1 bg-amber-500 text-slate-950 font-black rounded-lg text-[10px]">
-          + إدخال سعر
+        <div class="w-full py-0.5 bg-amber-500 text-slate-950 font-black rounded-lg text-[9px]">
+          + إدخال صنف
         </div>
       `;
       grid.appendChild(customBtn);
 
-      if (menuItems.length === 0) {
+      let filteredItems = menuItems;
+      if (currentCategoryFilter !== 'ALL') {
+        filteredItems = filteredItems.filter(it => (it.category || '').toUpperCase().includes(currentCategoryFilter));
+      }
+      if (currentSearchQuery) {
+        filteredItems = filteredItems.filter(it => 
+          (it.menu_item_name || it.name || '').toLowerCase().includes(currentSearchQuery) ||
+          (it.category || '').toLowerCase().includes(currentSearchQuery)
+        );
+      }
+
+      if (filteredItems.length === 0) {
         const emptyMsg = document.createElement('div');
-        emptyMsg.className = 'col-span-full py-6 text-center text-slate-400 font-semibold text-xs';
-        emptyMsg.textContent = 'لا توجد أصناف متاحة حالياً بالقائمة';
+        emptyMsg.className = 'col-span-full py-8 text-center text-slate-400 font-bold text-xs';
+        emptyMsg.textContent = 'لا توجد أصناف مطابقة للبحث حالياً';
         grid.appendChild(emptyMsg);
         return;
       }
 
-      menuItems.forEach(item => {
+      filteredItems.forEach(item => {
         const name = item.menu_item_name || item.name || 'صنف';
         const icon = getItemIcon(name, item.category);
         const price = Number(item.price) || 0;
 
         const btn = document.createElement('button');
         btn.onclick = () => addToCart(name, item.category, icon, price);
-        btn.className = 'bg-slate-900 border border-slate-800 hover:border-amber-500/60 rounded-xl p-2 flex flex-col items-center justify-between text-center min-h-[110px] cursor-pointer transition-colors';
+        btn.className = 'bg-slate-900 border border-slate-800 hover:border-amber-500/60 rounded-xl p-2 flex flex-col items-center justify-between text-center min-h-[105px] cursor-pointer transition-all hover:scale-[1.02] shadow-sm';
         btn.innerHTML = `
-          <div class="w-10 h-10 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-xl shadow-inner">
+          <div class="w-9 h-9 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-lg shadow-inner">
             ${icon}
           </div>
           <div class="my-1 w-full px-1">
             <span class="block text-xs font-extrabold text-white truncate">${name}</span>
             <span class="block text-[11px] font-black text-amber-400 font-mono">${price} ج.م</span>
           </div>
-          <div class="w-full py-1 bg-slate-800 text-slate-200 font-bold rounded-lg text-[10px]">
+          <div class="w-full py-0.5 bg-slate-800 hover:bg-amber-500 hover:text-slate-950 text-slate-200 font-bold rounded-lg text-[9px] transition-colors">
             + إضافة
           </div>
         `;
@@ -908,6 +1533,7 @@
       });
     }
 
+    // Modifier Modal Logic
     let pendingItemForModifier = null;
     let selectedSugar = 'مظبوط';
     let selectedRoast = 'افتراضي';
@@ -975,12 +1601,10 @@
       renderCartUI();
     }
 
-    // Add item to local cart
     function addToCart(itemName, category, icon, price = 0) {
       openModifierModal(itemName, category, icon, price);
     }
 
-    // Change quantity of item in cart
     function updateCartQuantity(index, change) {
       if (index >= 0 && index < cart.length) {
         cart[index].quantity += change;
@@ -991,7 +1615,6 @@
       }
     }
 
-    // Remove item completely
     function removeFromCart(index) {
       if (index >= 0 && index < cart.length) {
         cart.splice(index, 1);
@@ -999,17 +1622,17 @@
       }
     }
 
-    // Clear cart
     function clearCart() {
       cart = [];
       renderCartUI();
     }
 
-    // Custom Item Modal logic
+    // Custom Item Modal
     function openCustomItemModal() {
       document.getElementById('custom-item-modal').classList.remove('hidden');
       document.getElementById('custom-name-input').focus();
     }
+
     function closeCustomItemModal() {
       document.getElementById('custom-item-modal').classList.add('hidden');
       document.getElementById('custom-name-input').value = '';
@@ -1041,124 +1664,163 @@
       showToast(`تمت إضافة "${name}" للفاتورة`, true);
     }
 
-    // Global Live Configuration
-    let posSystemConfig = {
-      currency: 'ج.م',
-      vat_percent: 14,
-      service_percent: 12,
-      apply_taxes: true
-    };
-
-    async function loadPosConfig() {
-      try {
-        const res = await fetch('/api/config');
-        const data = await res.json();
-        if (data.success && data.config) {
-          posSystemConfig = data.config;
-          document.querySelectorAll('.currency-symbol').forEach(el => el.textContent = posSystemConfig.currency || 'ج.م');
-          const srvRateEl = document.getElementById('cart-service-rate');
-          const vatRateEl = document.getElementById('cart-vat-rate');
-          const currEl = document.getElementById('cart-currency-label');
-          if (srvRateEl) srvRateEl.textContent = posSystemConfig.service_percent;
-          if (vatRateEl) vatRateEl.textContent = posSystemConfig.vat_percent;
-          if (currEl) currEl.textContent = posSystemConfig.currency || 'ج.م';
-          renderCartUI();
-        }
-      } catch (err) {
-        console.warn('Could not load pos config:', err);
-      }
-    }
-
-    // Render Cart Ticket UI
+    // Render Ticket UI (Active Table Orders + New Cart Items)
     function renderCartUI() {
-      const container = document.getElementById('cart-items-container');
-      const totalQtyElem = document.getElementById('cart-total-qty');
+      const activeSection = document.getElementById('active-table-orders-section');
+      const activeContainer = document.getElementById('active-table-items-container');
+      const activeCountBadge = document.getElementById('active-orders-count-badge');
+      const activeSubtotalEl = document.getElementById('active-orders-subtotal');
+
+      const newSectionHeader = document.getElementById('new-cart-header');
+      const newCountBadge = document.getElementById('new-cart-count-badge');
+      const newSubtotalEl = document.getElementById('new-cart-subtotal');
+      const cartContainer = document.getElementById('cart-items-container');
+
       const subtotalElem = document.getElementById('cart-subtotal-price');
       const serviceElem = document.getElementById('cart-service-price');
       const vatElem = document.getElementById('cart-vat-price');
       const totalPriceElem = document.getElementById('cart-total-price');
       const taxRow = document.getElementById('cart-tax-breakdown-row');
+      const totalItemsDesc = document.getElementById('ticket-total-items-desc');
       const sendBtn = document.getElementById('send-orders-btn');
       const sendBtnText = document.getElementById('send-btn-text');
 
-      let totalQty = 0;
-      let subtotal = 0;
+      let activeSubtotal = 0;
+      let activeQty = 0;
+      let newSubtotal = 0;
+      let newQty = 0;
 
-      if (cart.length === 0) {
-        container.innerHTML = `
-          <div id="empty-cart-msg" class="py-12 text-center text-slate-500 flex flex-col items-center justify-center">
-            <span class="text-3xl mb-1 opacity-50">🛒</span>
-            <p class="text-xs font-bold">السلة فارغة حالياً</p>
-            <p class="text-[10px] opacity-75 mt-0.5">اضغط الأصناف لإضافتها فوراً</p>
-          </div>
-        `;
-        if (totalQtyElem) totalQtyElem.textContent = '0';
-        if (subtotalElem) subtotalElem.textContent = `0 ${posSystemConfig.currency || 'ج.م'}`;
-        if (serviceElem) serviceElem.textContent = `0 ${posSystemConfig.currency || 'ج.م'}`;
-        if (vatElem) vatElem.textContent = `0 ${posSystemConfig.currency || 'ج.م'}`;
-        if (totalPriceElem) totalPriceElem.textContent = '0';
-        if (taxRow) taxRow.classList.toggle('hidden', !posSystemConfig.apply_taxes);
-        sendBtn.disabled = true;
-        sendBtnText.textContent = 'إرسال الطلبات (0)';
-        return;
+      // 1. Render Active Orders
+      if (activeTableOrders && activeTableOrders.length > 0) {
+        activeSection.classList.remove('hidden');
+        activeContainer.innerHTML = '';
+
+        activeTableOrders.forEach(it => {
+          const itSub = it.quantity * it.unit_price;
+          activeSubtotal += itSub;
+          activeQty += it.quantity;
+
+          let statusBadge = 'bg-amber-500/20 text-amber-300 border-amber-500/30';
+          let statusLabel = '⏳ قيد الانتظار';
+          if (it.kds_status === 'ACCEPTED') {
+            statusBadge = 'bg-sky-500/20 text-sky-300 border-sky-500/30';
+            statusLabel = '👨‍🍳 جاري التحضير';
+          } else if (it.kds_status === 'READY') {
+            statusBadge = 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30 font-black';
+            statusLabel = '🟢 جاهز للتقديم';
+          } else if (it.kds_status === 'DELIVERED') {
+            statusBadge = 'bg-purple-500/20 text-purple-300 border-purple-500/30';
+            statusLabel = '🍽️ تم التقديم';
+          }
+
+          const div = document.createElement('div');
+          div.className = 'flex items-center justify-between p-2 bg-slate-950/80 border border-slate-800 rounded-xl text-xs';
+          div.innerHTML = `
+            <div class="flex items-center gap-2">
+              <span class="text-base">${getItemIcon(it.item_name, it.department)}</span>
+              <div>
+                <div class="flex items-center gap-1.5">
+                  <h4 class="font-extrabold text-white text-xs leading-tight">${it.item_name}</h4>
+                  <span class="px-1.5 py-0.2 rounded-full border text-[8px] font-bold ${statusBadge}">${statusLabel}</span>
+                </div>
+                <div class="flex items-center gap-2 mt-0.5">
+                  <span class="text-[10px] font-mono text-amber-400 font-bold">${it.unit_price} ج.م × ${it.quantity}</span>
+                  <span class="text-[10px] text-slate-400 font-mono font-bold">= ${itSub} ج.م</span>
+                </div>
+                ${it.sugar_level || it.roast_type ? `<p class="text-[9px] text-amber-300/80 font-mono mt-0.5">${[it.sugar_level, it.roast_type].filter(Boolean).join(' | ')}</p>` : ''}
+              </div>
+            </div>
+            <div class="text-right">
+              <span class="px-2 py-0.5 bg-slate-800 rounded-lg text-[10px] font-mono font-bold text-slate-300">مسجل</span>
+            </div>
+          `;
+          activeContainer.appendChild(div);
+        });
+
+        if (activeCountBadge) activeCountBadge.textContent = activeQty;
+        if (activeSubtotalEl) activeSubtotalEl.textContent = `${activeSubtotal} ${posSystemConfig.currency || 'ج.م'}`;
+      } else {
+        activeSection.classList.add('hidden');
+        activeContainer.innerHTML = '';
       }
 
-      container.innerHTML = '';
+      // 2. Render New Pending Cart Items
+      if (cart.length > 0) {
+        newSectionHeader.classList.remove('hidden');
+        cartContainer.innerHTML = '';
 
-      cart.forEach((item, index) => {
-        const itemSubtotal = item.quantity * item.price;
-        totalQty += item.quantity;
-        subtotal += itemSubtotal;
+        cart.forEach((item, index) => {
+          const itemSubtotal = item.quantity * item.price;
+          newQty += item.quantity;
+          newSubtotal += itemSubtotal;
 
-        const cartItemDiv = document.createElement('div');
-        cartItemDiv.className = 'flex items-center justify-between p-2 bg-slate-800/90 border border-slate-700/80 rounded-xl text-xs';
-        
-        cartItemDiv.innerHTML = `
-          <div class="flex items-center gap-2">
-            <span class="text-lg">${item.icon || '☕'}</span>
-            <div>
-              <h4 class="font-extrabold text-white text-xs leading-tight">${item.item_name}</h4>
-              <div class="flex items-center gap-2 mt-0.5">
-                <span class="text-[10px] font-mono text-amber-400 font-bold">${item.price} ${posSystemConfig.currency || 'ج.م'}</span>
-                <span class="text-[10px] text-slate-400 font-mono font-bold">= ${itemSubtotal} ${posSystemConfig.currency || 'ج.م'}</span>
+          const cartItemDiv = document.createElement('div');
+          cartItemDiv.className = 'flex items-center justify-between p-2 bg-slate-800/90 border border-amber-500/30 rounded-xl text-xs shadow-sm';
+          cartItemDiv.innerHTML = `
+            <div class="flex items-center gap-2">
+              <span class="text-lg">${item.icon || '☕'}</span>
+              <div>
+                <h4 class="font-extrabold text-white text-xs leading-tight">${item.item_name}</h4>
+                <div class="flex items-center gap-2 mt-0.5">
+                  <span class="text-[10px] font-mono text-amber-400 font-bold">${item.price} ج.م</span>
+                  <span class="text-[10px] text-slate-400 font-mono font-bold">= ${itemSubtotal} ج.م</span>
+                </div>
+                ${item.sugar_level || item.roast_type || item.addons ? `<p class="text-[9px] text-amber-300/80 font-mono mt-0.5">${[item.sugar_level, item.roast_type, item.addons].filter(Boolean).join(' | ')}</p>` : ''}
               </div>
-              ${item.sugar_level || item.roast_type || item.addons ? `<p class="text-[9px] text-amber-300/80 font-mono mt-0.5">${[item.sugar_level, item.roast_type, item.addons].filter(Boolean).join(' | ')}</p>` : ''}
             </div>
-          </div>
 
-          <div class="flex items-center gap-1.5">
-            <div class="flex items-center gap-1 bg-slate-900 border border-slate-700 rounded-lg p-0.5">
+            <div class="flex items-center gap-1.5">
+              <div class="flex items-center gap-1 bg-slate-900 border border-slate-700 rounded-lg p-0.5">
+                <button 
+                  onclick="updateCartQuantity(${index}, -1)"
+                  class="w-6 h-6 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold flex items-center justify-center cursor-pointer">
+                  -
+                </button>
+                <span class="w-5 text-center font-black font-mono text-amber-400 text-xs">${item.quantity}</span>
+                <button 
+                  onclick="updateCartQuantity(${index}, 1)"
+                  class="w-6 h-6 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold flex items-center justify-center cursor-pointer">
+                  +
+                </button>
+              </div>
               <button 
-                onclick="updateCartQuantity(${index}, -1)"
-                class="w-6 h-6 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold flex items-center justify-center cursor-pointer">
-                -
-              </button>
-              <span class="w-5 text-center font-black font-mono text-amber-400 text-xs">${item.quantity}</span>
-              <button 
-                onclick="updateCartQuantity(${index}, 1)"
-                class="w-6 h-6 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold flex items-center justify-center cursor-pointer">
-                +
+                onclick="removeFromCart(${index})"
+                class="w-6 h-6 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 flex items-center justify-center cursor-pointer">
+                🗑️
               </button>
             </div>
-            <button 
-              onclick="removeFromCart(${index})"
-              class="w-7 h-7 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 flex items-center justify-center cursor-pointer">
-              🗑️
-            </button>
-          </div>
-        `;
+          `;
+          cartContainer.appendChild(cartItemDiv);
+        });
 
-        container.appendChild(cartItemDiv);
-      });
+        if (newCountBadge) newCountBadge.textContent = newQty;
+        if (newSubtotalEl) newSubtotalEl.textContent = `${newSubtotal} ${posSystemConfig.currency || 'ج.م'}`;
+      } else {
+        newSectionHeader.classList.add('hidden');
+        if (activeTableOrders.length === 0) {
+          cartContainer.innerHTML = `
+            <div id="empty-cart-msg" class="py-10 text-center text-slate-500 flex flex-col items-center justify-center">
+              <span class="text-3xl mb-1 opacity-50">🛒</span>
+              <p class="text-xs font-bold text-slate-400">السلة فارغة حالياً</p>
+              <p class="text-[10px] text-slate-500 mt-0.5">اضغط على أي صنف من القائمة لإضافته فوراً</p>
+            </div>
+          `;
+        } else {
+          cartContainer.innerHTML = '';
+        }
+      }
 
-      // Calculate dynamic taxation breakdown
+      // 3. Combined Calculation
+      const combinedSubtotal = activeSubtotal + newSubtotal;
+      const combinedQty = activeQty + newQty;
+
       let serviceFee = 0;
       let vatFee = 0;
-      let finalTotal = subtotal;
+      let finalTotal = combinedSubtotal;
 
-      if (posSystemConfig.apply_taxes) {
-        serviceFee = Number(((subtotal * (Number(posSystemConfig.service_percent) || 0)) / 100).toFixed(2));
-        const taxableBase = subtotal + serviceFee;
+      if (posSystemConfig.apply_taxes && combinedSubtotal > 0) {
+        serviceFee = Number(((combinedSubtotal * (Number(posSystemConfig.service_percent) || 0)) / 100).toFixed(2));
+        const taxableBase = combinedSubtotal + serviceFee;
         vatFee = Number(((taxableBase * (Number(posSystemConfig.vat_percent) || 0)) / 100).toFixed(2));
         finalTotal = Number((taxableBase + vatFee).toFixed(2));
         if (taxRow) taxRow.classList.remove('hidden');
@@ -1166,17 +1828,23 @@
         if (taxRow) taxRow.classList.add('hidden');
       }
 
-      if (totalQtyElem) totalQtyElem.textContent = totalQty;
-      if (subtotalElem) subtotalElem.textContent = `${subtotal.toLocaleString('ar-EG')} ${posSystemConfig.currency || 'ج.م'}`;
+      if (subtotalElem) subtotalElem.textContent = `${combinedSubtotal.toLocaleString('ar-EG')} ${posSystemConfig.currency || 'ج.م'}`;
       if (serviceElem) serviceElem.textContent = `${serviceFee.toLocaleString('ar-EG')} ${posSystemConfig.currency || 'ج.م'}`;
       if (vatElem) vatElem.textContent = `${vatFee.toLocaleString('ar-EG')} ${posSystemConfig.currency || 'ج.م'}`;
       if (totalPriceElem) totalPriceElem.textContent = finalTotal.toLocaleString('ar-EG');
-      
-      sendBtn.disabled = false;
-      sendBtnText.textContent = `إرسال الطلبات (${totalQty})`;
+      if (totalItemsDesc) totalItemsDesc.textContent = `${combinedQty} صنف (${activeQty} مسجل + ${newQty} جديد)`;
+
+      // Update Send Orders Button
+      if (newQty > 0) {
+        sendBtn.disabled = false;
+        sendBtnText.textContent = `إرسال للمطبخ (${newQty})`;
+      } else {
+        sendBtn.disabled = true;
+        sendBtnText.textContent = 'إرسال للمطبخ (0)';
+      }
     }
 
-    // Send Cart Orders Action Handler + Silent BOH Kitchen Print
+    // Send Cart Orders to Kitchen / KDS
     async function sendCartOrders() {
       if (cart.length === 0) return;
 
@@ -1230,7 +1898,7 @@
       }
 
       if (failureCount === 0) {
-        showToast(`تم إرسال ${successCount} طلب بنجاح!`, true);
+        showToast(`تم إرسال ${successCount} صنف للمطبخ والبار بنجاح! 🚀`, true);
         
         // Silently call hardware Kitchen/Bar Print bridge
         fetch('/api/print/kitchen', {
@@ -1244,7 +1912,12 @@
         }).catch(() => {});
 
         cart = [];
-        renderCartUI();
+        if (selectedTableNumber > 0) {
+          await fetchTableSessions();
+          await fetchSelectedTableSession(selectedTableNumber, false);
+        } else {
+          renderCartUI();
+        }
       } else {
         showToast(`تم إرسال بعض الطلبات وحصل خطأ في ${failureCount}`, false);
         renderCartUI();
@@ -1282,19 +1955,36 @@
     let currentCustomerData = null;
 
     function openCheckoutModal() {
-      // Calculate total bill with dynamic taxes
-      const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-      currentCheckoutSubtotal = subtotal;
+      // Calculate total from activeTableOrders + cart
+      let activeSubtotal = 0;
+      activeTableOrders.forEach(it => activeSubtotal += (it.quantity * it.unit_price));
+      let newSubtotal = 0;
+      cart.forEach(it => newSubtotal += (it.quantity * it.price));
 
-      let finalBill = subtotal;
+      const combinedSubtotal = activeSubtotal + newSubtotal;
+      if (combinedSubtotal <= 0) {
+        showToast('لا توجد طلبات لدفعها في الفاتورة الحالية', false);
+        return;
+      }
+
+      currentCheckoutSubtotal = combinedSubtotal;
+
+      let finalBill = combinedSubtotal;
       if (posSystemConfig.apply_taxes) {
-        const srv = Number(((subtotal * (Number(posSystemConfig.service_percent) || 0)) / 100).toFixed(2));
-        const taxable = subtotal + srv;
+        const srv = Number(((combinedSubtotal * (Number(posSystemConfig.service_percent) || 0)) / 100).toFixed(2));
+        const taxable = combinedSubtotal + srv;
         const vat = Number(((taxable * (Number(posSystemConfig.vat_percent) || 0)) / 100).toFixed(2));
         finalBill = Number((taxable + vat).toFixed(2));
       }
 
       currentCheckoutTotal = finalBill;
+
+      const targetLabel = document.getElementById('checkout-target-label');
+      if (targetLabel) {
+        targetLabel.textContent = selectedTableNumber > 0 
+          ? `حساب طاولة رقم #${selectedTableNumber}:` 
+          : 'حساب الطلب المباشر (سفري):';
+      }
 
       document.getElementById('checkout-total-bill').textContent = `${currentCheckoutTotal} ${posSystemConfig.currency || 'ج.م'}`;
       document.getElementById('pay-cash').value = currentCheckoutTotal > 0 ? currentCheckoutTotal : '';
@@ -1303,11 +1993,17 @@
       document.getElementById('pay-wallet').value = '';
       document.getElementById('pay-tip').value = '';
       
-      // Reset customer loyalty UI
-      document.getElementById('customer-phone').value = '';
-      document.getElementById('loyalty-info').classList.add('hidden');
-      document.getElementById('redeem-points-toggle').checked = false;
-      currentCustomerData = null;
+      // Auto-populate customer phone if table has customer assigned
+      const tbl = tablesMap.get(selectedTableNumber);
+      if (tbl && tbl.customer_phone) {
+        document.getElementById('customer-phone').value = tbl.customer_phone;
+        searchCustomerLoyalty();
+      } else {
+        document.getElementById('customer-phone').value = '';
+        document.getElementById('loyalty-info').classList.add('hidden');
+        document.getElementById('redeem-points-toggle').checked = false;
+        currentCustomerData = null;
+      }
 
       updateCheckoutRemaining();
       document.getElementById('checkout-modal').classList.remove('hidden');
@@ -1346,7 +2042,6 @@
       const visa = Number(document.getElementById('pay-visa').value) || 0;
       const wallet = Number(document.getElementById('pay-wallet').value) || 0;
 
-      // Points discount deduction (1 point = 1 unit of currency)
       let pointsDiscount = 0;
       const redeemToggle = document.getElementById('redeem-points-toggle');
       if (redeemToggle && redeemToggle.checked && currentCustomerData) {
@@ -1393,7 +2088,7 @@
 
     async function submitCheckout(event) {
       event.preventDefault();
-      if (!confirm(`هل أنت متاكد من إغلاق الحساب وتحصيل الدفع للطاولة رقم ${selectedTableNumber || 'سفري'}؟`)) return;
+      if (!confirm(`هل أنت متأكد من إغلاق الحساب وتحصيل الدفع للطاولة رقم ${selectedTableNumber || 'سفري'}؟`)) return;
 
       const cash = Number(document.getElementById('pay-cash').value) || 0;
       const instapay = Number(document.getElementById('pay-instapay').value) || 0;
@@ -1416,6 +2111,9 @@
 
       const currentUser = JSON.parse(localStorage.getItem('currentUser') || localStorage.getItem('user') || '{}');
 
+      // Combined checkout items: active table items + new cart items
+      const combinedItems = [...activeTableOrders, ...cart];
+
       try {
         const response = await fetch('/api/checkout', {
           method: 'POST',
@@ -1425,7 +2123,7 @@
             subtotal: currentCheckoutSubtotal,
             total_amount: currentCheckoutTotal,
             payments,
-            items: cart,
+            items: combinedItems,
             cashier_name: currentUser.name || 'الكاشير',
             customer_phone: customerPhone || null,
             points_redeemed: pointsRedeemed,
@@ -1438,9 +2136,11 @@
           showToast('تم إغلاق الفاتورة وطباعة الإيصال وتسجيل الدفع بنجاح! 🖨️', true);
           closeCheckoutModal();
           cart = [];
+          activeTableOrders = [];
+          activeTableTotals = null;
           renderCartUI();
           if (selectedTableNumber > 0) {
-            fetchTableSessions();
+            await fetchTableSessions();
             selectTable(0);
           }
         } else {
@@ -1452,75 +2152,55 @@
       }
     }
 
-    // Initial Load & Network Monitor
+    // WebSocket Real-time Synchronization
+    function connectWebSocket() {
+      const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      try {
+        ws = new WebSocket(`${protocol}//${location.host}`);
+        ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            if (data.type === 'TABLE_LIFECYCLE_CHANGED' || data.type === 'TABLE_SEATED' || data.type === 'TABLE_VACATED' || data.type === 'TABLE_CHECK_REQUESTED' || data.type === 'NEW_ORDER' || data.type === 'ORDER_STATUS_CHANGED' || data.type === 'CHECKOUT_COMPLETED') {
+              fetchTableSessions();
+            }
+          } catch (e) {}
+        };
+        ws.onclose = () => setTimeout(connectWebSocket, 3000);
+      } catch (e) {}
+    }
+
+    // Network Monitor
     function initNetworkMonitor() {
       const dot = document.getElementById('net-status-dot');
       const text = document.getElementById('net-status-text');
-      const actionBtns = document.querySelectorAll('#send-order-btn, button[type="submit"]');
+      const actionBtns = document.querySelectorAll('#send-orders-btn, button[type="submit"]');
 
       function updateStatus(online) {
         if (dot && text) {
           if (online) {
-            dot.className = "w-2.5 h-2.5 rounded-full bg-emerald-500";
+            dot.className = "w-2 h-2 rounded-full bg-emerald-500";
             text.className = "text-emerald-400 font-bold";
             text.textContent = "متصل";
           } else {
-            dot.className = "w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping";
+            dot.className = "w-2 h-2 rounded-full bg-rose-500 animate-ping";
             text.className = "text-rose-400 font-bold";
             text.textContent = "منقطع";
           }
         }
-        actionBtns.forEach(btn => {
-          if (btn) btn.disabled = !online;
-        });
       }
 
       window.addEventListener('online', () => updateStatus(true));
       window.addEventListener('offline', () => updateStatus(false));
       updateStatus(navigator.onLine);
     }
-    
+
+    // Initialize POS
     initNetworkMonitor();
     loadPosConfig();
     fetchMenu();
+    fetchTableSessions();
+    connectWebSocket();
+    setInterval(fetchTableSessions, 10000);
   </script>
-  <!-- Modifier Selection Modal -->
-  <div id="modifier-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
-    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 max-w-sm w-full space-y-4 shadow-2xl text-right">
-      <div class="flex items-center justify-between border-b border-slate-800 pb-2">
-        <h3 id="modifier-item-title" class="text-base font-bold text-amber-400">تخصيص المشروب</h3>
-        <button onclick="closeModifierModal()" class="text-slate-400 hover:text-white font-bold text-lg">✕</button>
-      </div>
-
-      <!-- Sugar Selection -->
-      <div class="space-y-1.5">
-        <label class="text-xs font-extrabold text-slate-300 block">درجة السكر (Sugar Level):</label>
-        <div class="grid grid-cols-2 gap-1.5 text-xs font-bold">
-          <button type="button" onclick="selectSugar('مظبوط')" class="sugar-btn p-2 bg-amber-500/20 border border-amber-500 text-amber-300 rounded-lg">مظبوط</button>
-          <button type="button" onclick="selectSugar('سادة')" class="sugar-btn p-2 bg-slate-800 border border-slate-700 text-slate-300 rounded-lg">سادة</button>
-          <button type="button" onclick="selectSugar('زيادة')" class="sugar-btn p-2 bg-slate-800 border border-slate-700 text-slate-300 rounded-lg">زيادة</button>
-          <button type="button" onclick="selectSugar('سكر خارجي')" class="sugar-btn p-2 bg-slate-800 border border-slate-700 text-slate-300 rounded-lg">سكر خارجي</button>
-        </div>
-      </div>
-
-      <!-- Roast Selection -->
-      <div class="space-y-1.5">
-        <label class="text-xs font-extrabold text-slate-300 block">درجة التحويجة / البن (Roast Type):</label>
-        <div class="grid grid-cols-3 gap-1.5 text-xs font-bold">
-          <button type="button" onclick="selectRoast('افتراضي')" class="roast-btn p-1.5 bg-amber-500/20 border border-amber-500 text-amber-300 rounded-lg">افتراضي</button>
-          <button type="button" onclick="selectRoast('فاتح')" class="roast-btn p-1.5 bg-slate-800 border border-slate-700 text-slate-300 rounded-lg">فاتح</button>
-          <button type="button" onclick="selectRoast('وسط')" class="roast-btn p-1.5 bg-slate-800 border border-slate-700 text-slate-300 rounded-lg">وسط</button>
-          <button type="button" onclick="selectRoast('غامق')" class="roast-btn p-1.5 bg-slate-800 border border-slate-700 text-slate-300 rounded-lg">غامق</button>
-          <button type="button" onclick="selectRoast('محوج')" class="roast-btn p-1.5 bg-slate-800 border border-slate-700 text-slate-300 rounded-lg">محوج</button>
-        </div>
-      </div>
-
-      <div class="pt-2 flex gap-2">
-        <button onclick="confirmItemWithModifiers()" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm rounded-xl border border-emerald-400/30">
-          تأكيد وإضافة للطلب 🛒
-        </button>
-      </div>
-    </div>
-  </div>
 </body>
 </html>

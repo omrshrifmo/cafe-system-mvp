@@ -15,15 +15,20 @@ async function authMiddleware(req, res, next) {
     token = req.headers['x-session-token'];
   }
 
+  console.log('authMiddleware: cookies =', req.cookies, 'token =', token);
+
   if (!token) {
+    console.log('authMiddleware: no token, user = null');
     req.user = null;
     return next();
   }
 
   try {
     const user = await validateSession(token);
+    console.log('authMiddleware: validateSession returned', user);
     req.user = user;
   } catch (err) {
+    console.log('authMiddleware: validateSession threw', err);
     req.user = null;
   }
 

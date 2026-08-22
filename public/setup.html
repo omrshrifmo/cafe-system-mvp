@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>كافيه مزاج - إعداد النظام</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background-color: #0f172a;
+      color: #f8fafc;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-4">
+  <div class="w-full max-w-md bg-slate-900 border border-slate-800 rounded-xl p-8 shadow-2xl text-center">
+    <div class="w-16 h-16 bg-indigo-600 rounded-full flex items-center justify-center text-3xl font-bold text-slate-100 mx-auto mb-4">
+      ⚙️
+    </div>
+    <h1 class="text-2xl font-bold text-slate-100 mb-2">مرحباً بك في نظام كافيه مزاج</h1>
+    <p class="text-sm text-slate-400 mb-8">يبدو أن هذه هي المرة الأولى لتشغيل النظام. يرجى اختيار وضع التشغيل.</p>
+
+    <div class="space-y-4">
+      <button onclick="initDemo()" class="w-full bg-slate-800 hover:bg-slate-700 text-amber-400 font-bold py-4 px-6 rounded-xl border border-slate-700 flex flex-col items-center gap-1 transition-colors">
+        <span class="text-lg">وضع التجربة (DEMO) 🧪</span>
+        <span class="text-xs text-slate-400 font-normal">استكشاف النظام ببيانات وهمية للتجريب</span>
+      </button>
+
+      <button onclick="initLive()" class="w-full bg-emerald-900/40 hover:bg-emerald-800/60 text-emerald-400 font-bold py-4 px-6 rounded-xl border border-emerald-800/50 flex flex-col items-center gap-1 transition-colors">
+        <span class="text-lg">وضع التشغيل الفعلي (LIVE) 🚀</span>
+        <span class="text-xs text-emerald-600 font-normal">بدء التشغيل الحقيقي بقاعدة بيانات فارغة</span>
+      </button>
+    </div>
+
+    <div id="statusMsg" class="hidden mt-6 p-3 rounded-lg text-sm font-bold"></div>
+  </div>
+
+  <script>
+    function showMsg(msg, isError = false) {
+      const el = document.getElementById('statusMsg');
+      el.textContent = msg;
+      el.className = `mt-6 p-3 rounded-lg text-sm font-bold ${isError ? 'bg-red-900/50 text-red-400 border border-red-800' : 'bg-emerald-900/50 text-emerald-400 border border-emerald-800'}`;
+      el.classList.remove('hidden');
+    }
+
+    async function initDemo() {
+      try {
+        const res = await fetch('/api/setup/init-demo', { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+          showMsg('تم التبديل إلى وضع التجربة بنجاح. جاري التوجيه...');
+          setTimeout(() => window.location.href = '/', 1500);
+        } else {
+          showMsg(data.error || 'حدث خطأ غير متوقع', true);
+        }
+      } catch (err) {
+        showMsg('تعذر الاتصال بالخادم', true);
+      }
+    }
+
+    async function initLive() {
+      if (!confirm('تنبيه: هل أنت متأكد من الانتقال لوضع التشغيل الفعلي؟')) return;
+      try {
+        const res = await fetch('/api/setup/init-live', { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+          showMsg('تم التبديل إلى وضع التشغيل الفعلي بنجاح. جاري التوجيه...');
+          setTimeout(() => window.location.href = '/', 1500);
+        } else {
+          showMsg(data.error || 'حدث خطأ غير متوقع', true);
+        }
+      } catch (err) {
+        showMsg('تعذر الاتصال بالخادم', true);
+      }
+    }
+
+    window.addEventListener("DOMContentLoaded", async () => {
+      try {
+        const res = await fetch('/api/setup/status');
+        const data = await res.json();
+        if (data.mode !== 'ONBOARDING') {
+          window.location.replace('/');
+        }
+      } catch (e) {}
+    });
+  </script>
+</body>
+</html>

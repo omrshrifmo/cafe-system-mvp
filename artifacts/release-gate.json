@@ -1,0 +1,31 @@
+{
+  "evaluated_at": "2026-08-22T18:32:23.064Z",
+  "status": "PASS",
+  "provenance": {
+    "commit_sha": "5602882e7274af7c263f260b4f9760db45746586",
+    "branch": "main",
+    "build_id": "build-v2-remediated",
+    "schema_version": "005_canonical_prices.sql",
+    "service_worker_version": "cafe-os-v3",
+    "database_path": "cafe.db",
+    "database_sha256": "0eebe26e34be3efb1d2b1ff756a8f34cd235c0c4d50eed15870cae5856e4cf05"
+  },
+  "gates": {
+    "isolated_install_start": "PASS",
+    "backup_checksum_verified": "PASS",
+    "fixtures_created_and_identifiable": "PASS",
+    "runtime_identity_equals_checkout": "PASS",
+    "defect_ledger_tracked": "PASS"
+  },
+  "fixtures": {
+    "clean": "fixtures/clean.sqlite",
+    "legacy": "fixtures/legacy.sqlite",
+    "concurrency": "fixtures/concurrency.sqlite",
+    "offline": "fixtures/offline.sqlite"
+  },
+  "backup": {
+    "backup_file": "backups/cafe_baseline_backup.db",
+    "restore_file": "backups/cafe_baseline_restore_test.db",
+    "verified": true
+  }
+}

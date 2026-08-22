@@ -23,6 +23,9 @@
 <body class="min-h-screen flex flex-col items-center justify-center p-4">
   <div class="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-2xl">
     <!-- Header -->
+    <div id="demo-banner" class="hidden w-full bg-rose-600 text-white text-xs font-bold text-center py-1 rounded-t-xl mb-4">
+      وضع التجربة (DEMO MODE) - البيانات وهمية
+    </div>
     <div class="text-center mb-6">
       <div class="w-16 h-16 bg-amber-600 rounded-full flex items-center justify-center text-3xl font-bold text-slate-950 mx-auto mb-3">
         ☕
@@ -56,6 +59,7 @@
     </div>
   </div>
 
+  <script src="/modules/auth.js"></script>
   <script>
     let currentPin = "";
 
@@ -83,12 +87,6 @@
       updateDisplay();
     }
 
-    function quickFill(pin) {
-      currentPin = pin;
-      updateDisplay();
-      submitLogin();
-    }
-
     function showError(msg) {
       const errorMsg = document.getElementById("errorMsg");
       errorMsg.textContent = msg;
@@ -107,29 +105,18 @@
       }
 
       try {
-        const res = await fetch('/api/auth/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ pin_code: currentPin })
-        });
-        const data = await res.json();
-
-        if (data.success) {
-          localStorage.setItem('currentUser', JSON.stringify(data.user));
-          localStorage.setItem('userTools', JSON.stringify(data.tools));
-          if (data.activeShift) {
-            localStorage.setItem('activeShift', JSON.stringify(data.activeShift));
-          } else {
-            localStorage.removeItem('activeShift');
-          }
-          window.location.href = 'portal.html';
-        } else {
-          showError(data.error || "رمز PIN غير صحيح");
-          currentPin = "";
-          updateDisplay();
+        if (!window.AuthModule) {
+           throw new Error('وحدة التحقق غير متوفرة');
         }
+        
+        await window.AuthModule.loginWithPin(currentPin);
+        
+        // Let the router handle the redirect dynamically based on what the user is permitted to see
+        window.location.replace('/portal.html');
       } catch (err) {
-        showError("تعذر الاتصال بالخادم. يرجى المحاولة لاحقاً.");
+        showError(err.message || "تعذر الاتصال بالخادم. يرجى المحاولة لاحقاً.");
+        currentPin = "";
+        updateDisplay();
       }
     }
 
@@ -147,18 +134,13 @@
       }
     });
 
-    // Auto-redirect only if authoritative active server session exists
     window.addEventListener("DOMContentLoaded", async () => {
-      try {
-        const res = await fetch('/api/auth/me');
-        if (res.ok) {
-          const data = await res.json();
-          if (data.success && data.user) {
-            localStorage.setItem('currentUser', JSON.stringify(data.user));
-            window.location.replace('/portal.html');
-          }
-        }
-      } catch (e) {}
+      if (!window.AuthModule) return;
+      
+      const user = await window.AuthModule.checkAuthSession();
+      if (user) {
+        window.location.replace('/portal.html');
+      }
     });
   </script>
 </body>

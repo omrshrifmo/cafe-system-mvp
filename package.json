@@ -11,12 +11,12 @@
     "db:restore": "node src/db/cli.js restore",
     "lint": "eslint src/ test/ public/modules/",
     "format:check": "echo \"Checking code format... OK\"",
-    "test": "mocha \"test/**/*.test.js\" --timeout 15000 --exit",
-    "test:unit": "mocha \"test/unit/**/*.test.js\" --timeout 10000 --exit",
-    "test:integration": "mocha \"test/integration/**/*.test.js\" --timeout 15000 --exit",
-    "test:security": "mocha \"test/security/**/*.test.js\" --timeout 10000 --exit",
-    "test:e2e": "mocha \"test/e2e/**/*.test.js\" --timeout 20000 --exit",
-    "test:coverage": "c8 mocha \"test/**/*.test.js\" --timeout 15000 --exit"
+    "test": "NODE_ENV=test mocha \"test/**/*.test.js\" --timeout 15000 --exit",
+    "test:unit": "NODE_ENV=test mocha \"test/unit/**/*.test.js\" --timeout 10000 --exit",
+    "test:integration": "NODE_ENV=test mocha \"test/integration/**/*.test.js\" --timeout 15000 --exit",
+    "test:security": "NODE_ENV=test mocha \"test/security/**/*.test.js\" --timeout 10000 --exit",
+    "test:e2e": "NODE_ENV=test mocha \"test/e2e/**/*.test.js\" --timeout 20000 --exit",
+    "test:coverage": "NODE_ENV=test c8 mocha \"test/**/*.test.js\" --timeout 15000 --exit"
   },
   "keywords": [
     "pos",

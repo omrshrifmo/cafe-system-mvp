@@ -1,0 +1,21 @@
+{
+  "timestamp": "2026-08-22T18:32:22.736Z",
+  "schema_version": "005_canonical_prices.sql",
+  "financial": {
+    "total_order_sessions": 31,
+    "total_revenue_egp": "10226.07",
+    "total_payments_egp": "1896.07",
+    "cash_payments_egp": "1566.07",
+    "visa_payments_egp": "330.00",
+    "instapay_payments_egp": "0.00",
+    "wallet_payments_egp": "0.00"
+  },
+  "inventory": {
+    "total_items": 6,
+    "total_valuation_egp": "0.00"
+  },
+  "payroll": {
+    "total_staff": 21,
+    "total_logged_hours": 0
+  }
+}

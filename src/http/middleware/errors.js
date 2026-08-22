@@ -13,13 +13,26 @@ function errorHandler(err, req, res, next) {
     userId: req.user ? req.user.id : null
   });
 
-  const statusCode = err.status || err.statusCode || 500;
-  const errorCode = err.code || (statusCode === 400 ? 'VALIDATION_ERROR' : 'INTERNAL_ERROR');
-
+  let statusCode = err.status || err.statusCode || 500;
+  let errorCode = err.code || (statusCode === 400 ? 'VALIDATION_ERROR' : 'INTERNAL_ERROR');
   let clientMessage = err.message || 'حدث خطأ غير متوقع أثناء معالجة الطلب';
-  
-  // Prevent SQL implementation details from leaking to the client
-  if (clientMessage.includes('SQLITE_') || errorCode.toString().includes('SQLITE')) {
+
+  // Map raw SQLite errors to safe public HTTP errors
+  if (err.message && err.message.includes('SQLITE_CONSTRAINT_UNIQUE')) {
+    statusCode = 409;
+    errorCode = 'CONFLICT';
+    clientMessage = 'هذا السجل موجود مسبقاً.';
+  } else if (err.message && err.message.includes('SQLITE_CONSTRAINT_FOREIGNKEY')) {
+    statusCode = 400;
+    errorCode = 'VALIDATION_ERROR';
+    clientMessage = 'البيانات المرتبطة غير صحيحة أو غير موجودة.';
+  } else if (err.message && err.message.includes('SQLITE_CONSTRAINT_NOTNULL')) {
+    statusCode = 400;
+    errorCode = 'VALIDATION_ERROR';
+    clientMessage = 'يرجى إدخال جميع الحقول المطلوبة.';
+  } else if (err.message && (err.message.includes('SQLITE_') || errorCode.toString().includes('SQLITE'))) {
+    statusCode = 500;
+    errorCode = 'INTERNAL_ERROR';
     clientMessage = 'حدث خطأ في قاعدة البيانات، يرجى المحاولة مرة أخرى أو مراجعة الدعم الفني.';
   }
 

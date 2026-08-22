@@ -289,12 +289,12 @@ async function requestOrderCancellation(orderItemId, waiterId = null, reason = '
         );
       }
     });
-    return { id: orderItemId, status: 'CANCELLED', message: 'تم إلغاء الطلب واسترجاع الخامات مباشرة' };
+    return { success: true, id: orderItemId, status: 'CANCELLED', message: 'تم إلغاء الطلب واسترجاع الخامات مباشرة' };
   }
 
   // If already ACCEPTED or READY, initiate cancellation handshake
   await runQuery(`UPDATE order_items SET edit_request = 'CANCEL_REQUESTED', cancel_reason = ? WHERE id = ?`, [reason, orderItemId]);
-  return { id: orderItemId, edit_request: 'CANCEL_REQUESTED', message: 'تم إرسال طلب إلغاء لشاشة التحضير بانتظار الموافقة' };
+  return { success: true, id: orderItemId, edit_request: 'CANCEL_REQUESTED', message: 'تم إرسال طلب إلغاء لشاشة التحضير بانتظار الموافقة' };
 }
 
 async function resolveOrderCancellation(orderItemId, approved = false, actorId = null) {

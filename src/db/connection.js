@@ -4,12 +4,13 @@
 const sqlite3 = require('sqlite3').verbose();
 const env = require('../config/env');
 const logger = require('../observability/logger');
+const modeService = require('../domain/system/modeService');
 
 let dbInstance = null;
 
 function getDb(customPath = null) {
   if (!dbInstance) {
-    const dbPath = customPath || env.DB_PATH;
+    const dbPath = customPath || modeService.getDatabasePath();
     dbInstance = new sqlite3.Database(dbPath, (err) => {
       if (err) {
         logger.error('Failed to connect to SQLite database', { error: err.message, path: dbPath });

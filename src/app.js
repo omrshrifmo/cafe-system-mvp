@@ -8,7 +8,9 @@ const cookieParser = require('cookie-parser');
 const requestIdMiddleware = require('./http/middleware/request-id');
 const { authMiddleware } = require('./http/middleware/auth');
 const { enforceRegistry } = require('./http/middleware/registry');
+const { modeMiddleware } = require('./http/middleware/mode');
 const errorHandler = require('./http/middleware/errors');
+const envelopeMiddleware = require('./http/middleware/envelope');
 
 // Route Modules
 const authRoutes = require('./http/routes/auth');
@@ -24,6 +26,8 @@ const crmRoutes = require('./http/routes/crm');
 const syncRoutes = require('./http/routes/sync');
 const printRoutes = require('./http/routes/print');
 const usersRoutes = require('./http/routes/users');
+const setupRoutes = require('./http/routes/setup');
+const adminRoutes = require('./http/routes/admin');
 
 function createApp() {
   const app = express();
@@ -33,6 +37,8 @@ function createApp() {
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
   app.use(cookieParser());
   app.use(requestIdMiddleware);
+  app.use(envelopeMiddleware);
+  app.use(modeMiddleware);
   app.use(authMiddleware);
 
   // Protect static HTML pages (Phase 1)
@@ -73,6 +79,8 @@ function createApp() {
   app.use('/api', crmRoutes);
   app.use('/api', syncRoutes);
   app.use('/api', printRoutes);
+  app.use('/api/setup', setupRoutes);
+  app.use('/api/admin', adminRoutes);
 
   // Health check endpoint
   app.get('/healthz', (req, res) => {
@@ -83,12 +91,54 @@ function createApp() {
     });
   });
 
-  // Build info endpoint (Phase 0)
+  // Build info endpoint with full provenance metadata
+  const crypto = require('crypto');
+  const SERVER_INSTANCE_ID = crypto.randomUUID();
+  const PROCESS_START_TIME = new Date().toISOString();
+  let COMMIT_SHA = 'd4c1b979';
+  let GIT_BRANCH = 'master';
+  try {
+    const { execSync } = require('child_process');
+    COMMIT_SHA = execSync('git rev-parse HEAD', { cwd: path.join(__dirname, '..'), encoding: 'utf8' }).trim();
+    GIT_BRANCH = execSync('git branch --show-current', { cwd: path.join(__dirname, '..'), encoding: 'utf8' }).trim() || 'master';
+  } catch (e) {}
+
+  const BUILD_ID = `build-${COMMIT_SHA.slice(0, 8)}-v2`;
+  const SCHEMA_VERSION = '005_canonical_prices.sql';
+  const MIGRATION_VERSION = '005';
+  const SW_VERSION = 'cafe-os-v3';
+
   app.get('/api/build-info', (req, res) => {
-    res.setHeader('X-Build-Id', 'build-v2-remediated');
+    const env = require('./config/env');
+    const { getMode } = require('./domain/system/modeService');
+    const dbIdentity = path.basename(env.DB_PATH || 'cafe.db');
+    const currentMode = getMode();
+
+    res.setHeader('X-Build-Id', BUILD_ID);
+    res.setHeader('X-Commit-Sha', COMMIT_SHA);
+    res.setHeader('X-Branch', GIT_BRANCH);
+    res.setHeader('X-Schema-Version', SCHEMA_VERSION);
+    res.setHeader('X-Migration-Version', MIGRATION_VERSION);
+    res.setHeader('X-Service-Worker-Version', SW_VERSION);
+    res.setHeader('X-Environment-Mode', env.NODE_ENV || 'production');
+    res.setHeader('X-Database-Identity', dbIdentity);
+    res.setHeader('X-Process-Start-Time', PROCESS_START_TIME);
+    res.setHeader('X-Server-Instance-Id', SERVER_INSTANCE_ID);
+    res.setHeader('X-App-Mode', currentMode);
+
     res.json({
       status: 'OK',
-      buildId: 'build-v2-remediated',
+      buildId: BUILD_ID,
+      commitSha: COMMIT_SHA,
+      branch: GIT_BRANCH,
+      schemaVersion: SCHEMA_VERSION,
+      migrationVersion: MIGRATION_VERSION,
+      serviceWorkerVersion: SW_VERSION,
+      environmentMode: env.NODE_ENV || 'production',
+      databaseIdentity: dbIdentity,
+      processStartTime: PROCESS_START_TIME,
+      serverInstanceId: SERVER_INSTANCE_ID,
+      appMode: currentMode,
       timestamp: new Date().toISOString()
     });
   });

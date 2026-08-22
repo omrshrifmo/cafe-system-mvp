@@ -1,0 +1,15 @@
+{
+  "source_database": "/home/omrshrifmo/cafe-system-mvp/cafe.db",
+  "source_size_bytes": 929792,
+  "backup_file": "/home/omrshrifmo/cafe-system-mvp/backups/cafe_baseline_backup.db",
+  "backup_sha256": "0eebe26e34be3efb1d2b1ff756a8f34cd235c0c4d50eed15870cae5856e4cf05",
+  "backup_md5": "d2d1523da7fbde3717011abd1444505e",
+  "backup_size_bytes": 921600,
+  "restore_test_file": "/home/omrshrifmo/cafe-system-mvp/backups/cafe_baseline_restore_test.db",
+  "restore_sha256": "0eebe26e34be3efb1d2b1ff756a8f34cd235c0c4d50eed15870cae5856e4cf05",
+  "restore_md5": "d2d1523da7fbde3717011abd1444505e",
+  "restore_size_bytes": 921600,
+  "checksum_verified": true,
+  "created_at": "2026-08-22T18:32:22.737Z",
+  "integrity_status": "ok"
+}

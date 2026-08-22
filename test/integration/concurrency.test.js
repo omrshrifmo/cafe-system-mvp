@@ -12,6 +12,7 @@ describe('Concurrency & Transactional Integrity Tests', () => {
     app = createApp();
 
     const wRes = await request(app).post('/api/auth/login').send({ pin: '1001' });
+    console.log('wRes.body:', wRes.body);
     waiterToken = wRes.body.token;
   });
 
