@@ -147,12 +147,18 @@
       }
     });
 
-    // Auto-redirect if already logged in
-    window.addEventListener("DOMContentLoaded", () => {
-      const user = localStorage.getItem('currentUser');
-      if (user) {
-        window.location.href = 'portal.html';
-      }
+    // Auto-redirect only if authoritative active server session exists
+    window.addEventListener("DOMContentLoaded", async () => {
+      try {
+        const res = await fetch('/api/auth/me');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.user) {
+            localStorage.setItem('currentUser', JSON.stringify(data.user));
+            window.location.replace('/portal.html');
+          }
+        }
+      } catch (e) {}
     });
   </script>
 </body>
