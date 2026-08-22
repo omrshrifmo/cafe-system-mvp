@@ -16,9 +16,16 @@ function errorHandler(err, req, res, next) {
   const statusCode = err.status || err.statusCode || 500;
   const errorCode = err.code || (statusCode === 400 ? 'VALIDATION_ERROR' : 'INTERNAL_ERROR');
 
+  let clientMessage = err.message || 'حدث خطأ غير متوقع أثناء معالجة الطلب';
+  
+  // Prevent SQL implementation details from leaking to the client
+  if (clientMessage.includes('SQLITE_') || errorCode.toString().includes('SQLITE')) {
+    clientMessage = 'حدث خطأ في قاعدة البيانات، يرجى المحاولة مرة أخرى أو مراجعة الدعم الفني.';
+  }
+
   res.status(statusCode).json({
     success: false,
-    error: err.message || 'حدث خطأ غير متوقع أثناء معالجة الطلب',
+    error: clientMessage,
     code: errorCode,
     requestId: req.id,
     data: null

@@ -232,13 +232,16 @@
       }
 
       try {
-        const res = await fetch('/api/purchases', {
+        const res = await fetch('/api/inventory/purchase', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            inventory_id: parseInt(invId, 10),
-            qty_added: parseFloat(qty),
-            total_cost: parseFloat(cost)
+            items: [{
+              inventory_id: parseInt(invId, 10),
+              quantity: parseFloat(qty),
+              unit_price: parseFloat(cost) / parseFloat(qty)
+            }],
+            notes: 'شراء مباشر من لوحة المشتريات'
           })
         });
         const data = await res.json();

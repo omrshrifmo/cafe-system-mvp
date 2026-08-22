@@ -588,10 +588,10 @@
           }
         }
 
-        const res = await fetch('/api/orders/kds-status', {
-          method: 'POST',
+        const res = await fetch(`/api/orders/${orderId}/status`, {
+          method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: orderId, kds_status: nextStatus })
+          body: JSON.stringify({ status: nextStatus })
         });
         const data = await res.json();
         if (res.ok && data.success) {
@@ -605,10 +605,10 @@
 
     async function resolveCancel(orderId, approved) {
       try {
-        const res = await fetch('/api/orders/resolve-cancel', {
+        const res = await fetch(`/api/orders/${orderId}/cancel-resolve`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: orderId, approved })
+          body: JSON.stringify({ approved })
         });
         const data = await res.json();
         if (res.ok && data.success) {

@@ -115,17 +115,17 @@ router.get('/reports/bi', requireAuth, requirePermission('reports:financial'), a
     );
 
     const wasteCost = await getQuery(
-      `SELECT COALESCE(SUM(amount), 0) as total_waste_cost FROM waste_log`
+      `SELECT COALESCE(SUM(cost_minor), 0) / 100.0 as total_waste_cost FROM waste_log`
     );
 
     const topItems = await allQuery(
-      `SELECT oi.item_name as name, 
+      `SELECT oi.item_name_snapshot as name, 
               SUM(oi.quantity) as quantity, 
               COALESCE(SUM((oi.unit_price_minor * oi.quantity) / 100.0), 0) as revenue
        FROM order_items oi
        JOIN order_sessions os ON oi.session_id = os.id
        WHERE oi.status = 'ACTIVE'
-       GROUP BY oi.item_name
+       GROUP BY oi.item_name_snapshot
        ORDER BY quantity DESC
        LIMIT 10`
     );
@@ -145,7 +145,7 @@ router.get('/reports/bi', requireAuth, requirePermission('reports:financial'), a
         total_revenue: summary ? summary.total_revenue : 0,
         total_orders: summary ? summary.total_orders : 0,
         aov: summary ? Math.round(summary.aov * 10) / 10 : 0,
-        waste_cost: wasteCost ? wasteCost.total_waste_cost : 0
+        waste_cost: wasteCost ? wasteCost.total_waste_items : 0
       },
       top_items: topItems,
       department_sales: departmentSales
@@ -156,7 +156,7 @@ router.get('/reports/bi', requireAuth, requirePermission('reports:financial'), a
 });
 
 // Cash Reconciliation for Shift Declaration
-router.get('/reports/cash-reconciliation', requireAuth, async (req, res, next) => {
+router.get('/reports/cash-reconciliation', requireAuth, requirePermission('reports:financial'), async (req, res, next) => {
   try {
     const shift = req.query.shift || 'MORNING';
     const sales = await getQuery(
@@ -261,6 +261,21 @@ router.post('/advances', requireAuth, async (req, res, next) => {
       [employee_name, amount, reason]
     );
     res.json({ success: true, advance_id: result.lastID });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Get total tips for today
+router.get('/tips/total', requireAuth, requirePermission('reports:read'), async (req, res, next) => {
+  try {
+    const tipRow = await getQuery(
+      `SELECT COALESCE(SUM(tip_minor), 0) / 100.0 as total_tips 
+       FROM payments 
+       WHERE status = 'COMPLETED' 
+       AND date(created_at) = date('now', 'localtime')`
+    );
+    res.json({ success: true, total: tipRow ? tipRow.total_tips : 0 });
   } catch (err) {
     next(err);
   }

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-08-20T14:22:30.905Z",
+  "generatedAt": "2026-08-22T14:21:57.716Z",
   "workspacePath": "/home/omrshrifmo/cafe-system-mvp",
   "branch": "main",
   "skills": [
@@ -94,7 +94,11 @@
       ],
       "isRelevant": true,
       "matchedGlobs": [
-        "**/.github/**/*.md"
+        "**/.github/workflows/*.yml",
+        "**/.github/**/*.md",
+        "**/test/**",
+        "**/src/**",
+        "**/*.test.js"
       ],
       "installedInWorkspace": true,
       "availableInGlobal": false,
@@ -410,8 +414,11 @@
         "**/*.md",
         "**/docs/**"
       ],
-      "isRelevant": false,
-      "matchedGlobs": [],
+      "isRelevant": true,
+      "matchedGlobs": [
+        "**/*.md",
+        "**/docs/**"
+      ],
       "installedInWorkspace": false,
       "availableInGlobal": false,
       "inLibrary": true,

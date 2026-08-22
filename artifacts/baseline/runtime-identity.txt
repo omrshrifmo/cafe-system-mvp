@@ -1,0 +1,200 @@
+/home/omrshrifmo/cafe-system-mvp
+omrshrifmo
+origin	https://github.com/omrshrifmo/cafe-system-mvp.git (fetch)
+origin	https://github.com/omrshrifmo/cafe-system-mvp.git (push)
+## main...origin/main
+ M .claude/learning/attribution-collector-state.json
+ M .claude/learning/attribution-trust.json
+ M .claude/learning/confidence-history.jsonl
+ M .claude/learning/cost-attribution.json
+ M .claude/learning/extension-output.log
+ M .claude/learning/pipeline-cycle.json
+ M .claude/learning/project-profile.json
+ M .claude/learning/remote-repo-probe.json
+ M .claude/learning/runs.snapshot.json
+ M .claude/learning/skill-adoption-state.json
+ M .claude/learning/skill-adoption.jsonl
+ M .claude/learning/task-active-skills.json
+ M .claude/learning/task-proposals-apply-state.json
+ M .claude/learning/today-cost.json
+ M .claude/learning/workspace-affinity.json
+ M .cursor/learning/project-profile.json
+ M .cursor/learning/runs.snapshot.json
+ M .cursor/learning/skill-adoption-state.json
+ M .cursor/learning/skills-catalog.json
+ M .cursor/learning/task-active-skills.json
+ M .cursor/learning/task-skill-proposals.json
+ M .cursor/skills/extension-value-audit/.skill-version.json
+ M .cursor/skills/file-style-conventions/.skill-version.json
+ M .cursor/skills/github-actions-ci/.skill-version.json
+ M .cursor/skills/self-learning/.skill-version.json
+ M .cursor/skills/skill-creator/.skill-version.json
+ M .cursor/skills/skill-feedback-adaptation/.skill-version.json
+ M .cursor/skills/skill-official-updater/.skill-version.json
+ M .cursor/skills/skill-usage-insights/.skill-version.json
+ M .github/copilot-instructions.md
+ M .github/instructions/extension-value-audit.instructions.md
+ M .github/instructions/file-style-conventions.instructions.md
+ M .github/instructions/github-actions-ci.instructions.md
+ M .github/instructions/self-learning.instructions.md
+ M .github/instructions/skill-creator.instructions.md
+ M .github/instructions/skill-feedback-adaptation.instructions.md
+ M .github/instructions/skill-official-updater.instructions.md
+ M .github/instructions/skill-usage-insights.instructions.md
+ M .kiro/learning/project-profile.json
+ M .kiro/learning/runs.snapshot.json
+ M .kiro/learning/skill-adoption-state.json
+ M .kiro/learning/skills-catalog.json
+ M .kiro/learning/task-active-skills.json
+ M .kiro/learning/task-skill-proposals.json
+ M .kiro/skills/extension-value-audit/.skill-version.json
+ M .kiro/skills/file-style-conventions/.skill-version.json
+ M .kiro/skills/github-actions-ci/.skill-version.json
+ M .kiro/skills/self-learning/.skill-version.json
+ M .kiro/skills/skill-creator/.skill-version.json
+ M .kiro/skills/skill-feedback-adaptation/.skill-version.json
+ M .kiro/skills/skill-official-updater/.skill-version.json
+ M .kiro/skills/skill-usage-insights/.skill-version.json
+ M CLAUDE.md
+ M cafe.db
+ M cafe.db-shm
+ M cafe.db-wal
+?? .cursor/skills/doc-coauthoring/
+?? .github/instructions/doc-coauthoring.instructions.md
+?? .kiro/skills/doc-coauthoring/
+?? artifacts/
+2db35b9448efee2ddd75f53753e01ffc34222968
+2db35b9 chore: migrate to sqlite and update project metadata and instructions
+v22.23.1
+12.0.1
+./cafe.db
+./cafe.db-shm
+./cafe.db-wal
+./CLAUDE.md
+./.claude/settings.json
+./.claude/settings.local.json
+./.cursor/hooks.json
+./database.js
+./database.sqlite
+./docs/architecture.md
+./docs/backup-restore.md
+./docs/current-state.md
+./docs/data-model.md
+./docs/financial-controls.md
+./docs/implementation-report.md
+./docs/inventory-ledger.md
+./docs/migration-reconciliation.md
+./docs/offline-sync.md
+./docs/operations-runbook.md
+./docs/permissions.md
+./docs/realtime-kds.md
+./docs/release-gate.json
+./docs/security-model.md
+./docs/testing-strategy.md
+./.git/COMMIT_EDITMSG
+./.git/config
+./.git/description
+./.git/FETCH_HEAD
+./.git/HEAD
+./.github/copilot-instructions.md
+./.gitignore
+./.git/index
+./.git/ORIG_HEAD
+./node_modules/.package-lock.json
+./package.json
+./package-lock.json
+./public/admin-menu.html
+./public/bi.html
+./public/crm.html
+./public/eod.html
+./public/hr.html
+./public/index.html
+./public/inventory.html
+./public/kds.html
+./public/kitchen.html
+./public/manifest.json
+./public/menu-manager.html
+./public/nav.js
+./public/portal.html
+./public/pos.html
+./public/purchasing.html
+./public/qa.html
+./public/qr-menu.html
+./public/reservations.html
+./public/runner.html
+./public/settings.html
+./public/shareholders.html
+./public/shisha.html
+./public/suppliers.html
+./public/sw.js
+./public/tables.html
+./README.md
+./scratch/check_pins.js
+./scratch/fix_missing_pins.js
+./scratch/test_enterprise_refactor.js
+./server.js
+./server.log
+./setup_production.js
+./src/app.js
+./src/server.js
+./test_suite.js
+root        2038  0.0  0.0   2768    12 ?        SNs  Aug13   0:00 fusermount3 -o rw,nosuid,nodev,fsname=portal,auto_unmount,subtype=portal -- /run/user/1000/doc
+omrshri+    4953  1.7  0.8 55482648 132320 ?     S<l  Aug13 231:15 /app/extra/chrome --type=gpu-process --ozone-platform=wayland --render-node-override=/dev/dri/renderD128 --crashpad-handler-pid=18 --enable-crash-reporter=6be706dc-23ce-4969-b5c3-32f9ec078f47, --change-stack-guard-on-fork=enable --gpu-preferences=UAAAAAAAAAAgAQAEAAAAAAAAAAAAAGAAAQAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAYAAAAAAAAABgAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAgAAAAAAAAA --shared-files --metrics-shmem-handle=4,i,11342142515706330352,15241375906851107538,262144 --field-trial-handle=3,i,1439189476242143415,15307373517938319432,262144 --disable-features=DesktopPWAsRunOnOsLogin,EyeDropper,WebAssemblyTrapHandler --variations-seed-version --pseudonymization-salt-handle=7,i,12027756289043779930,9592865406583120038,4 --trace-process-track-uuid=3190708988185955192
+omrshri+    4959  0.3  0.6 54992924 111264 ?     Sl   Aug13  50:39 /app/extra/chrome --type=utility --utility-sub-type=network.mojom.NetworkService --lang=en-US --service-sandbox-type=none --render-node-override=/dev/dri/renderD128 --crashpad-handler-pid=18 --enable-crash-reporter=6be706dc-23ce-4969-b5c3-32f9ec078f47, --change-stack-guard-on-fork=enable --shared-files=v8_context_snapshot_data:100 --metrics-shmem-handle=4,i,13264323989363218608,14198789907155080273,524288 --field-trial-handle=3,i,1439189476242143415,15307373517938319432,262144 --disable-features=DesktopPWAsRunOnOsLogin,EyeDropper,WebAssemblyTrapHandler --variations-seed-version --pseudonymization-salt-handle=7,i,12027756289043779930,9592865406583120038,4 --trace-process-track-uuid=3190708989122997041
+omrshri+    5961  0.0  0.1 55035092 21580 ?      S<l  Aug13   0:50 /app/extra/chrome --type=utility --utility-sub-type=audio.mojom.AudioService --lang=en-US --service-sandbox-type=none --render-node-override=/dev/dri/renderD128 --crashpad-handler-pid=18 --enable-crash-reporter=6be706dc-23ce-4969-b5c3-32f9ec078f47, --change-stack-guard-on-fork=enable --shared-files=v8_context_snapshot_data:100 --metrics-shmem-handle=4,i,4492588089470964191,15409205551630525695,524288 --field-trial-handle=3,i,1439189476242143415,15307373517938319432,262144 --disable-features=DesktopPWAsRunOnOsLogin,EyeDropper,WebAssemblyTrapHandler --variations-seed-version --pseudonymization-salt-handle=7,i,12027756289043779930,9592865406583120038,4 --trace-process-track-uuid=3190709027541712850
+omrshri+  152923  0.2  0.1 55484816 24468 ?      S<l  Aug14  28:15 /opt/vivaldi/vivaldi-bin --type=gpu-process --ozone-platform=wayland --render-node-override=/dev/dri/renderD128 --crashpad-handler-pid=152879 --enable-crash-reporter=,stable --change-stack-guard-on-fork=enable --gpu-preferences=WAAAAAAAAAAgAQAEAAAAAAAAAAAAAGAAQAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAAAAAACAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAAgAAAAAAAAACAAAAAAAAAAIAAAAAAAAAA== --running-vivaldi --shared-files --field-trial-handle=3,i,11678081675798875512,18431956136707160630,262144 --disable-features=EyeDropper --variations-seed-version --pseudonymization-salt-handle=7,i,8672473453291933879,2627986610595556548,4 --trace-process-track-uuid=3190708988185955192
+omrshri+  152925  0.0  0.2 54969176 34632 ?      Sl   Aug14   1:27 /opt/vivaldi/vivaldi-bin --type=utility --utility-sub-type=network.mojom.NetworkService --lang=en-US --running-vivaldi --service-sandbox-type=none --render-node-override=/dev/dri/renderD128 --crashpad-handler-pid=152879 --enable-crash-reporter=,stable --change-stack-guard-on-fork=enable --shared-files=v8_context_snapshot_data:100 --field-trial-handle=3,i,11678081675798875512,18431956136707160630,262144 --disable-features=EyeDropper --variations-seed-version --pseudonymization-salt-handle=7,i,8672473453291933879,2627986610595556548,4 --trace-process-track-uuid=3190708989122997041
+omrshri+  152965  0.0  0.0 55042284 6280 ?       S<l  Aug14   0:15 /opt/vivaldi/vivaldi-bin --type=utility --utility-sub-type=storage.mojom.StorageService --lang=en-US --running-vivaldi --service-sandbox-type=utility --render-node-override=/dev/dri/renderD128 --crashpad-handler-pid=152879 --enable-crash-reporter=,stable --change-stack-guard-on-fork=enable --shared-files=v8_context_snapshot_data:100 --field-trial-handle=3,i,11678081675798875512,18431956136707160630,262144 --disable-features=EyeDropper --variations-seed-version --pseudonymization-salt-handle=7,i,8672473453291933879,2627986610595556548,4 --trace-process-track-uuid=3190708990060038890
+omrshri+  187784  0.2  0.5 1339280 85688 ?       SNsl 16:51   0:13 node /home/omrshrifmo/cafe-system-mvp/server.js
+omrshri+  314484  0.0  0.0 55033324 5232 ?       Sl   Aug14   0:14 /opt/vivaldi/vivaldi-bin --type=utility --utility-sub-type=audio.mojom.AudioService --lang=en-US --running-vivaldi --service-sandbox-type=none --render-node-override=/dev/dri/renderD128 --crashpad-handler-pid=152879 --enable-crash-reporter=,stable --change-stack-guard-on-fork=enable --shared-files=v8_context_snapshot_data:100 --field-trial-handle=3,i,11678081675798875512,18431956136707160630,262144 --disable-features=EyeDropper --variations-seed-version --pseudonymization-salt-handle=7,i,8672473453291933879,2627986610595556548,4 --trace-process-track-uuid=3190709069708596055
+omrshri+ 2673677  0.0  0.2 1459608928 32828 ?    SNl  Aug21   0:21 /opt/antigravity-ide/antigravity-ide /home/omrshrifmo/.antigravity-ide/extensions/redhat.vscode-yaml-1.24.0-universal/dist/languageserver.js --node-ipc --clientProcessId=2851110
+omrshri+ 2843915  0.0  0.1 33926248 24128 ?      SNl  Aug18   0:53 /proc/self/exe --type=utility --utility-sub-type=network.mojom.NetworkService --lang=en-US --service-sandbox-type=none --render-node-override=/dev/dri/renderD128 --enable-crash-reporter=891b4d2a-e27f-4b24-be21-630e0ed748e9,no_channel --user-data-dir=/home/omrshrifmo/.config/Antigravity IDE --standard-schemes=vscode-webview,vscode-file --enable-sandbox --secure-schemes=vscode-webview,vscode-file --cors-schemes=vscode-webview,vscode-file --fetch-schemes=vscode-webview,vscode-file --service-worker-schemes=vscode-webview --code-cache-schemes=vscode-webview,vscode-file --shared-files=v8_context_snapshot_data:100 --field-trial-handle=3,i,8900989622796641521,16274800026580664438,262144 --enable-features=DocumentPolicyIncludeJSCallStacksInCrashReports,EarlyEstablishGpuChannel,EstablishGpuChannelAsync,PdfUseShowSaveFilePicker --disable-features=CalculateNativeWinOcclusion,LocalNetworkAccessChecks,ScreenAIOCREnabled,SpareRendererForSitePerProcess,TraceSiteInstanceGetProcessCreation --variations-seed-version --trace-process-track-uuid=3190708989122997041
+omrshri+ 2844698  0.0  0.1 1478153408 32492 ?    SNl  Aug18   1:09 /proc/self/exe --type=utility --utility-sub-type=node.mojom.NodeService --lang=en-US --service-sandbox-type=none --render-node-override=/dev/dri/renderD128 --enable-crash-reporter=891b4d2a-e27f-4b24-be21-630e0ed748e9,no_channel --user-data-dir=/home/omrshrifmo/.config/Antigravity IDE --standard-schemes=vscode-webview,vscode-file --enable-sandbox --secure-schemes=vscode-webview,vscode-file --cors-schemes=vscode-webview,vscode-file --fetch-schemes=vscode-webview,vscode-file --service-worker-schemes=vscode-webview --code-cache-schemes=vscode-webview,vscode-file --shared-files=v8_context_snapshot_data:100 --field-trial-handle=3,i,8900989622796641521,16274800026580664438,262144 --enable-features=DocumentPolicyIncludeJSCallStacksInCrashReports,EarlyEstablishGpuChannel,EstablishGpuChannelAsync,PdfUseShowSaveFilePicker --disable-features=CalculateNativeWinOcclusion,LocalNetworkAccessChecks,ScreenAIOCREnabled,SpareRendererForSitePerProcess,TraceSiteInstanceGetProcessCreation --variations-seed-version --trace-process-track-uuid=3190708991934122588
+omrshri+ 2845023  0.1  0.1 1461401324 21508 ?    SNl  Aug18   6:58 /proc/self/exe --type=utility --utility-sub-type=node.mojom.NodeService --lang=en-US --service-sandbox-type=none --render-node-override=/dev/dri/renderD128 --enable-crash-reporter=891b4d2a-e27f-4b24-be21-630e0ed748e9,no_channel --user-data-dir=/home/omrshrifmo/.config/Antigravity IDE --standard-schemes=vscode-webview,vscode-file --enable-sandbox --secure-schemes=vscode-webview,vscode-file --cors-schemes=vscode-webview,vscode-file --fetch-schemes=vscode-webview,vscode-file --service-worker-schemes=vscode-webview --code-cache-schemes=vscode-webview,vscode-file --shared-files=v8_context_snapshot_data:100 --field-trial-handle=3,i,8900989622796641521,16274800026580664438,262144 --enable-features=DocumentPolicyIncludeJSCallStacksInCrashReports,EarlyEstablishGpuChannel,EstablishGpuChannelAsync,PdfUseShowSaveFilePicker --disable-features=CalculateNativeWinOcclusion,LocalNetworkAccessChecks,ScreenAIOCREnabled,SpareRendererForSitePerProcess,TraceSiteInstanceGetProcessCreation --variations-seed-version --trace-process-track-uuid=3190708996619331833
+omrshri+ 2846529  0.0  0.0 33996288 13148 ?      SNl  Aug18   0:10 /proc/self/exe --type=utility --utility-sub-type=audio.mojom.AudioService --lang=en-US --service-sandbox-type=none --render-node-override=/dev/dri/renderD128 --enable-crash-reporter=891b4d2a-e27f-4b24-be21-630e0ed748e9,no_channel --user-data-dir=/home/omrshrifmo/.config/Antigravity IDE --standard-schemes=vscode-webview,vscode-file --enable-sandbox --secure-schemes=vscode-webview,vscode-file --cors-schemes=vscode-webview,vscode-file --fetch-schemes=vscode-webview,vscode-file --service-worker-schemes=vscode-webview --code-cache-schemes=vscode-webview,vscode-file --shared-files=v8_context_snapshot_data:100 --field-trial-handle=3,i,8900989622796641521,16274800026580664438,262144 --enable-features=DocumentPolicyIncludeJSCallStacksInCrashReports,EarlyEstablishGpuChannel,EstablishGpuChannelAsync,PdfUseShowSaveFilePicker --disable-features=CalculateNativeWinOcclusion,LocalNetworkAccessChecks,ScreenAIOCREnabled,SpareRendererForSitePerProcess,TraceSiteInstanceGetProcessCreation --variations-seed-version --trace-process-track-uuid=3190708997556373682
+omrshri+ 2851094  0.1  0.2 1461393076 48284 ?    SNl  Aug18  13:01 /proc/self/exe --type=utility --utility-sub-type=node.mojom.NodeService --lang=en-US --service-sandbox-type=none --render-node-override=/dev/dri/renderD128 --enable-crash-reporter=891b4d2a-e27f-4b24-be21-630e0ed748e9,no_channel --user-data-dir=/home/omrshrifmo/.config/Antigravity IDE --standard-schemes=vscode-webview,vscode-file --enable-sandbox --secure-schemes=vscode-webview,vscode-file --cors-schemes=vscode-webview,vscode-file --fetch-schemes=vscode-webview,vscode-file --service-worker-schemes=vscode-webview --code-cache-schemes=vscode-webview,vscode-file --shared-files=v8_context_snapshot_data:100 --field-trial-handle=3,i,8900989622796641521,16274800026580664438,262144 --enable-features=DocumentPolicyIncludeJSCallStacksInCrashReports,EarlyEstablishGpuChannel,EstablishGpuChannelAsync,PdfUseShowSaveFilePicker --disable-features=CalculateNativeWinOcclusion,LocalNetworkAccessChecks,ScreenAIOCREnabled,SpareRendererForSitePerProcess,TraceSiteInstanceGetProcessCreation --variations-seed-version --trace-process-track-uuid=3190709006926792172
+omrshri+ 2851110  3.9  2.0 1461394984 327268 ?   RNl  Aug18 267:56 /proc/self/exe --type=utility --utility-sub-type=node.mojom.NodeService --lang=en-US --service-sandbox-type=none --render-node-override=/dev/dri/renderD128 --dns-result-order=ipv4first --experimental-network-inspection --inspect-port=0 --enable-crash-reporter=891b4d2a-e27f-4b24-be21-630e0ed748e9,no_channel --user-data-dir=/home/omrshrifmo/.config/Antigravity IDE --standard-schemes=vscode-webview,vscode-file --enable-sandbox --secure-schemes=vscode-webview,vscode-file --cors-schemes=vscode-webview,vscode-file --fetch-schemes=vscode-webview,vscode-file --service-worker-schemes=vscode-webview --code-cache-schemes=vscode-webview,vscode-file --shared-files=v8_context_snapshot_data:100 --field-trial-handle=3,i,8900989622796641521,16274800026580664438,262144 --enable-features=DocumentPolicyIncludeJSCallStacksInCrashReports,EarlyEstablishGpuChannel,EstablishGpuChannelAsync,PdfUseShowSaveFilePicker --disable-features=CalculateNativeWinOcclusion,LocalNetworkAccessChecks,ScreenAIOCREnabled,SpareRendererForSitePerProcess,TraceSiteInstanceGetProcessCreation --variations-seed-version --trace-process-track-uuid=3190709007863834021
+omrshri+ 2851296  0.0  0.1 1459608120 21880 ?    SNl  Aug18   0:38 /opt/antigravity-ide/antigravity-ide /opt/antigravity-ide/resources/app/extensions/json-language-features/server/dist/node/jsonServerMain --node-ipc --clientProcessId=2851110
+omrshri+ 2887575  0.0  0.1 1459575336 22656 ?    SNl  Aug18   0:26 /opt/antigravity-ide/antigravity-ide /opt/antigravity-ide/resources/app/extensions/markdown-language-features/dist/serverWorkerMain --node-ipc --clientProcessId=2851110
+omrshri+ 2887576  0.0  0.1 1476385480 26196 ?    SNl  Aug18   2:46 /opt/antigravity-ide/antigravity-ide /home/omrshrifmo/.antigravity-ide/extensions/cyrusnewday.skill-language-server-0.8.0-universal/dist/server.js --node-ipc --clientProcessId=2851110
+omrshri+ 2888755  0.0  0.0 1459575336 15156 ?    SNl  Aug18   0:14 /opt/antigravity-ide/antigravity-ide --max-old-space-size=3072 /opt/antigravity-ide/resources/app/extensions/node_modules/typescript/lib/tsserver.js --serverMode partialSemantic --useInferredProjectPerProjectRoot --disableAutomaticTypingAcquisition --cancellationPipeName /tmp/vscode-typescript1000/b478c117352e7389559e/tscancellation-192257e03e9ce7e55aee.tmp* --locale en --noGetErrOnBackgroundUpdate --canUseWatchEvents --validateDefaultNpmLocation --useNodeIpc
+omrshri+ 2888756  0.0  0.0 1459575336 15292 ?    SNl  Aug18   4:40 /opt/antigravity-ide/antigravity-ide --max-old-space-size=3072 /opt/antigravity-ide/resources/app/extensions/node_modules/typescript/lib/tsserver.js --useInferredProjectPerProjectRoot --enableTelemetry --cancellationPipeName /tmp/vscode-typescript1000/b478c117352e7389559e/tscancellation-72fecd5dd8191ece2605.tmp* --locale en --noGetErrOnBackgroundUpdate --canUseWatchEvents --validateDefaultNpmLocation --useNodeIpc
+omrshri+ 2888792  0.0  0.0 1459575336 14776 ?    SNl  Aug18   0:05 /opt/antigravity-ide/antigravity-ide /opt/antigravity-ide/resources/app/extensions/node_modules/typescript/lib/typingsInstaller.js --globalTypingsCacheLocation /home/omrshrifmo/.cache/typescript/5.9 --enableTelemetry --typesMapLocation /opt/antigravity-ide/resources/app/extensions/node_modules/typescript/lib/typesMap.json --validateDefaultNpmLocation
+omrshri+ 2892444  0.0  0.1 1459575336 26344 ?    SNl  Aug18   0:34 /opt/antigravity-ide/antigravity-ide /opt/antigravity-ide/resources/app/extensions/html-language-features/server/dist/node/htmlServerMain --node-ipc --clientProcessId=2851110
+omrshri+ 2926833  0.0  0.3 1203672 52556 ?       SNsl Aug18   2:14 PM2 v7.0.3: God Daemon (/home/omrshrifmo/.pm2)
+omrshri+ 3225048  0.0  0.2 1459575336 34016 ?    SNl  01:51   0:02 /opt/antigravity-ide/antigravity-ide /home/omrshrifmo/.antigravity-ide/extensions/github.vscode-github-actions-0.32.3-universal/dist/server-node.js --node-ipc --clientProcessId=2851110
+LISTEN 0      511          0.0.0.0:3000       0.0.0.0:*    users:(("node /home/omrs",pid=187784,fd=29))
+┌────┬────────────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐
+│ id │ name           │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │
+├────┼────────────────┼─────────────┼─────────┼─────────┼──────────┼────────┼──────┼───────────┼──────────┼──────────┼──────────┼──────────┤
+│ 0  │ cafe-server    │ default     │ 2.0.0   │ fork    │ 187784   │ 87m    │ 13   │ online    │ 0%       │ 83.6mb   │ omrshri… │ disabled │
+└────┴────────────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘
+host metrics | cpu: 46.9% | ram usage: 74.9% | lo: ⇓ 0.109mb/s ⇑ 0.109mb/s | wlan0: ⇓ 0.101mb/s ⇑ 0.021mb/s | disk: ⇓ 5.483mb/s ⇑ 0.895mb/s |
+Lifecycle scripts included in cafe-system-mvp@2.0.0:
+  start
+    node src/server.js
+  test
+    mocha "test/**/*.test.js" --timeout 15000 --exit
+available via `npm run`:
+  dev
+    node src/server.js
+  db:migrate
+    node src/db/cli.js migrate
+  db:backup
+    node src/db/cli.js backup
+  db:restore
+    node src/db/cli.js restore
+  lint
+    eslint src/ test/ public/modules/
+  format:check
+    echo "Checking code format... OK"
+  test:unit
+    mocha "test/unit/**/*.test.js" --timeout 10000 --exit
+  test:integration
+    mocha "test/integration/**/*.test.js" --timeout 15000 --exit
+  test:security
+    mocha "test/security/**/*.test.js" --timeout 10000 --exit
+  test:e2e
+    mocha "test/e2e/**/*.test.js" --timeout 20000 --exit
+  test:coverage
+    c8 mocha "test/**/*.test.js" --timeout 15000 --exit

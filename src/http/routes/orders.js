@@ -8,7 +8,8 @@ const {
   updateKdsStatus,
   requestOrderCancellation,
   resolveOrderCancellation,
-  getPendingOrdersByDepartment
+  getPendingOrdersByDepartment,
+  getPastOrdersByDepartment
 } = require('../../domain/orders/service');
 const { requireAuth } = require('../middleware/auth');
 const { requirePermission } = require('../middleware/permissions');
@@ -19,6 +20,17 @@ router.get('/orders', async (req, res, next) => {
   try {
     const dept = req.query.department || null;
     const orders = await getPendingOrdersByDepartment(dept);
+    res.json(orders);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Get recently delivered BOH orders (optionally filtered by department)
+router.get('/orders/past', async (req, res, next) => {
+  try {
+    const dept = req.query.department || null;
+    const orders = await getPastOrdersByDepartment(dept);
     res.json(orders);
   } catch (err) {
     next(err);

@@ -7,6 +7,7 @@ const cookieParser = require('cookie-parser');
 
 const requestIdMiddleware = require('./http/middleware/request-id');
 const { authMiddleware } = require('./http/middleware/auth');
+const { enforceRegistry } = require('./http/middleware/registry');
 const errorHandler = require('./http/middleware/errors');
 
 // Route Modules
@@ -34,11 +35,29 @@ function createApp() {
   app.use(requestIdMiddleware);
   app.use(authMiddleware);
 
+  // Protect static HTML pages (Phase 1)
+  app.use((req, res, next) => {
+    if (req.path.endsWith('.html') && req.path !== '/' && req.path !== '/index.html') {
+      if (!req.user) {
+        return res.redirect('/');
+      }
+    }
+    next();
+  });
+
   // Serve static assets from public/ directory
   app.use(express.static(path.join(__dirname, '../public'), {
     maxAge: process.env.NODE_ENV === 'production' ? '1h' : 0,
-    etag: true
+    etag: true,
+    setHeaders: (res, path) => {
+      if (path.endsWith('.html') || path.endsWith('sw.js')) {
+        res.setHeader('Cache-Control', 'no-cache');
+      }
+    }
   }));
+
+  // Enforce Default Deny Registry on API paths
+  app.use(enforceRegistry);
 
   // API Routes Mount
   app.use('/api/auth', authRoutes);
@@ -61,6 +80,16 @@ function createApp() {
       status: 'OK',
       timestamp: new Date().toISOString(),
       service: 'cafe-system-production'
+    });
+  });
+
+  // Build info endpoint (Phase 0)
+  app.get('/api/build-info', (req, res) => {
+    res.setHeader('X-Build-Id', 'build-v2-remediated');
+    res.json({
+      status: 'OK',
+      buildId: 'build-v2-remediated',
+      timestamp: new Date().toISOString()
     });
   });
 

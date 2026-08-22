@@ -353,6 +353,37 @@ async function getPendingOrdersByDepartment(department = null) {
   });
 }
 
+async function getPastOrdersByDepartment(department = null) {
+  let sql = `
+    SELECT oi.id, oi.session_id, oi.item_name_snapshot as item_name, oi.quantity,
+           oi.modifiers_json, oi.department, oi.kds_status, oi.edit_request, oi.cancel_reason,
+           oi.created_at, os.table_id, t.table_number, t.custom_name as table_custom_name
+    FROM order_items oi
+    JOIN order_sessions os ON oi.session_id = os.id
+    LEFT JOIN tables t ON os.table_id = t.id
+    WHERE oi.kds_status = 'DELIVERED'
+  `;
+  const params = [];
+  if (department) {
+    sql += ` AND oi.department = ?`;
+    params.push(String(department).toUpperCase());
+  }
+  sql += ` ORDER BY oi.updated_at DESC LIMIT 50`;
+
+  const rows = await allQuery(sql, params);
+  return rows.map(r => {
+    let mods = {};
+    try { mods = JSON.parse(r.modifiers_json || '{}'); } catch (e) {}
+    return {
+      ...r,
+      table_number: r.table_number || 0,
+      sugar_level: mods.sugar_level || 'مظبوط',
+      roast_type: mods.roast_type || 'افتراضي',
+      notes: mods.notes || ''
+    };
+  });
+}
+
 module.exports = {
   createOrderSession,
   getOrCreateActiveSessionForTable,
@@ -361,5 +392,6 @@ module.exports = {
   updateKdsStatus,
   requestOrderCancellation,
   resolveOrderCancellation,
-  getPendingOrdersByDepartment
+  getPendingOrdersByDepartment,
+  getPastOrdersByDepartment
 };

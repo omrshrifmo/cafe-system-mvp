@@ -425,9 +425,9 @@
     async function loadTodayData() {
       try {
         const [expRes, advRes, tipsRes, shiftsRes] = await Promise.all([
-          fetch('/api/expenses'),
-          fetch('/api/hr/advances'),
-          fetch('/api/tips/total'),
+          fetch('/api/reports/expenses'),
+          fetch('/api/reports/advances'),
+          fetch('/api/reports/tips/total'),
           fetch('/api/shifts/active')
         ]);
 
@@ -499,7 +499,7 @@
       const amount = document.getElementById('expense-amount').value;
       const payment_source = document.getElementById('expense-source').value;
       try {
-        const res = await fetch('/api/expenses', {
+        const res = await fetch('/api/reports/expenses', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ description: desc, amount: Number(amount), payment_source })
@@ -523,7 +523,7 @@
       const employee_name = document.getElementById('advance-name').value.trim();
       const amount = document.getElementById('advance-amount').value;
       try {
-        const res = await fetch('/api/hr/advances', {
+        const res = await fetch('/api/reports/advances', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ employee_name, amount: Number(amount) })
@@ -553,7 +553,7 @@
         const user = JSON.parse(userStr);
         const shiftType = localStorage.getItem('active_shift_type') || (new Date().getHours() < 16 ? 'MORNING' : 'NIGHT');
 
-        const res = await fetch('/api/drawer/declare-extended', {
+        const res = await fetch('/api/shifts/declare-cash-extended', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
@@ -656,7 +656,7 @@
       const tbody = document.getElementById('payroll-table-body');
       tbody.innerHTML = `<tr><td colspan="8" class="p-6 text-center text-slate-500">جاري تحميل وتحديث الرواتب...</td></tr>`;
       try {
-        const res = await fetch('/api/hr/payroll', {
+        const res = await fetch('/api/users/payroll', {
           headers: { 'x-user-role': (JSON.parse(localStorage.getItem('user') || '{}')).role || 'OWNER' }
         });
         const data = await res.json();
@@ -695,7 +695,7 @@
     async function saveHourlyRate(userId) {
       const rate = document.getElementById(`rate-input-${userId}`).value;
       try {
-        const res = await fetch('/api/hr/hourly-rate', {
+        const res = await fetch(`/api/users/${userId}/hourly-rate`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ user_id: userId, hourly_rate: Number(rate) })
@@ -716,7 +716,7 @@
     async function fetchPenalties() {
       const tbody = document.getElementById('penalties-table-body');
       try {
-        const res = await fetch('/api/hr/penalties');
+        const res = await fetch('/api/users/penalties');
         const data = await res.json();
         if (!data.success || !data.penalties || data.penalties.length === 0) {
           tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-slate-500">لا توجد جزاءات مسجلة</td></tr>`;
@@ -750,7 +750,7 @@
       }
 
       try {
-        const res = await fetch('/api/hr/penalties', {
+        const res = await fetch('/api/users/penalties', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ user_id: Number(user_id), amount: Number(amount), reason })
@@ -799,7 +799,7 @@
       document.getElementById('declarations-modal').classList.remove('hidden');
       const tbody = document.getElementById('declarations-table-body');
       try {
-        const res = await fetch('/api/hr/declarations');
+        const res = await fetch('/api/users/declarations');
         const data = await res.json();
         if (!data.success || !data.declarations || data.declarations.length === 0) {
           tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-500">لا توجد إقرارات تقفيل مسجلة اليوم</td></tr>`;
@@ -828,7 +828,7 @@
     async function fetchStaffAllowances() {
       const tbody = document.getElementById('allowances-table-body');
       try {
-        const res = await fetch('/api/staff-allowances');
+        const res = await fetch('/api/users/staff-allowances');
         const data = await res.json();
         if (res.ok && data.success && Array.isArray(data.allowances)) {
           if (data.allowances.length === 0) {
@@ -867,7 +867,7 @@
       const disc = parseFloat(document.getElementById(`allowance-disc-${userId}`).value) || 0;
 
       try {
-        const res = await fetch('/api/staff-allowances', {
+        const res = await fetch('/api/users/staff-allowances', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
