@@ -403,18 +403,37 @@
     
     document.getElementById('tableBadge').textContent = tableNumber > 0 ? `طاولة ${tableNumber}` : 'طلب خارجي';
 
-    let menuData = { grouped: [], legacy_menu: [] };
+    let menuCategories = [];
     let cart = []; // { item_name, price, quantity, department, emoji }
     let currentCategory = 'all';
 
     const DEPT_EMOJI = { BARISTA: '☕', KITCHEN: '🍳', SHISHA: '💨' };
 
+    async function validateTable() {
+      if (tableNumber <= 0) return;
+      try {
+        const res = await fetch(`/api/public/tables/${tableNumber}`);
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          document.body.innerHTML = `
+            <div style="min-height:100vh;background:#0f172a;color:#f8fafc;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;font-family:'Tajawal',sans-serif;">
+              <div style="font-size:48px;margin-bottom:16px;">⚠️</div>
+              <h1 style="font-size:22px;font-weight:900;color:#f43f5e;margin-bottom:8px;">طاولة غير صالحة</h1>
+              <p style="font-size:14px;color:#94a3b8;max-width:320px;line-height:1.6;margin-bottom:24px;">
+                طاولة رقم (${tableNumber}) غير مسجلة أو غير متاحة حالياً بنظام الكافيه. يرجى مسح رمز QR الصحيح الموجود على طاولتك.
+              </p>
+            </div>
+          `;
+        }
+      } catch (e) {}
+    }
+
     async function loadMenu() {
       try {
         const res = await fetch('/api/public/menu');
         const data = await res.json();
-        if (data.success) {
-          menuData = data;
+        if (data.success && Array.isArray(data.menu)) {
+          menuCategories = data.menu;
           renderCategories();
           renderMenu('all');
         }
@@ -427,8 +446,7 @@
       const scroll = document.getElementById('catScroll');
       scroll.innerHTML = `<button class="cat-pill active" data-cat="all" onclick="filterCat('all',this)">🌟 الكل</button>`;
       
-      // New categories
-      menuData.grouped.forEach(cat => {
+      menuCategories.forEach(cat => {
         if (cat.items && cat.items.length > 0) {
           const btn = document.createElement('button');
           btn.className = 'cat-pill';
@@ -438,21 +456,6 @@
           scroll.appendChild(btn);
         }
       });
-
-      // Legacy departments
-      const depts = [...new Set((menuData.legacy_menu || []).map(i => i.category || 'BARISTA'))];
-      depts.forEach(dept => {
-        const btn = document.createElement('button');
-        btn.className = 'cat-pill';
-        btn.setAttribute('data-cat', 'dept_' + dept);
-        btn.innerHTML = `${DEPT_EMOJI[dept] || '☕'} ${deptLabel(dept)}`;
-        btn.onclick = () => filterCat('dept_' + dept, btn);
-        scroll.appendChild(btn);
-      });
-    }
-
-    function deptLabel(d) {
-      return { BARISTA: 'مشروبات', KITCHEN: 'مطبخ', SHISHA: 'شيشة' }[d] || d;
     }
 
     function filterCat(cat, btn) {
@@ -472,10 +475,9 @@
       const content = document.getElementById('menuContent');
       content.innerHTML = '';
 
-      // New structured items
       const cats = catFilter === 'all' 
-        ? menuData.grouped 
-        : menuData.grouped.filter(c => catFilter === 'cat_' + c.id);
+        ? menuCategories 
+        : menuCategories.filter(c => catFilter === 'cat_' + c.id);
       
       let hasContent = false;
       cats.forEach(cat => {
@@ -489,51 +491,12 @@
         const grid = document.createElement('div');
         grid.className = 'items-grid';
         visibleItems.forEach(item => {
-          grid.appendChild(makeItemCard(item.name, item.base_price, cat.icon || '☕', item.department, !item.is_available));
+          const price = Number(item.price) || 0;
+          grid.appendChild(makeItemCard(item.name, price, cat.icon || '☕', item.department || 'BARISTA', !item.is_available));
         });
         section.appendChild(grid);
         content.appendChild(section);
       });
-
-      // Legacy items
-      let legacyItems = menuData.legacy_menu || [];
-      if (catFilter !== 'all') {
-        if (catFilter.startsWith('dept_')) {
-          const dept = catFilter.replace('dept_', '');
-          legacyItems = legacyItems.filter(i => (i.category || 'BARISTA') === dept);
-        } else {
-          legacyItems = [];
-        }
-      }
-      
-      // Deduplicate against new items
-      const newItemNames = new Set(menuData.grouped.flatMap(c => (c.items || []).map(i => i.name)));
-      legacyItems = legacyItems.filter(i => !newItemNames.has(i.item_name || i.menu_item_name));
-      
-      if (legacyItems.length > 0) {
-        hasContent = true;
-        const byDept = {};
-        legacyItems.forEach(item => {
-          const dept = item.category || 'BARISTA';
-          if (!byDept[dept]) byDept[dept] = [];
-          byDept[dept].push(item);
-        });
-        Object.entries(byDept).forEach(([dept, items]) => {
-          if (catFilter.startsWith('dept_') && catFilter !== 'dept_' + dept) return;
-          const section = document.createElement('section');
-          section.className = 'section';
-          section.innerHTML = `<div class="section-title">${DEPT_EMOJI[dept] || '☕'} ${deptLabel(dept)}</div>`;
-          const grid = document.createElement('div');
-          grid.className = 'items-grid';
-          [...new Map(items.map(i => [i.item_name || i.menu_item_name, i])).values()].forEach(item => {
-            const name = item.item_name || item.menu_item_name;
-            const price = item.price || 0;
-            grid.appendChild(makeItemCard(name, price, DEPT_EMOJI[dept] || '☕', dept, false));
-          });
-          section.appendChild(grid);
-          content.appendChild(section);
-        });
-      }
 
       if (!hasContent) {
         content.innerHTML = `<div class="empty-state"><div class="empty-icon">🔍</div><p>لا توجد أصناف في هذا التصنيف</p></div>`;
@@ -674,6 +637,7 @@
       loadMenu();
     }
 
+    validateTable();
     loadMenu();
   </script>
 </body>

@@ -1,5 +1,6 @@
 /**
  * Global Configuration & Maintenance HTTP Routes
+ * Strictly enforces authentication and role permissions
  */
 const express = require('express');
 const router = express.Router();
@@ -7,10 +8,33 @@ const { getSystemTaxConfig } = require('../../domain/payments/service');
 const { verifyReauthentication } = require('../../domain/auth/service');
 const { requireAuth } = require('../middleware/auth');
 const { requirePermission } = require('../middleware/permissions');
-const { runQuery } = require('../../db/connection');
+const { runQuery, getQuery } = require('../../db/connection');
 const env = require('../../config/env');
 
-router.get('/config', async (req, res, next) => {
+// Public non-sensitive cafe branding info for guest QR
+router.get('/config/public', async (req, res, next) => {
+  try {
+    const cafeName = await getQuery(`SELECT value FROM system_config WHERE key = 'cafe_name'`);
+    const currency = await getQuery(`SELECT value FROM system_config WHERE key = 'currency'`);
+    const headerNote = await getQuery(`SELECT value FROM system_config WHERE key = 'header_note'`);
+    const footerNote = await getQuery(`SELECT value FROM system_config WHERE key = 'footer_note'`);
+
+    res.json({
+      success: true,
+      config: {
+        cafe_name: cafeName ? cafeName.value : 'كافيه مزاج',
+        currency: currency ? currency.value : 'ج.م',
+        header_note: headerNote ? headerNote.value : '',
+        footer_note: footerNote ? footerNote.value : ''
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Full operational configuration - strictly requires authentication
+router.get('/config', requireAuth, async (req, res, next) => {
   try {
     const config = await getSystemTaxConfig();
     res.json({
@@ -22,7 +46,7 @@ router.get('/config', async (req, res, next) => {
   }
 });
 
-router.post('/config', requireAuth, requirePermission('orders:void_unpaid'), async (req, res, next) => {
+router.post('/config', requireAuth, requirePermission('system:settings'), async (req, res, next) => {
   try {
     const updates = req.body;
     for (const [k, v] of Object.entries(updates)) {

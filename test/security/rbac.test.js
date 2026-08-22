@@ -30,6 +30,48 @@ describe('Security & RBAC Protection Tests', () => {
     ownerToken = oRes.body.token;
   });
 
+  it('P0-01: Unauthenticated GET /api/users must return 401 AUTH_REQUIRED', async () => {
+    const res = await request(app).get('/api/users');
+    assert.strictEqual(res.status, 401);
+    assert.strictEqual(res.body.success, false);
+    assert.strictEqual(res.body.code, 'AUTH_REQUIRED');
+  });
+
+  it('P0-02: Unauthenticated GET /api/reports/eod must return 401 AUTH_REQUIRED', async () => {
+    const res = await request(app).get('/api/reports/eod');
+    assert.strictEqual(res.status, 401);
+    assert.strictEqual(res.body.success, false);
+    assert.strictEqual(res.body.code, 'AUTH_REQUIRED');
+  });
+
+  it('P0-03: Unauthenticated GET /api/reports/bi must return 401 AUTH_REQUIRED', async () => {
+    const res = await request(app).get('/api/reports/bi');
+    assert.strictEqual(res.status, 401);
+    assert.strictEqual(res.body.success, false);
+    assert.strictEqual(res.body.code, 'AUTH_REQUIRED');
+  });
+
+  it('P0-04: Unauthenticated GET /api/config must return 401 AUTH_REQUIRED', async () => {
+    const res = await request(app).get('/api/config');
+    assert.strictEqual(res.status, 401);
+    assert.strictEqual(res.body.success, false);
+    assert.strictEqual(res.body.code, 'AUTH_REQUIRED');
+  });
+
+  it('P0-11: Public table validation should reject non-existent table 9999 with 404', async () => {
+    const res = await request(app).get('/api/public/tables/9999');
+    assert.strictEqual(res.status, 404);
+    assert.strictEqual(res.body.success, false);
+    assert.strictEqual(res.body.code, 'INVALID_TABLE');
+  });
+
+  it('P0-11: Public table validation should accept valid registered table', async () => {
+    const res = await request(app).get('/api/public/tables/1');
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.body.success, true);
+    assert.ok(res.body.table);
+  });
+
   it('Financial Blindness: Should block Cashier (OP_ASSISTANT_CASHIER) from GET /api/reports/eod with 403 Forbidden', async () => {
     const res = await request(app)
       .get('/api/reports/eod')

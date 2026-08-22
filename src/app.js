@@ -22,6 +22,7 @@ const configRoutes = require('./http/routes/config');
 const crmRoutes = require('./http/routes/crm');
 const syncRoutes = require('./http/routes/sync');
 const printRoutes = require('./http/routes/print');
+const usersRoutes = require('./http/routes/users');
 
 function createApp() {
   const app = express();
@@ -41,6 +42,7 @@ function createApp() {
 
   // API Routes Mount
   app.use('/api/auth', authRoutes);
+  app.use('/api', usersRoutes);
   app.use('/api', catalogRoutes);
   app.use('/api', ordersRoutes);
   app.use('/api', paymentsRoutes);

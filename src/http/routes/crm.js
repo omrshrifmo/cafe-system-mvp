@@ -1,5 +1,6 @@
 /**
  * CRM, Reservations, Complaints, Customer Feedback & Staff Allowances HTTP Routes
+ * Strictly requires authentication and role permissions
  */
 const express = require('express');
 const router = express.Router();
@@ -8,14 +9,14 @@ const { requirePermission } = require('../middleware/permissions');
 const { allQuery, getQuery, runQuery } = require('../../db/connection');
 
 // Customers lookup & CRM
-router.get('/customers', async (req, res, next) => {
+router.get('/customers', requireAuth, async (req, res, next) => {
   try {
     const phone = req.query.phone;
     if (phone) {
       const customer = await getQuery(`SELECT * FROM customers WHERE phone = ?`, [String(phone).trim()]);
       return res.json(customer || null);
     }
-    const customers = await allQuery(`SELECT * FROM customers ORDER BY total_spent DESC LIMIT 50`);
+    const customers = await allQuery(`SELECT id, name, phone, points, total_spent, visits, last_visit, notes FROM customers ORDER BY total_spent DESC LIMIT 50`);
     res.json(customers);
   } catch (err) {
     next(err);
@@ -39,7 +40,7 @@ router.post('/customers', requireAuth, async (req, res, next) => {
 });
 
 // Reservations
-router.get('/reservations', async (req, res, next) => {
+router.get('/reservations', requireAuth, async (req, res, next) => {
   try {
     const reservations = await allQuery(`SELECT * FROM reservations ORDER BY reservation_date DESC, reservation_time DESC LIMIT 50`);
     res.json(reservations);
@@ -63,7 +64,7 @@ router.post('/reservations', requireAuth, async (req, res, next) => {
 });
 
 // Customer Feedback & QA
-router.get('/feedback', async (req, res, next) => {
+router.get('/feedback', requireAuth, async (req, res, next) => {
   try {
     const feedback = await allQuery(`SELECT * FROM customer_feedback ORDER BY created_at DESC LIMIT 50`);
     res.json(feedback);
@@ -85,8 +86,31 @@ router.post('/feedback', async (req, res, next) => {
   }
 });
 
+// Complaints / QA Records
+router.get('/complaints', requireAuth, async (req, res, next) => {
+  try {
+    const complaints = await allQuery(`SELECT * FROM complaints ORDER BY created_at DESC LIMIT 50`);
+    res.json(complaints);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/complaints', requireAuth, async (req, res, next) => {
+  try {
+    const { customer_name, order_id, description, severity, status } = req.body;
+    const result = await runQuery(
+      `INSERT INTO complaints (customer_name, order_id, description, severity, status) VALUES (?, ?, ?, ?, ?)`,
+      [customer_name || 'عميل', order_id || null, description, severity || 'MEDIUM', status || 'OPEN']
+    );
+    res.json({ success: true, complaint_id: result.lastID });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // Staff Drink / Meal Allowances
-router.get('/staff/allowances', async (req, res, next) => {
+router.get('/staff/allowances', requireAuth, async (req, res, next) => {
   try {
     const allowances = await allQuery(`SELECT * FROM staff_allowances ORDER BY created_at DESC LIMIT 50`);
     res.json(allowances);
@@ -98,11 +122,11 @@ router.get('/staff/allowances', async (req, res, next) => {
 router.post('/staff/allowances', requireAuth, async (req, res, next) => {
   try {
     const { user_name, item_name, quantity } = req.body;
-    const resId = await runQuery(
-      `INSERT INTO staff_allowances (user_id, user_name, item_name, quantity) VALUES (?, ?, ?, ?)`,
-      [req.user.id, user_name || req.user.name, item_name, quantity || 1]
+    const result = await runQuery(
+      `INSERT INTO staff_allowances (user_name, item_name, quantity) VALUES (?, ?, ?)`,
+      [user_name, item_name, quantity || 1]
     );
-    res.json({ success: true, allowance_id: resId.lastID });
+    res.json({ success: true, allowance_id: result.lastID });
   } catch (err) {
     next(err);
   }

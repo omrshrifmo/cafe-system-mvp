@@ -2,6 +2,7 @@
  * كافيه مزاج - Universal Enterprise Unified Navigation, Design System & Shell
  * Unified Header, Collapsible Multi-Group Sidebar, and Compact Footer
  * Standardized on 'Tajawal' Typography & Slate-900/950 Theme
+ * Enforces Server-Authenticated Session Validation and Strict Client-Side Page Guarding
  */
 
 (function () {
@@ -76,7 +77,6 @@
   function injectGlobalStyles() {
     if (document.getElementById('mazaj-global-styles')) return;
 
-    // Load Tajawal font if not already loaded
     if (!document.getElementById('tajawal-font-link')) {
       const fontLink = document.createElement('link');
       fontLink.id = 'tajawal-font-link';
@@ -209,10 +209,22 @@
     }
   }
 
-  function logout() {
+  async function logout() {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch (e) {}
     localStorage.removeItem('user');
     localStorage.removeItem('currentUser');
     localStorage.removeItem('userTools');
+    localStorage.removeItem('session_token');
+    sessionStorage.clear();
+    document.body.innerHTML = `
+      <div class="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-center text-slate-200" style="font-family: 'Tajawal', sans-serif;">
+        <div class="text-3xl mb-3">👋</div>
+        <h1 class="text-lg font-bold mb-2">تم تسجيل الخروج بنجاح</h1>
+        <p class="text-xs text-slate-400">جاري التوجيه لصفحة الدخول...</p>
+      </div>
+    `;
     window.location.href = '/index.html';
   }
 
@@ -223,7 +235,7 @@
     }
   }
 
-  function initNav() {
+  async function validateSessionAndRender() {
     const pathname = window.location.pathname;
     if (pathname === '/' || pathname.endsWith('/index.html') || pathname.includes('qr-menu.html')) {
       return;
@@ -231,8 +243,40 @@
 
     injectGlobalStyles();
 
-    const currentUser = getStoredUser();
-    const userRole = currentUser.role || 'OWNER';
+    // 1. Verify authenticated server session
+    let authenticatedUser = null;
+    try {
+      const res = await fetch('/api/auth/me');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.user) {
+          authenticatedUser = data.user;
+          localStorage.setItem('currentUser', JSON.stringify(data.user));
+        }
+      }
+    } catch (e) {}
+
+    // If server says unauthorized / logged out, clear stale state and redirect to login immediately
+    if (!authenticatedUser) {
+      localStorage.removeItem('user');
+      localStorage.removeItem('currentUser');
+      localStorage.removeItem('userTools');
+      sessionStorage.clear();
+      document.body.innerHTML = `
+        <div class="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-center text-slate-200" style="font-family: 'Tajawal', sans-serif;">
+          <div class="w-16 h-16 bg-amber-500/20 text-amber-400 border border-amber-500/40 rounded-2xl flex items-center justify-center text-3xl mb-4">
+            🔒
+          </div>
+          <h1 class="text-xl font-bold mb-2">يلزم تسجيل الدخول</h1>
+          <p class="text-sm text-slate-400 mb-4">انتهت صلاحية الجلسة أو تم تسجيل الخروج. جاري التوجيه...</p>
+        </div>
+      `;
+      setTimeout(() => { window.location.href = '/index.html'; }, 300);
+      return;
+    }
+
+    const currentUser = authenticatedUser;
+    const userRole = currentUser.role || 'WAITER';
     const currentShift = getActiveShiftType();
 
     // Determine current active page and check role permissions
@@ -272,7 +316,6 @@
     // Top Unified Header Bar HTML (Height: 46px)
     const topBarHTML = `
       <header class="h-[46px] bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-4 flex items-center justify-between text-xs text-slate-300 shrink-0 z-50 select-none shadow-md">
-        <!-- Right side: Toggle, Logo & Current Page -->
         <div class="flex items-center gap-3">
           <button onclick="window.MazajNav.toggleSidebar()" id="sidebar-toggle-btn" title="طي/توسيع القائمة الجانبية (Ctrl+B)" class="hidden md:flex w-7 h-7 bg-slate-800 hover:bg-slate-700 text-amber-400 rounded-lg text-xs font-black items-center justify-center border border-slate-700 cursor-pointer transition-colors shadow-sm">
             ${isCollapsed() ? '▶' : '◀'}
@@ -295,9 +338,7 @@
           </div>
         </div>
 
-        <!-- Left side: Shift badge, Clock, User Profile & Logout -->
         <div class="flex items-center gap-2.5">
-          <!-- Shift Switcher Button -->
           <button onclick="window.MazajNav.toggleShiftType()" id="global-shift-badge" title="اضغط للتبديل بين الورديات" class="px-2.5 py-1 rounded-lg text-[11px] font-extrabold cursor-pointer border flex items-center gap-1.5 transition-all shadow-sm ${
             currentShift === 'MORNING' 
               ? 'bg-amber-500/15 text-amber-300 border-amber-500/40 hover:bg-amber-500/25' 
@@ -307,19 +348,16 @@
             <span>${currentShift === 'MORNING' ? 'وردية صباحية' : 'وردية مسائية'}</span>
           </button>
 
-          <!-- Live Clock -->
           <div id="nav-live-clock" class="hidden lg:block text-slate-400 font-mono text-[11px] bg-slate-950/80 px-2.5 py-1 rounded-lg border border-slate-800">
             00:00:00 م
           </div>
 
-          <!-- User Pill -->
           <div class="px-2.5 py-1 bg-slate-950 rounded-lg text-[11px] font-bold text-slate-300 border border-slate-800 flex items-center gap-1.5">
             <span>👤</span>
             <span class="text-white max-w-[100px] truncate">${currentUser.name || 'مستخدم'}</span>
             <span class="text-amber-400 text-[10px] font-mono font-black">(${userRole})</span>
           </div>
 
-          <!-- Logout Button -->
           <button onclick="window.MazajNav.logout()" title="تسجيل الخروج" class="px-2.5 py-1 bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 border border-rose-500/30 rounded-lg text-[11px] font-bold cursor-pointer transition-colors">
             🚪 خروج
           </button>
@@ -331,7 +369,6 @@
     const sidebarWidth = isCollapsed() ? '64px' : '230px';
     const sidebarHTML = `
       <aside id="app-sidebar" style="width: ${sidebarWidth};" class="hidden md:flex flex-col bg-slate-900/90 backdrop-blur-md border-l border-slate-800 shrink-0 h-full select-none transition-all duration-200">
-        <!-- Navigation Groups -->
         <nav class="flex-1 overflow-y-auto scrollbar-thin p-2 space-y-3">
           ${navGroups.map(grp => {
             const accessibleItems = grp.items.filter(item => item.roles.includes(userRole));
@@ -360,82 +397,77 @@
           }).join('')}
         </nav>
 
-        <!-- Sidebar Footer Status -->
         <div class="p-2 border-t border-slate-800/80 bg-slate-950/40 text-[10px] text-slate-500 flex items-center justify-between">
           <span class="nav-label truncate ${isCollapsed() ? 'hidden' : ''}">🟢 الخادم متصل</span>
           <span class="text-slate-600 font-mono text-[9px]">v2.6</span>
         </div>
       </aside>
 
-      <!-- Mobile Drawer Overlay -->
       <div id="mobile-drawer-overlay" class="md:hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[99] hidden flex justify-start">
         <div class="w-72 bg-slate-900 h-full border-l border-slate-800 flex flex-col p-4 shadow-2xl overflow-y-auto scrollbar-thin">
           <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-3">
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2 text-white">
               <span class="text-xl">☕</span>
               <span class="font-black text-sm text-amber-400">كافيه مزاج</span>
             </div>
-            <button onclick="window.MazajNav.toggleMobileMenu()" class="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center font-bold text-sm cursor-pointer">✕</button>
+            <button onclick="window.MazajNav.toggleMobileMenu()" class="w-7 h-7 bg-slate-800 text-slate-400 rounded-lg flex items-center justify-center font-bold">✕</button>
           </div>
-
-          <nav class="flex-1 overflow-y-auto space-y-4">
+          <div class="space-y-3 flex-1">
             ${navGroups.map(grp => {
               const accessibleItems = grp.items.filter(item => item.roles.includes(userRole));
               if (accessibleItems.length === 0) return '';
-
               return `
                 <div>
-                  <div class="text-[10px] font-bold text-slate-500 uppercase px-2 mb-1.5">${grp.groupTitle}</div>
+                  <div class="text-[10px] font-bold text-slate-500 uppercase px-2 mb-1">${grp.groupTitle}</div>
                   <div class="space-y-1">
-                    ${accessibleItems.map(item => {
-                      const isActive = pathname.endsWith(item.path);
-                      return `
-                        <a href="${item.path}" onclick="window.MazajNav.toggleMobileMenu()" class="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-bold ${
-                          isActive ? 'bg-amber-500 text-slate-950 font-black' : 'text-slate-300 hover:bg-slate-800'
-                        }">
-                          <span class="text-base">${item.icon}</span>
-                          <span class="text-xs">${item.title}</span>
-                        </a>
-                      `;
-                    }).join('')}
+                    ${accessibleItems.map(item => `
+                      <a href="${item.path}" class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-300 hover:bg-slate-800">
+                        <span>${item.icon}</span>
+                        <span>${item.title}</span>
+                      </a>
+                    `).join('')}
                   </div>
                 </div>
               `;
             }).join('')}
-          </nav>
+          </div>
+          <button onclick="window.MazajNav.logout()" class="w-full mt-4 py-2.5 bg-rose-950/50 text-rose-300 rounded-xl font-bold text-xs border border-rose-500/30">🚪 خروج</button>
         </div>
       </div>
     `;
 
-    // Unified Bottom Footer HTML (Height: 28px)
+    // Footer HTML (Height: 28px)
     const footerHTML = `
-      <footer class="h-7 bg-slate-950 border-t border-slate-800/80 px-4 flex items-center justify-between text-[10px] text-slate-500 shrink-0 z-40 select-none">
+      <footer class="h-[28px] bg-slate-950/95 border-t border-slate-800 px-4 flex items-center justify-between text-[11px] text-slate-500 shrink-0 z-50 select-none">
         <div class="flex items-center gap-3">
-          <span class="font-bold text-slate-400">كافيه مزاج &copy; 2026</span>
+          <span class="flex items-center gap-1 text-emerald-400 font-bold">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span>نظام التشغيل نشط</span>
+          </span>
           <span class="text-slate-700">|</span>
-          <span>نظام التشغيل وإدارة المطاعم المتكامل</span>
+          <span class="text-slate-400">كافيه مزاج - نظام إدارة العمليات والضيافة</span>
         </div>
-        <div class="flex items-center gap-3 font-mono">
-          <span class="text-emerald-400 font-bold">● متصل بالخادم المحلي</span>
-          <span class="hidden sm:inline text-slate-600">|</span>
-          <span class="hidden sm:inline">اختصار القائمة: <kbd class="px-1 bg-slate-800 rounded border border-slate-700 text-slate-400">Ctrl+B</kbd></span>
+        <div class="flex items-center gap-3 font-mono text-[10px]">
+          <span>شبكة محلية (LAN)</span>
+          <span class="text-slate-700">|</span>
+          <span class="text-amber-500/80 font-bold">طابعة: 192.168.1.100</span>
         </div>
       </footer>
     `;
 
-    // Wrap page contents into rootContainer: Header + (Sidebar + ContentArea) + Footer
+    // Wrap page structure cleanly
+    if (document.getElementById('mazaj-app-root')) return;
+
     const rootContainer = document.createElement('div');
-    rootContainer.className = 'flex flex-col h-screen max-h-screen w-screen overflow-hidden bg-slate-950 text-slate-100';
-    rootContainer.dir = 'rtl';
+    rootContainer.id = 'mazaj-app-root';
+    rootContainer.className = 'flex flex-col h-screen w-screen overflow-hidden bg-slate-950 text-slate-100';
 
-    // 1. Insert Top Header
-    const topBarWrapper = document.createElement('div');
-    topBarWrapper.innerHTML = topBarHTML;
-    rootContainer.appendChild(topBarWrapper.firstElementChild);
+    const headerWrapper = document.createElement('div');
+    headerWrapper.innerHTML = topBarHTML;
+    rootContainer.appendChild(headerWrapper.firstElementChild);
 
-    // 2. Middle Body (Sidebar + Content)
     const mainBody = document.createElement('div');
-    mainBody.className = 'flex flex-1 min-h-0 min-w-0 overflow-hidden';
+    mainBody.className = 'flex flex-1 min-h-0 w-full overflow-hidden';
 
     const tempSidebar = document.createElement('div');
     tempSidebar.innerHTML = sidebarHTML;
@@ -447,7 +479,6 @@
     contentArea.id = 'app-content-area';
     contentArea.className = 'flex-1 min-w-0 h-full flex flex-col overflow-y-auto scrollbar-thin';
 
-    // Move existing body children to contentArea
     while (document.body.firstChild) {
       contentArea.appendChild(document.body.firstChild);
     }
@@ -455,15 +486,12 @@
     mainBody.appendChild(contentArea);
     rootContainer.appendChild(mainBody);
 
-    // 3. Insert Footer
     const footerWrapper = document.createElement('div');
     footerWrapper.innerHTML = footerHTML;
     rootContainer.appendChild(footerWrapper.firstElementChild);
 
-    // Append root container to body
     document.body.appendChild(rootContainer);
 
-    // Keyboard shortcut for toggling sidebar (Ctrl + B)
     window.addEventListener('keydown', (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
         e.preventDefault();
@@ -481,12 +509,12 @@
     toggleMobileMenu,
     toggleShiftType,
     logout,
-    initNav
+    initNav: validateSessionAndRender
   };
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initNav);
+    document.addEventListener('DOMContentLoaded', validateSessionAndRender);
   } else {
-    initNav();
+    validateSessionAndRender();
   }
 })();

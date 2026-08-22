@@ -1,5 +1,6 @@
 /**
- * Inventory, Purchases, Waste & Transfers HTTP Routes
+ * Inventory, Purchases, Waste, Transfers & Suppliers HTTP Routes
+ * Strictly requires authentication and role permissions
  */
 const express = require('express');
 const router = express.Router();
@@ -8,7 +9,7 @@ const { requireAuth } = require('../middleware/auth');
 const { requirePermission } = require('../middleware/permissions');
 const { allQuery, getQuery, runQuery } = require('../../db/connection');
 
-router.get('/inventory', async (req, res, next) => {
+router.get('/inventory', requireAuth, async (req, res, next) => {
   try {
     const inventory = await getInventory();
     res.json({
@@ -28,6 +29,27 @@ router.post('/inventory/purchase', requireAuth, requirePermission('inventory:pur
       success: true,
       message: 'تم تسجيل فاتورة المشتريات وإيداع المخزون بنجاح 📦',
       purchase: result
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/purchases', requireAuth, async (req, res, next) => {
+  try {
+    const purchases = await allQuery(
+      `SELECT p.id, p.total_amount_minor / 100.0 as total_cost, p.invoice_number, p.notes, p.created_at,
+              s.name as supplier_name,
+              i.name as item_name, pi.unit, (pi.quantity_microunits / 1000000.0) as qty_added
+       FROM purchases p
+       LEFT JOIN suppliers s ON p.supplier_id = s.id
+       LEFT JOIN purchase_items pi ON p.id = pi.purchase_id
+       LEFT JOIN inventory_items i ON pi.inventory_item_id = i.id
+       ORDER BY p.created_at DESC LIMIT 50`
+    );
+    res.json({
+      success: true,
+      purchases
     });
   } catch (err) {
     next(err);
@@ -61,10 +83,13 @@ router.post('/inventory/transfer', requireAuth, requirePermission('inventory:tra
 });
 
 // Suppliers
-router.get('/suppliers', async (req, res, next) => {
+router.get('/suppliers', requireAuth, async (req, res, next) => {
   try {
     const suppliers = await allQuery(`SELECT * FROM suppliers ORDER BY name ASC`);
-    res.json(suppliers);
+    res.json({
+      success: true,
+      suppliers
+    });
   } catch (err) {
     next(err);
   }

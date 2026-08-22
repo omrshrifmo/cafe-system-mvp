@@ -6,8 +6,31 @@ const router = express.Router();
 const { getAllTables, seatTable, requestTableCheck, vacateTable, moveTable } = require('../../domain/tables/service');
 const { requireAuth } = require('../middleware/auth');
 const { requirePermission } = require('../middleware/permissions');
+const { getQuery } = require('../../db/connection');
 
-router.get('/tables', async (req, res, next) => {
+// Public table validation for QR guests
+router.get('/public/tables/:number', async (req, res, next) => {
+  try {
+    const tableNum = req.params.number;
+    const table = await getQuery(`SELECT id, table_number, zone, capacity, status FROM tables WHERE table_number = ?`, [tableNum]);
+    if (!table) {
+      return res.status(404).json({
+        success: false,
+        error: `طاولة رقم (${tableNum}) غير صالحة أو غير مسجلة بنظام الصالة`,
+        code: 'INVALID_TABLE'
+      });
+    }
+    res.json({
+      success: true,
+      table
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Authenticated tables list
+router.get('/tables', requireAuth, async (req, res, next) => {
   try {
     const tables = await getAllTables();
     res.json({
