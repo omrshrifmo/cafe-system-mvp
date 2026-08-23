@@ -19,15 +19,15 @@ describe('Security & RBAC Protection Tests', () => {
 
     // Login Cashier (1007)
     const cRes = await request(app).post('/api/auth/login').send({ pin: '1007' });
-    cashierToken = cRes.body.token;
+    cashierToken = cRes.body.token || cRes.body.data?.token || (cRes.headers['set-cookie'] ? cRes.headers['set-cookie'][0].split(';')[0].split('=')[1] : null);
 
     // Login OP Manager (1008)
     const mRes = await request(app).post('/api/auth/login').send({ pin: '1008' });
-    managerToken = mRes.body.token;
+    managerToken = mRes.body.token || mRes.body.data?.token || (mRes.headers['set-cookie'] ? mRes.headers['set-cookie'][0].split(';')[0].split('=')[1] : null);
 
     // Login Owner (1009)
     const oRes = await request(app).post('/api/auth/login').send({ pin: '1009' });
-    ownerToken = oRes.body.token;
+    ownerToken = oRes.body.token || oRes.body.data?.token || (oRes.headers['set-cookie'] ? oRes.headers['set-cookie'][0].split(';')[0].split('=')[1] : null);
   });
 
   it('P0-01: Unauthenticated GET /api/users must return 401 AUTH_REQUIRED', async () => {
@@ -98,7 +98,7 @@ describe('Security & RBAC Protection Tests', () => {
       .post('/api/orders')
       .set('Cookie', [`session_token=${managerToken}`])
       .send({ table_number: 8, item_name: 'اسبريسو', quantity: 1 });
-    const orderId = orderRes.body.order.id;
+    const orderId = orderRes.body.order?.id || orderRes.body.data?.order?.id;
 
     await request(app)
       .post('/api/checkout')

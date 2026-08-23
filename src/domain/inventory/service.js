@@ -182,9 +182,55 @@ async function transferMaterial(transferData, actorId = null) {
   });
 }
 
+async function deductBOM(tx, orderItemId, catalogItem, qty, actorId) {
+  if (!catalogItem.ingredients || catalogItem.ingredients.length === 0) return;
+
+  for (const ing of catalogItem.ingredients) {
+    if (!ing.unit) {
+      throw new Error(`UNRECONCILED: Invalid unit mapping for ingredient ${ing.inventory_item_id}`);
+    }
+
+    const yieldFactor = (ing.yield_percent || 100) / 100.0;
+    const lossFactor = (ing.preparation_loss_percent || 0) / 100.0;
+    
+    // Total required accounts for yield and prep loss
+    // Ex: If yield is 80%, we need 1/0.8 times the amount.
+    // If loss is 10%, we waste an extra 10%.
+    const rawRequired = ing.quantity_microunits * qty;
+    const totalRequiredMicrounits = Math.round((rawRequired / yieldFactor) * (1 + lossFactor));
+
+    const invItem = await tx.get(`SELECT id, cost_per_unit_minor, unit FROM inventory_items WHERE id = ?`, [ing.inventory_item_id]);
+    if (!invItem) {
+      throw new Error(`UNRECONCILED: Missing inventory item ${ing.inventory_item_id}`);
+    }
+    
+    if (invItem.unit !== ing.unit) {
+      throw new Error(`UNRECONCILED: Unit mismatch for ${ing.inventory_item_id}`);
+    }
+
+    // Deduct total required from stock
+    await tx.run(
+      `UPDATE inventory_items 
+       SET current_stock_microunits = current_stock_microunits - ?, 
+           updated_at = datetime('now', 'localtime') 
+       WHERE id = ?`,
+      [totalRequiredMicrounits, ing.inventory_item_id]
+    );
+
+    // Ledger for actual consumed (which goes to expected consumption)
+    const consumeKey = `CONSUME_ORD_${orderItemId}_ING_${ing.inventory_item_id}`;
+    await tx.run(
+      `INSERT INTO inventory_ledger (inventory_item_id, event_type, quantity_delta_microunits, unit, source_type, source_id, idempotency_key, actor_id, unit_cost_minor)
+       VALUES (?, 'CONSUMPTION', ?, ?, 'ORDER_ITEM', ?, ?, ?, ?)`,
+      [ing.inventory_item_id, -totalRequiredMicrounits, ing.unit, String(orderItemId), consumeKey, actorId, invItem.cost_per_unit_minor]
+    );
+  }
+}
+
 module.exports = {
   getInventory,
   logPurchase,
   logWaste,
-  transferMaterial
+  transferMaterial,
+  deductBOM
 };

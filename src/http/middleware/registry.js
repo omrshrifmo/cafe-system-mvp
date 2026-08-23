@@ -10,6 +10,8 @@ const routeRegistry = [
   
   // Public APIs
   { method: 'GET', pathRegex: /^\/api\/build-info$/, permission: 'public' },
+  { method: 'GET', pathRegex: /^\/api\/health\//, permission: 'public' },
+  { method: 'GET', pathRegex: /^\/api\/metrics$/, permission: 'public' },
   { method: 'ALL', pathRegex: /^\/api\/public\//, permission: 'public' },
   
   // Basic Authenticated User Endpoints

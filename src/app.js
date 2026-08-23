@@ -28,14 +28,30 @@ const printRoutes = require('./http/routes/print');
 const usersRoutes = require('./http/routes/users');
 const setupRoutes = require('./http/routes/setup');
 const adminRoutes = require('./http/routes/admin');
+const { securityHeaders, strictCors, csrfProtection } = require('./http/middleware/security');
+const { router: healthRoutes, recordRequestMetric } = require('./http/routes/health');
 
 function createApp() {
   const app = express();
+
+  // Security Headers & Strict CORS
+  app.use(securityHeaders);
+  app.use(strictCors);
+
+  // Request Metrics Tracking
+  app.use((req, res, next) => {
+    const start = Date.now();
+    res.on('finish', () => {
+      recordRequestMetric(res.statusCode, Date.now() - start);
+    });
+    next();
+  });
 
   // Basic Middlewares
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
   app.use(cookieParser());
+  app.use(csrfProtection);
   app.use(requestIdMiddleware);
   app.use(envelopeMiddleware);
   app.use(modeMiddleware);
@@ -81,6 +97,7 @@ function createApp() {
   app.use('/api', printRoutes);
   app.use('/api/setup', setupRoutes);
   app.use('/api/admin', adminRoutes);
+  app.use('/api', healthRoutes);
 
   // Health check endpoint
   app.get('/healthz', (req, res) => {

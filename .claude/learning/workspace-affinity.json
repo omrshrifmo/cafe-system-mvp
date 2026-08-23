@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "computedAt": "2026-08-22T14:22:38.130Z",
+  "computedAt": "2026-08-23T14:22:39.058Z",
   "skills": {
     "skill-feedback-adaptation": {
       "skill": "skill-feedback-adaptation",
@@ -31,6 +31,15 @@
     },
     "github-actions-ci": {
       "skill": "github-actions-ci",
+      "observations": 0,
+      "manualInvocations": 0,
+      "recommendationInvocations": 0,
+      "successCount": 0,
+      "reuseCount": 0,
+      "affinityScore": 0
+    },
+    "doc-coauthoring": {
+      "skill": "doc-coauthoring",
       "observations": 0,
       "manualInvocations": 0,
       "recommendationInvocations": 0,

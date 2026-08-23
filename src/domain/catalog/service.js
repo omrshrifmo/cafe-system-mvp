@@ -2,7 +2,6 @@
  * Canonical Menu & Recipe BOM Domain Service
  */
 const { allQuery, getQuery, runQuery } = require('../../db/connection');
-const { runTransaction } = require('../../db/transaction');
 
 async function getMenu() {
   const categories = await allQuery(
@@ -14,12 +13,13 @@ async function getMenu() {
 
   const items = await allQuery(
     `SELECT m.id, m.category_id, m.name, m.name_en, m.description, m.department, 
-            m.is_available, m.is_featured, m.sort_order,
+            m.is_available, m.is_featured, m.sort_order, m.sku, m.image_ref,
+            m.allergens, m.tax_class, m.lifecycle_state,
             COALESCE(p.amount_minor, 0) as price_minor,
             COALESCE(p.currency, 'ج.م') as currency
      FROM menu_items m
      LEFT JOIN menu_prices p ON m.id = p.menu_item_id AND (p.valid_to IS NULL OR p.valid_to > datetime('now', 'localtime'))
-     WHERE m.is_available = 1
+     WHERE m.is_available = 1 AND m.lifecycle_state = 'PUBLISHED'
      ORDER BY m.sort_order ASC, m.id ASC`
   );
 
@@ -28,10 +28,10 @@ async function getMenu() {
     if (!itemsByCategory.has(item.category_id)) {
       itemsByCategory.set(item.category_id, []);
     }
-    // Present human-readable price along with minor units
     itemsByCategory.get(item.category_id).push({
       ...item,
-      price: (item.price_minor / 100).toFixed(2)
+      price: (item.price_minor / 100).toFixed(2),
+      allergens: item.allergens ? JSON.parse(item.allergens) : []
     });
   }
 
@@ -43,7 +43,7 @@ async function getMenu() {
 
 async function getMenuItemWithActivePriceAndBOM(menuItemId) {
   const item = await getQuery(
-    `SELECT m.id, m.category_id, m.name, m.department, m.is_available,
+    `SELECT m.id, m.category_id, m.name, m.department, m.is_available, m.lifecycle_state, m.sku, m.publication_version,
             COALESCE(p.amount_minor, 0) as price_minor,
             COALESCE(p.currency, 'ج.م') as currency,
             r.id as recipe_version_id, r.version as recipe_version,
@@ -51,8 +51,8 @@ async function getMenuItemWithActivePriceAndBOM(menuItemId) {
      FROM menu_items m
      LEFT JOIN menu_prices p ON m.id = p.menu_item_id AND (p.valid_to IS NULL OR p.valid_to > datetime('now', 'localtime'))
      LEFT JOIN recipe_versions r ON m.id = r.menu_item_id AND (r.active_to IS NULL OR r.active_to > datetime('now', 'localtime'))
-     WHERE m.id = ? OR m.name = ?`,
-    [menuItemId, menuItemId]
+     WHERE m.id = ? OR m.sku = ? OR m.name = ?`,
+    [menuItemId, menuItemId, menuItemId]
   );
 
   if (!item) return null;
@@ -60,7 +60,7 @@ async function getMenuItemWithActivePriceAndBOM(menuItemId) {
   let ingredients = [];
   if (item.recipe_version_id) {
     ingredients = await allQuery(
-      `SELECT ri.inventory_item_id, ri.quantity_microunits, ri.unit,
+      `SELECT ri.inventory_item_id, ri.quantity_microunits, ri.unit, ri.yield_percent, ri.preparation_loss_percent, ri.cost_basis,
               i.name as inventory_item_name, i.current_stock_microunits, i.cost_per_unit_minor
        FROM recipe_ingredients ri
        JOIN inventory_items i ON ri.inventory_item_id = i.id
@@ -84,8 +84,61 @@ async function getRecipeDetails(itemNameOrId) {
   return getMenuItemWithActivePriceAndBOM(itemNameOrId);
 }
 
+// Ensure duplicates do not exist
+async function validateUniqueItem(sku, name, name_en, excludeId = null) {
+  let query = `SELECT id, sku, name, name_en FROM menu_items WHERE (name = ? OR name_en = ? OR (sku = ? AND sku IS NOT NULL))`;
+  let params = [name, name_en, sku];
+  
+  if (excludeId) {
+    query += ` AND id != ?`;
+    params.push(excludeId);
+  }
+
+  const existing = await allQuery(query, params);
+  
+  if (existing.length > 0) {
+    const dup = existing[0];
+    if (dup.sku === sku && sku) throw new Error(`SKU ${sku} is already in use by item ${dup.id}`);
+    if (dup.name === name || dup.name_en === name_en) throw new Error(`Name duplicate detected with item ${dup.id}`);
+  }
+}
+
+async function createMenuItem(itemData) {
+  const { sku, name, name_en, category_id, department, priceMinor, description, is_featured, sort_order, author_id } = itemData;
+  
+  await validateUniqueItem(sku, name, name_en);
+
+  const itemRes = await runQuery(
+    `INSERT INTO menu_items (sku, category_id, name, name_en, description, department, is_available, is_featured, sort_order, lifecycle_state) 
+     VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, 'DRAFT')`,
+    [sku || null, category_id || 1, name.trim(), name_en ? name_en.trim() : null, description || null, department || 'BARISTA', is_featured ? 1 : 0, sort_order || 0]
+  );
+
+  const itemId = itemRes.lastID;
+  if (priceMinor !== undefined) {
+    await runQuery(`INSERT INTO menu_prices (menu_item_id, amount_minor, currency, author_id) VALUES (?, ?, 'ج.م', ?)`, [itemId, priceMinor, author_id]);
+  }
+
+  return itemId;
+}
+
+async function publishMenuItem(itemId, author_id) {
+  // Simple lifecycle publish
+  const item = await getQuery(`SELECT lifecycle_state, publication_version FROM menu_items WHERE id = ?`, [itemId]);
+  if (!item) throw new Error("Item not found");
+  
+  if (item.lifecycle_state === 'PUBLISHED') return true;
+
+  const newVersion = item.publication_version + 1;
+  await runQuery(`UPDATE menu_items SET lifecycle_state = 'PUBLISHED', publication_version = ?, updated_at = datetime('now', 'localtime') WHERE id = ?`, [newVersion, itemId]);
+  
+  return true;
+}
+
 module.exports = {
   getMenu,
   getMenuItemWithActivePriceAndBOM,
-  getRecipeDetails
+  getRecipeDetails,
+  createMenuItem,
+  publishMenuItem
 };

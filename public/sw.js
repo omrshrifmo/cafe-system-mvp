@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cafe-os-v3';
+const CACHE_NAME = 'cafe-os-v3.1';
 const STATIC_ASSETS = [
   '/',
   '/pos.html',
@@ -21,14 +21,20 @@ const STATIC_ASSETS = [
   '/shareholders.html',
   '/qa.html',
   '/settings.html',
+  '/qr-menu.html',
   '/nav.js',
-  '/manifest.json'
+  '/manifest.json',
+  '/modules/ui-state.js',
+  '/modules/api.js',
+  '/modules/auth.js',
+  '/modules/db.js',
+  '/modules/sync.js'
 ];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('⚡ [ServiceWorker] Pre-caching offline shell assets v2');
+      console.log('⚡ [ServiceWorker v3.1] Pre-caching offline shell assets');
       return cache.addAll(STATIC_ASSETS).catch((err) => {
         console.warn('⚠️ [ServiceWorker] Non-critical precache skip:', err);
       });
@@ -53,6 +59,12 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
+
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
@@ -61,9 +73,8 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Network-first strategy with cache fallback
+  // Network-first strategy with cache fallback for static app shells
   event.respondWith(
-    // Force network fetch to bypass browser cache for HTML requests if needed
     fetch(event.request, {
       cache: event.request.headers.get('accept')?.includes('text/html') ? 'no-cache' : 'default'
     })

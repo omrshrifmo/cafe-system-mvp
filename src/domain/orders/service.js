@@ -3,8 +3,9 @@
  */
 const crypto = require('crypto');
 const { allQuery, getQuery, runQuery } = require('../../db/connection');
-const { runTransaction } = require('../../db/transaction');
 const { getMenuItemWithActivePriceAndBOM } = require('../catalog/service');
+const { getActiveOffers, evaluateOffer } = require('../catalog/offers');
+const { deductBOM } = require('../inventory/service');
 const logger = require('../../observability/logger');
 
 async function createOrderSession(tableId, orderType = 'DINE_IN', customerPhone = null, actorId = null) {
@@ -57,10 +58,21 @@ async function addOrderItem(sessionId, menuItemIdOrName, quantity = 1, modifiers
 
   const qty = Math.max(1, parseInt(quantity, 10) || 1);
   const unitPriceMinor = catalogItem.price_minor;
+  // TODO: taxes and offers computation
+  const taxMinor = 0;
+  const serviceMinor = 0;
+  const discountMinor = 0;
+  const offerId = null;
+  const catalogVersion = catalogItem.publication_version || 1;
+  const quoteSnapshot = JSON.stringify(catalogItem);
 
   const res = await runQuery(
-    `INSERT INTO order_items (session_id, menu_item_id, item_name_snapshot, unit_price_minor, quantity, modifiers_json, recipe_version_id, department, waiter_id)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO order_items (
+       session_id, menu_item_id, item_name_snapshot, unit_price_minor, quantity, modifiers_json, 
+       recipe_version_id, department, waiter_id, price_minor, tax_minor, service_minor, 
+       discount_minor, offer_id, catalog_version, quote_snapshot
+     )
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       sessionId,
       catalogItem.id,
@@ -70,7 +82,14 @@ async function addOrderItem(sessionId, menuItemIdOrName, quantity = 1, modifiers
       JSON.stringify(modifiers || {}),
       catalogItem.recipe_version_id || null,
       catalogItem.department || 'BARISTA',
-      actorId || null
+      actorId || null,
+      unitPriceMinor,
+      taxMinor,
+      serviceMinor,
+      discountMinor,
+      offerId,
+      catalogVersion,
+      quoteSnapshot
     ]
   );
 
@@ -97,6 +116,9 @@ async function submitOrderWithBOM(orderData, actorId = null) {
   const { table_number, item_name, quantity = 1, sugar_level, roast_type, customer_phone, waiter_id } = orderData;
   const tNum = parseInt(table_number, 10) || 0;
   const actualWaiterId = actorId || waiter_id || null;
+
+  // Fetch active offers to apply automatically
+  const activeOffers = await getActiveOffers();
 
   return runTransaction(async (tx) => {
     // 1. Resolve table & session
@@ -142,10 +164,30 @@ async function submitOrderWithBOM(orderData, actorId = null) {
     const qty = Math.max(1, parseInt(quantity, 10) || 1);
     const modifiers = { sugar_level, roast_type };
 
-    // 3. Create Order Item row
+    // 3. Evaluate offers
+    let itemDiscountMinor = 0;
+    let appliedOfferId = null;
+    for (const offer of activeOffers) {
+      const d = evaluateOffer(offer, catalogItem, qty);
+      if (d > itemDiscountMinor) {
+        itemDiscountMinor = d;
+        appliedOfferId = offer.id;
+      }
+    }
+
+    const taxMinor = 0;
+    const serviceMinor = 0;
+    const catalogVersion = catalogItem.publication_version || 1;
+    const quoteSnapshot = JSON.stringify(catalogItem);
+
+    // 4. Create Order Item row
     const itemRes = await tx.run(
-      `INSERT INTO order_items (session_id, menu_item_id, item_name_snapshot, unit_price_minor, quantity, modifiers_json, recipe_version_id, department, waiter_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO order_items (
+         session_id, menu_item_id, item_name_snapshot, unit_price_minor, quantity, modifiers_json, 
+         recipe_version_id, department, waiter_id, price_minor, tax_minor, service_minor, 
+         discount_minor, offer_id, catalog_version, quote_snapshot
+       )
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         session.id,
         catalogItem.id,
@@ -155,44 +197,30 @@ async function submitOrderWithBOM(orderData, actorId = null) {
         JSON.stringify(modifiers),
         catalogItem.recipe_version_id || null,
         catalogItem.department || 'BARISTA',
-        actualWaiterId
+        actualWaiterId,
+        catalogItem.price_minor,
+        taxMinor,
+        serviceMinor,
+        itemDiscountMinor,
+        appliedOfferId,
+        catalogVersion,
+        quoteSnapshot
       ]
     );
 
     const orderItemId = itemRes.lastID;
 
-    // 4. BOM Inventory Deductions via immutable inventory_ledger
-    if (catalogItem.ingredients && catalogItem.ingredients.length > 0) {
-      for (const ing of catalogItem.ingredients) {
-        const requiredMicrounits = ing.quantity_microunits * qty;
-        
-        // Deduct inventory
-        await tx.run(
-          `UPDATE inventory_items 
-           SET current_stock_microunits = current_stock_microunits - ?, 
-               updated_at = datetime('now', 'localtime') 
-           WHERE id = ?`,
-          [requiredMicrounits, ing.inventory_item_id]
-        );
+    // 5. BOM Inventory Deductions via immutable inventory_ledger
+    await deductBOM(tx, orderItemId, catalogItem, qty, actualWaiterId);
 
-        // Record consumption ledger entry
-        const idempKey = `CONSUME_ORD_${orderItemId}_ING_${ing.inventory_item_id}`;
-        await tx.run(
-          `INSERT INTO inventory_ledger (inventory_item_id, event_type, quantity_delta_microunits, unit, source_type, source_id, idempotency_key, actor_id)
-           VALUES (?, 'CONSUMPTION', ?, ?, 'ORDER_ITEM', ?, ?, ?)`,
-          [ing.inventory_item_id, -requiredMicrounits, ing.unit, String(orderItemId), idempKey, actualWaiterId]
-        );
-      }
-    }
-
-    // 5. Update session totals
-    const lineTotal = catalogItem.price_minor * qty;
+    // 6. Update session totals
+    const lineTotal = (catalogItem.price_minor * qty) - itemDiscountMinor;
     await tx.run(
       `UPDATE order_sessions SET subtotal_minor = subtotal_minor + ?, total_minor = total_minor + ?, version = version + 1 WHERE id = ?`,
       [lineTotal, lineTotal, session.id]
     );
 
-    // 6. Insert print job for BOH Kitchen Ticket
+    // 7. Insert print job for BOH Kitchen Ticket
     const printJobId = crypto.randomUUID();
     const ticketPayload = JSON.stringify({
       order_id: orderItemId,

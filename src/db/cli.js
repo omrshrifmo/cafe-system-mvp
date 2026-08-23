@@ -34,8 +34,20 @@ async function main() {
         });
       });
       console.log(`✅ Backup successfully created at: ${targetPath}`);
+    } else if (command === 'status') {
+      const { allQuery } = require('./connection');
+      const applied = await allQuery("SELECT version, applied_at, status FROM schema_migrations;");
+      console.log(`📊 Schema Migrations Applied: ${applied.length}`);
+      applied.forEach(m => console.log(`  - [${m.status}] ${m.version} (${m.applied_at})`));
     } else if (command === 'restore') {
-      const sourcePath = process.argv[3];
+      const backupDir = path.join(__dirname, '../../backups');
+      let sourcePath = process.argv[3];
+      if (!sourcePath && fs.existsSync(backupDir)) {
+        const backups = fs.readdirSync(backupDir).filter(f => f.endsWith('.sqlite') || f.endsWith('.db')).sort().reverse();
+        if (backups.length > 0) {
+          sourcePath = path.join(backupDir, backups[0]);
+        }
+      }
       if (!sourcePath || !fs.existsSync(sourcePath)) {
         console.error(`❌ Source backup file not found: ${sourcePath}`);
         process.exit(1);
@@ -47,7 +59,7 @@ async function main() {
       await runMigrations();
       console.log('✅ Database restore and migration complete.');
     } else {
-      console.error(`Unknown command: ${command}. Use: migrate | backup | restore <path>`);
+      console.error(`Unknown command: ${command}. Use: migrate | status | backup | restore <path>`);
       process.exit(1);
     }
   } catch (err) {

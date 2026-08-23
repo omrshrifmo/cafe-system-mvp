@@ -3,10 +3,10 @@
  */
 const express = require('express');
 const router = express.Router();
-const { getMenu, getRecipeDetails } = require('../../domain/catalog/service');
+const { getMenu, getRecipeDetails, createMenuItem, publishMenuItem } = require('../../domain/catalog/service');
 const { requirePermission } = require('../middleware/permissions');
 const { requireAuth } = require('../middleware/auth');
-const { allQuery, getQuery, runQuery } = require('../../db/connection');
+const { allQuery, runQuery } = require('../../db/connection');
 
 // Get canonical hierarchical menu for POS, QR, and KDS
 router.get('/menu', async (req, res, next) => {
@@ -102,7 +102,7 @@ router.get('/menu/items', async (req, res, next) => {
   try {
     const items = await allQuery(
       `SELECT m.id, m.category_id, m.name, m.name_en, m.description, m.department, 
-              m.is_available, m.is_featured, m.sort_order,
+              m.is_available, m.is_featured, m.sort_order, m.sku, m.lifecycle_state, m.publication_version,
               c.name as category_name, c.icon as category_icon,
               COALESCE(p.amount_minor, 0) as price_minor,
               (COALESCE(p.amount_minor, 0) / 100.0) as price,
@@ -123,20 +123,21 @@ router.get('/menu/items', async (req, res, next) => {
 
 router.post('/menu/items', requireAuth, requirePermission('menu:write'), async (req, res, next) => {
   try {
-    const { name, name_en, category_id, department = 'BARISTA', price, description, is_featured = 0, sort_order = 0, instructions } = req.body;
+    const { sku, name, name_en, category_id, department = 'BARISTA', price_minor, price, description, is_featured = 0, sort_order = 0, instructions } = req.body;
+    
     if (!name || !name.trim()) {
       return res.status(400).json({ success: false, error: 'اسم الصنف مطلوب' });
     }
-    const priceMinor = Math.round((Number(price) || 0) * 100);
+    
+    // Support either explicit minor units or float price fallback
+    const computedPriceMinor = price_minor !== undefined ? price_minor : Math.round((Number(price) || 0) * 100);
 
-    const itemRes = await runQuery(
-      `INSERT INTO menu_items (category_id, name, name_en, description, department, is_available, is_featured, sort_order) 
-       VALUES (?, ?, ?, ?, ?, 1, ?, ?)`,
-      [category_id || 1, name.trim(), name_en ? name_en.trim() : null, description || null, department, is_featured ? 1 : 0, sort_order]
-    );
-
-    const itemId = itemRes.lastID;
-    await runQuery(`INSERT INTO menu_prices (menu_item_id, amount_minor, currency) VALUES (?, ?, 'ج.م')`, [itemId, priceMinor]);
+    const itemId = await createMenuItem({
+      sku, name, name_en, category_id, department, 
+      priceMinor: computedPriceMinor, 
+      description, is_featured, sort_order, 
+      author_id: req.user ? req.user.id : null
+    });
 
     if (instructions) {
       await runQuery(
@@ -145,7 +146,20 @@ router.post('/menu/items', requireAuth, requirePermission('menu:write'), async (
       );
     }
 
-    res.json({ success: true, item_id: itemId, message: 'تم إضافة الصنف بنجاح' });
+    res.json({ success: true, item_id: itemId, message: 'تم إضافة الصنف بنجاح (DRAFT)' });
+  } catch (err) {
+    if (err.message.includes('duplicate')) {
+      return res.status(409).json({ success: false, error: err.message });
+    }
+    next(err);
+  }
+});
+
+router.post('/menu/items/:id/publish', requireAuth, requirePermission('menu:write'), async (req, res, next) => {
+  try {
+    const itemId = req.params.id;
+    await publishMenuItem(itemId, req.user ? req.user.id : null);
+    res.json({ success: true, message: 'تم نشر الصنف بنجاح' });
   } catch (err) {
     next(err);
   }
@@ -154,15 +168,24 @@ router.post('/menu/items', requireAuth, requirePermission('menu:write'), async (
 router.put('/menu/items/:id', requireAuth, requirePermission('menu:write'), async (req, res, next) => {
   try {
     const itemId = req.params.id;
-    const { name, name_en, category_id, department, price, description, is_available, is_featured, sort_order } = req.body;
+    const { sku, name, name_en, category_id, department, price_minor, price, description, is_available, is_featured, sort_order } = req.body;
 
-    if (is_available !== undefined && name === undefined && price === undefined) {
+    if (is_available !== undefined && name === undefined && price === undefined && price_minor === undefined) {
       await runQuery(`UPDATE menu_items SET is_available = ?, updated_at = datetime('now', 'localtime') WHERE id = ?`, [is_available ? 1 : 0, itemId]);
       return res.json({ success: true, message: 'تم تحديث حالة توفر الصنف' });
     }
 
+    // Checking for dupes before updating name/sku
+    if (name || sku) {
+      const existing = await allQuery(`SELECT id, name, sku FROM menu_items WHERE (name = ? OR (sku = ? AND sku IS NOT NULL)) AND id != ?`, [name, sku, itemId]);
+      if (existing.length > 0) {
+        return res.status(409).json({ success: false, error: 'Duplicate SKU or Name detected.' });
+      }
+    }
+
     await runQuery(
       `UPDATE menu_items SET
+         sku = COALESCE(?, sku),
          category_id = COALESCE(?, category_id),
          name = COALESCE(?, name),
          name_en = COALESCE(?, name_en),
@@ -173,14 +196,15 @@ router.put('/menu/items/:id', requireAuth, requirePermission('menu:write'), asyn
          sort_order = COALESCE(?, sort_order),
          updated_at = datetime('now', 'localtime')
        WHERE id = ?`,
-      [category_id, name, name_en, description, department, is_available, is_featured, sort_order, itemId]
+      [sku, category_id, name, name_en, description, department, is_available, is_featured, sort_order, itemId]
     );
 
-    if (price !== undefined) {
-      const priceMinor = Math.round((Number(price) || 0) * 100);
+    if (price !== undefined || price_minor !== undefined) {
+      const computedPriceMinor = price_minor !== undefined ? price_minor : Math.round((Number(price) || 0) * 100);
+      const authorId = req.user ? req.user.id : null;
       // Close older active price and insert new active price
       await runQuery(`UPDATE menu_prices SET valid_to = datetime('now', 'localtime') WHERE menu_item_id = ? AND valid_to IS NULL`, [itemId]);
-      await runQuery(`INSERT INTO menu_prices (menu_item_id, amount_minor, currency) VALUES (?, ?, 'ج.م')`, [itemId, priceMinor]);
+      await runQuery(`INSERT INTO menu_prices (menu_item_id, amount_minor, currency, author_id) VALUES (?, ?, 'ج.م', ?)`, [itemId, computedPriceMinor, authorId]);
     }
 
     res.json({ success: true, message: 'تم تحديث بيانات وسعر الصنف بنجاح' });
@@ -192,7 +216,7 @@ router.put('/menu/items/:id', requireAuth, requirePermission('menu:write'), asyn
 router.delete('/menu/items/:id', requireAuth, requirePermission('menu:write'), async (req, res, next) => {
   try {
     const itemId = req.params.id;
-    await runQuery(`UPDATE menu_items SET is_available = 0, updated_at = datetime('now', 'localtime') WHERE id = ?`, [itemId]);
+    await runQuery(`UPDATE menu_items SET is_available = 0, lifecycle_state = 'RETIRED', updated_at = datetime('now', 'localtime') WHERE id = ?`, [itemId]);
     res.json({ success: true, message: 'تم إيقاف وحفظ الصنف بنجاح' });
   } catch (err) {
     next(err);

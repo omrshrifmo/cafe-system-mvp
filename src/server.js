@@ -35,6 +35,13 @@ async function startServer() {
 
       server.close(async () => {
         logger.info('HTTP & WebSocket servers closed.');
+        try {
+          const { runQuery } = require('./db/connection');
+          await runQuery('PRAGMA wal_checkpoint(TRUNCATE);');
+          logger.info('WAL checkpoint TRUNCATE completed successfully.');
+        } catch (e) {
+          logger.warn('WAL checkpoint note:', { error: e.message });
+        }
         await closeDb();
         logger.info('Database connection closed cleanly. Exiting.');
         process.exit(0);

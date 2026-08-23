@@ -1,6 +1,6 @@
 /**
  * كافيه مزاج - Universal Enterprise Unified Navigation, Design System & Shell
- * Unified Header, Collapsible Multi-Group Sidebar, and Compact Footer
+ * Unified Header, Collapsible Multi-Group Sidebar, Compact Footer, UIState Contract & PWA Manager
  * Standardized on 'Tajawal' Typography & Slate-900/950 Theme
  * Enforces Server-Authenticated Session Validation and Strict Client-Side Page Guarding
  */
@@ -55,12 +55,46 @@
     }
   ];
 
-  // Auto-Register PWA Service Worker & Manifest
-  if ('serviceWorker' in navigator) {
+  // Dynamically load UIState script if missing
+  if (typeof window !== 'undefined' && !window.UIState) {
+    const script = document.createElement('script');
+    script.src = '/modules/ui-state.js';
+    document.head.appendChild(script);
+  }
+
+  // Auto-Register PWA Service Worker with Update Prompt
+  if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW registration note:', err));
+      navigator.serviceWorker.register('/sw.js').then((reg) => {
+        reg.addEventListener('updatefound', () => {
+          const newWorker = reg.installing;
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              showUpdatePrompt(newWorker);
+            }
+          });
+        });
+      }).catch(err => console.log('SW registration note:', err));
     });
   }
+
+  function showUpdatePrompt(worker) {
+    const banner = document.createElement('div');
+    banner.id = 'mazaj-sw-update-banner';
+    banner.className = 'fixed bottom-4 left-4 z-[999999] bg-amber-500 text-slate-950 px-4 py-3 rounded-2xl font-bold text-xs shadow-2xl flex items-center gap-3 border border-amber-400 animate-bounce';
+    banner.innerHTML = `
+      <span>⚡ يتوفر تحديث جديد للنظام (v3.1)</span>
+      <button id="mazaj-sw-reload-btn" class="px-3 py-1 bg-slate-950 text-white rounded-xl text-xs font-black hover:bg-slate-900 cursor-pointer shadow">
+        تحديث الآن 🔄
+      </button>
+    `;
+    document.body.appendChild(banner);
+    document.getElementById('mazaj-sw-reload-btn').onclick = () => {
+      worker.postMessage({ type: 'SKIP_WAITING' });
+      window.location.reload();
+    };
+  }
+
   if (!document.querySelector('link[rel="manifest"]')) {
     const manifestLink = document.createElement('link');
     manifestLink.rel = 'manifest';
@@ -98,6 +132,27 @@
         padding: 0;
         overflow: hidden;
       }
+      /* Accessibility Focus Ring */
+      :focus-visible {
+        outline: 2px solid #f59e0b !important;
+        outline-offset: 2px !important;
+      }
+      /* Skip Link for Keyboard Navigation */
+      .skip-link {
+        position: absolute;
+        top: -40px;
+        left: 0;
+        background: #f59e0b;
+        color: #0f172a;
+        padding: 8px 16px;
+        font-weight: 800;
+        z-index: 100000;
+        transition: top 0.2s;
+        border-radius: 0 0 8px 0;
+      }
+      .skip-link:focus {
+        top: 0;
+      }
       .stat-card {
         background: linear-gradient(135deg, #1e293b, #0f172a);
         border: 1px solid #334155;
@@ -127,15 +182,6 @@
       .scrollbar-thin::-webkit-scrollbar-thumb:hover {
         background: #475569;
       }
-      .cat-tag {
-        cursor: pointer;
-        transition: all 0.15s ease;
-      }
-      .cat-tag.selected {
-        background: rgba(245, 158, 11, 0.2) !important;
-        border-color: #f59e0b !important;
-        color: #fbbf24 !important;
-      }
       .sidebar-item {
         transition: all 0.15s ease;
       }
@@ -148,6 +194,15 @@
         color: #0f172a !important;
         font-weight: 800 !important;
         box-shadow: 0 4px 12px rgba(245, 158, 11, 0.25);
+      }
+      /* Touch target guarantee */
+      button, a, input, select, textarea {
+        min-height: 38px;
+      }
+      @media (max-width: 640px) {
+        button, a, input, select, textarea {
+          min-height: 44px;
+        }
       }
     `;
     document.head.appendChild(style);
@@ -235,6 +290,27 @@
     }
   }
 
+  function updateNetworkStatusBadge() {
+    const badge = document.getElementById('nav-net-status');
+    if (!badge) return;
+    if (navigator.onLine) {
+      badge.innerHTML = `
+        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+        <span class="text-emerald-400">متصل بالخادم</span>
+      `;
+      badge.className = "px-2 py-0.5 rounded-lg text-[10px] font-bold border border-emerald-500/30 bg-emerald-950/40 flex items-center gap-1.5";
+    } else {
+      badge.innerHTML = `
+        <span class="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+        <span class="text-rose-400">وضع غير متصل (Offline)</span>
+      `;
+      badge.className = "px-2 py-0.5 rounded-lg text-[10px] font-bold border border-rose-500/40 bg-rose-950/60 flex items-center gap-1.5";
+    }
+  }
+
+  window.addEventListener('online', updateNetworkStatusBadge);
+  window.addEventListener('offline', updateNetworkStatusBadge);
+
   async function validateSessionAndRender() {
     const pathname = window.location.pathname;
     if (pathname === '/' || pathname.endsWith('/index.html') || pathname.includes('qr-menu.html')) {
@@ -248,7 +324,6 @@
     let appMode = 'LIVE';
     try {
       const res = await fetch('/api/auth/me');
-      
       appMode = res.headers.get('X-App-Mode') || 'LIVE';
       
       if (res.status === 403) {
@@ -328,20 +403,21 @@
     // Top Unified Header Bar HTML (Height: 46px)
     const demoBannerHtml = appMode === 'DEMO' ? `<div class="w-full bg-rose-600 text-white text-[10px] font-black text-center py-0.5 tracking-widest z-[100] relative">وضع التجربة (DEMO MODE) - جميع الإجراءات هنا معزولة عن بيانات النظام الفعلي</div>` : '';
     const topBarHTML = `
+      <a href="#app-content-area" class="skip-link">انتقل للمحتوى الرئيسي (Tab)</a>
       ${demoBannerHtml}
-      <header class="h-[46px] bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-4 flex items-center justify-between text-xs text-slate-300 shrink-0 z-50 select-none shadow-md">
-        <div class="flex items-center gap-3">
-          <button onclick="window.MazajNav.toggleSidebar()" id="sidebar-toggle-btn" title="طي/توسيع القائمة الجانبية (Ctrl+B)" class="hidden md:flex w-7 h-7 bg-slate-800 hover:bg-slate-700 text-amber-400 rounded-lg text-xs font-black items-center justify-center border border-slate-700 cursor-pointer transition-colors shadow-sm">
+      <header role="banner" class="h-[46px] bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-3 md:px-4 flex items-center justify-between text-xs text-slate-300 shrink-0 z-50 select-none shadow-md">
+        <div class="flex items-center gap-2 md:gap-3">
+          <button onclick="window.MazajNav.toggleSidebar()" id="sidebar-toggle-btn" aria-label="طي أو توسيع القائمة الجانبية" class="hidden md:flex w-7 h-7 bg-slate-800 hover:bg-slate-700 text-amber-400 rounded-lg text-xs font-black items-center justify-center border border-slate-700 cursor-pointer transition-colors shadow-sm">
             ${isCollapsed() ? '▶' : '◀'}
           </button>
           
-          <button onclick="window.MazajNav.toggleMobileMenu()" class="md:hidden w-8 h-8 bg-amber-500 text-slate-950 rounded-lg font-black text-sm flex items-center justify-center cursor-pointer shadow">
+          <button onclick="window.MazajNav.toggleMobileMenu()" aria-label="فتح القائمة الرئيسية" class="md:hidden w-8 h-8 bg-amber-500 text-slate-950 rounded-lg font-black text-sm flex items-center justify-center cursor-pointer shadow">
             ☰
           </button>
 
           <a href="/portal.html" class="flex items-center gap-2 text-white hover:text-amber-400 transition-colors">
             <span class="text-lg">☕</span>
-            <span class="font-black text-sm tracking-wide text-amber-400">كافيه مزاج</span>
+            <span class="font-black text-sm tracking-wide text-amber-400 hidden xs:inline">كافيه مزاج</span>
           </a>
 
           <span class="text-slate-700 hidden sm:inline">|</span>
@@ -352,28 +428,33 @@
           </div>
         </div>
 
-        <div class="flex items-center gap-2.5">
-          <button onclick="window.MazajNav.toggleShiftType()" id="global-shift-badge" title="اضغط للتبديل بين الورديات" class="px-2.5 py-1 rounded-lg text-[11px] font-extrabold cursor-pointer border flex items-center gap-1.5 transition-all shadow-sm ${
+        <div class="flex items-center gap-1.5 md:gap-2.5">
+          <div id="nav-net-status" class="px-2 py-0.5 rounded-lg text-[10px] font-bold border border-emerald-500/30 bg-emerald-950/40 flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span class="text-emerald-400 hidden xs:inline">متصل</span>
+          </div>
+
+          <button onclick="window.MazajNav.toggleShiftType()" id="global-shift-badge" title="اضغط للتبديل بين الورديات" class="px-2 md:px-2.5 py-1 rounded-lg text-[11px] font-extrabold cursor-pointer border flex items-center gap-1.5 transition-all shadow-sm ${
             currentShift === 'MORNING' 
               ? 'bg-amber-500/15 text-amber-300 border-amber-500/40 hover:bg-amber-500/25' 
               : 'bg-indigo-500/15 text-indigo-300 border-indigo-500/40 hover:bg-indigo-500/25'
           }">
             <span>${currentShift === 'MORNING' ? '☀️' : '🌙'}</span>
-            <span>${currentShift === 'MORNING' ? 'وردية صباحية' : 'وردية مسائية'}</span>
+            <span class="hidden sm:inline">${currentShift === 'MORNING' ? 'وردية صباحية' : 'وردية مسائية'}</span>
           </button>
 
           <div id="nav-live-clock" class="hidden lg:block text-slate-400 font-mono text-[11px] bg-slate-950/80 px-2.5 py-1 rounded-lg border border-slate-800">
             00:00:00 م
           </div>
 
-          <div class="px-2.5 py-1 bg-slate-950 rounded-lg text-[11px] font-bold text-slate-300 border border-slate-800 flex items-center gap-1.5">
+          <div class="px-2 md:px-2.5 py-1 bg-slate-950 rounded-lg text-[11px] font-bold text-slate-300 border border-slate-800 flex items-center gap-1.5">
             <span>👤</span>
-            <span class="text-white max-w-[100px] truncate">${currentUser.name || 'مستخدم'}</span>
+            <span class="text-white max-w-[80px] sm:max-w-[100px] truncate">${currentUser.name || 'مستخدم'}</span>
             <span class="text-amber-400 text-[10px] font-mono font-black">(${userRole})</span>
           </div>
 
-          <button onclick="window.MazajNav.logout()" title="تسجيل الخروج" class="px-2.5 py-1 bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 border border-rose-500/30 rounded-lg text-[11px] font-bold cursor-pointer transition-colors">
-            🚪 خروج
+          <button onclick="window.MazajNav.logout()" title="تسجيل الخروج" class="px-2 md:px-2.5 py-1 bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 border border-rose-500/30 rounded-lg text-[11px] font-bold cursor-pointer transition-colors">
+            🚪 <span class="hidden xs:inline">خروج</span>
           </button>
         </div>
       </header>
@@ -382,7 +463,7 @@
     // Sidebar Container HTML
     const sidebarWidth = isCollapsed() ? '64px' : '230px';
     const sidebarHTML = `
-      <aside id="app-sidebar" style="width: ${sidebarWidth};" class="hidden md:flex flex-col bg-slate-900/90 backdrop-blur-md border-l border-slate-800 shrink-0 h-full select-none transition-all duration-200">
+      <aside id="app-sidebar" role="navigation" aria-label="القائمة الجانبية" style="width: ${sidebarWidth};" class="hidden md:flex flex-col bg-slate-900/90 backdrop-blur-md border-l border-slate-800 shrink-0 h-full select-none transition-all duration-200">
         <nav class="flex-1 overflow-y-auto scrollbar-thin p-2 space-y-3">
           ${navGroups.map(grp => {
             const accessibleItems = grp.items.filter(item => item.roles.includes(userRole));
@@ -413,7 +494,7 @@
 
         <div class="p-2 border-t border-slate-800/80 bg-slate-950/40 text-[10px] text-slate-500 flex items-center justify-between">
           <span class="nav-label truncate ${isCollapsed() ? 'hidden' : ''}">🟢 الخادم متصل</span>
-          <span class="text-slate-600 font-mono text-[9px]">v2.6</span>
+          <span class="text-slate-600 font-mono text-[9px]">v3.1</span>
         </div>
       </aside>
 
@@ -452,19 +533,19 @@
 
     // Footer HTML (Height: 28px)
     const footerHTML = `
-      <footer class="h-[28px] bg-slate-950/95 border-t border-slate-800 px-4 flex items-center justify-between text-[11px] text-slate-500 shrink-0 z-50 select-none">
+      <footer role="contentinfo" class="h-[28px] bg-slate-950/95 border-t border-slate-800 px-4 flex items-center justify-between text-[11px] text-slate-500 shrink-0 z-50 select-none">
         <div class="flex items-center gap-3">
           <span class="flex items-center gap-1 text-emerald-400 font-bold">
             <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
             <span>نظام التشغيل نشط</span>
           </span>
           <span class="text-slate-700">|</span>
-          <span class="text-slate-400">كافيه مزاج - نظام إدارة العمليات والضيافة</span>
+          <span class="text-slate-400 truncate">كافيه مزاج - نظام إدارة العمليات والضيافة</span>
         </div>
         <div class="flex items-center gap-3 font-mono text-[10px]">
           <span>شبكة محلية (LAN)</span>
-          <span class="text-slate-700">|</span>
-          <span class="text-amber-500/80 font-bold">طابعة: 192.168.1.100</span>
+          <span class="text-slate-700 hidden sm:inline">|</span>
+          <span class="text-amber-500/80 font-bold hidden sm:inline">طابعة: 192.168.1.100</span>
         </div>
       </footer>
     `;
@@ -478,7 +559,9 @@
 
     const headerWrapper = document.createElement('div');
     headerWrapper.innerHTML = topBarHTML;
-    rootContainer.appendChild(headerWrapper.firstElementChild);
+    while (headerWrapper.firstChild) {
+      rootContainer.appendChild(headerWrapper.firstChild);
+    }
 
     const mainBody = document.createElement('div');
     mainBody.className = 'flex flex-1 min-h-0 w-full overflow-hidden';
@@ -491,7 +574,8 @@
 
     const contentArea = document.createElement('div');
     contentArea.id = 'app-content-area';
-    contentArea.className = 'flex-1 min-w-0 h-full flex flex-col overflow-y-auto scrollbar-thin';
+    contentArea.tabIndex = -1;
+    contentArea.className = 'flex-1 min-w-0 h-full flex flex-col overflow-y-auto scrollbar-thin outline-none';
 
     while (document.body.firstChild) {
       contentArea.appendChild(document.body.firstChild);
@@ -502,7 +586,9 @@
 
     const footerWrapper = document.createElement('div');
     footerWrapper.innerHTML = footerHTML;
-    rootContainer.appendChild(footerWrapper.firstElementChild);
+    while (footerWrapper.firstChild) {
+      rootContainer.appendChild(footerWrapper.firstChild);
+    }
 
     document.body.appendChild(rootContainer);
 
@@ -515,6 +601,7 @@
 
     setInterval(updateClock, 1000);
     updateClock();
+    updateNetworkStatusBadge();
   }
 
   // Export functions globally

@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>كافيه مزاج - تقرير الورديات ونهاية اليوم (EOD & Shifts)</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/modules/ui-state.js"></script>
   <script src="/nav.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -20,52 +21,54 @@
 <body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col overflow-y-auto selection:bg-emerald-500 selection:text-black">
 
   <!-- Page Action Header -->
-  <div class="shrink-0 bg-slate-900/90 border-b border-slate-800 px-6 py-3.5 flex items-center justify-between shadow-md z-20">
+  <div class="shrink-0 bg-slate-900/90 border-b border-slate-800 px-4 md:px-6 py-3 flex items-center justify-between shadow-md z-20">
     <div class="flex items-center gap-3">
       <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 text-xl shadow-inner">
         📊
       </div>
       <div>
-        <h1 class="text-lg font-black text-white">تقرير نهاية اليوم وتسوية الدرج (EOD)</h1>
-        <p class="text-xs text-slate-400">مطابقة الكاش الفعلي مع المتوقع، تقفيل الورديات، واحتساب الفروقات المالية</p>
+        <h1 class="text-base md:text-lg font-black text-white">تقرير نهاية اليوم وتسوية الدرج (EOD)</h1>
+        <p class="text-[11px] text-slate-400">إثبات العد الفعلي للنقدية، تسوية الورديات، وإصدار تقرير Z المعتمد</p>
       </div>
     </div>
 
     <!-- Actions -->
-    <div class="flex items-center gap-3">
-      <div class="flex items-center bg-slate-800/80 rounded-xl p-1 border border-slate-700 text-xs">
-        <button onclick="selectShiftFilter('ALL')" id="shift-btn-ALL" class="px-3 py-1.5 rounded-lg font-bold bg-emerald-500 text-slate-950 cursor-pointer shadow-sm">اليوم بالكامل</button>
-        <button onclick="selectShiftFilter('MORNING')" id="shift-btn-MORNING" class="px-3 py-1.5 rounded-lg font-bold text-slate-300 hover:text-white cursor-pointer transition-colors">☀️ صباحية</button>
-        <button onclick="selectShiftFilter('NIGHT')" id="shift-btn-NIGHT" class="px-3 py-1.5 rounded-lg font-bold text-slate-300 hover:text-white cursor-pointer transition-colors">🌙 مسائية</button>
+    <div class="flex items-center gap-2 md:gap-3">
+      <div id="shift-filter-container" class="flex items-center bg-slate-800/80 rounded-xl p-1 border border-slate-700 text-xs">
+        <button onclick="selectShiftFilter('ALL')" id="shift-btn-ALL" class="px-2.5 md:px-3 py-1.5 rounded-lg font-bold bg-emerald-500 text-slate-950 cursor-pointer shadow-sm">اليوم بالكامل</button>
+        <button onclick="selectShiftFilter('MORNING')" id="shift-btn-MORNING" class="px-2.5 md:px-3 py-1.5 rounded-lg font-bold text-slate-300 hover:text-white cursor-pointer transition-colors">☀️ صباحية</button>
+        <button onclick="selectShiftFilter('NIGHT')" id="shift-btn-NIGHT" class="px-2.5 md:px-3 py-1.5 rounded-lg font-bold text-slate-300 hover:text-white cursor-pointer transition-colors">🌙 مسائية</button>
       </div>
 
-      <button onclick="fetchReportsData()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold cursor-pointer transition-colors border border-slate-700">
-        🔄 تحديث
+      <button onclick="fetchReportsData()" class="px-3 md:px-4 py-2 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 rounded-xl text-xs font-bold cursor-pointer transition-all border border-slate-700 flex items-center gap-1.5">
+        <span>🔄</span> <span class="hidden sm:inline">تحديث</span>
       </button>
     </div>
   </div>
 
   <!-- Main Container -->
-  <main class="w-full p-4 md:p-6 flex-1 flex flex-col min-h-0 overflow-y-auto space-y-5">
+  <main class="w-full p-3 md:p-6 flex-1 flex flex-col min-h-0 overflow-y-auto space-y-4 max-w-7xl mx-auto">
 
-    <!-- HERO CARD: Expected Cash in Drawer -->
-    <section class="bg-emerald-950/40 border border-emerald-500/50 rounded-3xl p-5 md:p-6 shadow-2xl relative overflow-hidden">
+    <div id="eod-state-container"></div>
+
+    <!-- MANAGER & OWNER AUDITED FINANCIAL HERO CARD -->
+    <section id="manager-reconciliation-card" class="hidden bg-emerald-950/40 border border-emerald-500/50 rounded-3xl p-5 md:p-6 shadow-2xl relative overflow-hidden">
       <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
         <div>
           <div class="flex items-center gap-2 mb-1.5">
-            <span class="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-black border border-emerald-500/40">المعيار المالي للنقدية</span>
+            <span class="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-black border border-emerald-500/40">المعيار المالي للنقدية (Authorized)</span>
             <span id="shift-badge-indicator" class="text-[10px] bg-slate-800 text-amber-300 px-2 py-0.5 rounded font-mono font-bold">كل الورديات</span>
           </div>
-          <h2 class="text-xl md:text-2xl font-black text-white">النقد الفعلي المتوقع في درج الخزينة</h2>
-          <p class="text-xs text-slate-300 mt-1 max-w-xl">المبلغ النقدي المحسوب بالدرج (مبيعات الكاش - مصروفات الدرج - سُلف الموظفين).</p>
+          <h2 class="text-lg md:text-2xl font-black text-white">النقد الفعلي المتوقع في درج الخزينة</h2>
+          <p class="text-xs text-slate-300 mt-1 max-w-xl">المعادلة المعتمدة: عهدة الافتتاح + مبيعات الكاش + الإكراميات - المصروفات - السُلف - الاسترجاعات.</p>
         </div>
 
         <div class="bg-slate-950/90 border border-emerald-500/50 p-4 rounded-2xl text-center md:text-right min-w-[220px] shadow-2xl">
           <span class="text-[10px] font-bold text-emerald-400 uppercase tracking-widest block mb-0.5">Expected Cash</span>
-          <div id="hero-expected-cash" class="text-3xl md:text-4xl font-black text-emerald-400 font-mono leading-none mb-1">
-            0 ج.م
+          <div id="hero-expected-cash" class="text-2xl md:text-3xl font-black text-emerald-400 font-mono leading-none mb-1">
+            --
           </div>
-          <p class="text-[10px] text-slate-400 font-bold">صافي النقد المتوفر للتصفية</p>
+          <p class="text-[10px] text-slate-400 font-bold">صافي النقد الدفتري المطلوب تسليمه</p>
         </div>
       </div>
 
@@ -73,39 +76,39 @@
       <div class="mt-4 pt-3 border-t border-emerald-500/20 grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
         <div class="bg-slate-900/90 p-2.5 rounded-xl border border-slate-800">
           <span class="text-slate-400 block text-[10px]">💵 مبيعات الكاش:</span>
-          <span id="formula-cash-sales" class="font-black text-emerald-400 font-mono">0 ج.م</span>
+          <span id="formula-cash-sales" class="font-black text-emerald-400 font-mono">--</span>
         </div>
         <div class="bg-slate-900/90 p-2.5 rounded-xl border border-slate-800">
           <span class="text-slate-400 block text-[10px]">💸 مصروفات الدرج:</span>
-          <span id="formula-drawer-expenses" class="font-black text-rose-400 font-mono">-0 ج.م</span>
+          <span id="formula-drawer-expenses" class="font-black text-rose-400 font-mono">--</span>
         </div>
         <div class="bg-slate-900/90 p-2.5 rounded-xl border border-slate-800">
           <span class="text-slate-400 block text-[10px]">💼 سُلف الموظفين:</span>
-          <span id="formula-advances" class="font-black text-amber-400 font-mono">-0 ج.م</span>
+          <span id="formula-advances" class="font-black text-amber-400 font-mono">--</span>
         </div>
         <div class="bg-emerald-900/40 p-2.5 rounded-xl border border-emerald-500/40 flex items-center justify-between">
-          <span class="font-bold text-white text-[10px]">الصافي:</span>
-          <span id="formula-result" class="font-black text-emerald-300 font-mono">0 ج.م</span>
+          <span class="font-bold text-white text-[10px]">الصافي المتوقع:</span>
+          <span id="formula-result" class="font-black text-emerald-300 font-mono">--</span>
         </div>
       </div>
     </section>
 
-    <!-- Cash Drawer Shift Reconciliation Panel -->
+    <!-- Cash Drawer Shift Declaration Panel (Blind Cashier Mode Compliant) -->
     <section class="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-xl">
       <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
         <div>
           <h3 class="text-sm font-black text-amber-400 flex items-center gap-2">
-            <span>🔒</span> تسوية وإغلاق درج النقدية بالوردية (Cash Drawer Declaration)
+            <span>🔒</span> إقرار وتسوية درج النقدية بالوردية (Blind Cash Declaration)
           </h3>
-          <p class="text-[10px] text-slate-400">إثبات العد الفعلي للنقدية ومطابقته آلياً مع المتوقع واكتشاف العجز أو الزيادة فوراً</p>
+          <p class="text-[10px] text-slate-400">يقوم الكاشير بعد النقدية الفعلية وإدخالها دون إظهار الرصيد المتوقع لضمان النزاهة</p>
         </div>
-        <span class="px-2.5 py-1 rounded bg-amber-500/20 text-amber-300 text-[10px] font-bold">إلزامية عند تبديل الوردية</span>
+        <span class="px-2.5 py-1 rounded bg-amber-500/20 text-amber-300 text-[10px] font-bold">نظام العد الأعمى (Blind Count)</span>
       </div>
 
       <form onsubmit="submitDrawerDeclaration(event)" class="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
         <div>
           <label class="block font-bold text-slate-300 mb-1">الوردية المراد تسويتها:</label>
-          <select id="decl-shift-select" onchange="calculateDrawerReconciliation()" class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-white font-bold">
+          <select id="decl-shift-select" class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-white font-bold">
             <option value="MORNING">☀️ الوردية الصباحية (Morning)</option>
             <option value="NIGHT">🌙 الوردية المسائية (Night)</option>
           </select>
@@ -113,35 +116,42 @@
 
         <div>
           <label class="block font-bold text-slate-300 mb-1">عهدة افتتاح الدرج (ج.م):</label>
-          <input type="number" step="1" id="decl-opening-cash" value="200" oninput="calculateDrawerReconciliation()" class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-white font-mono font-bold" />
+          <input type="number" step="1" min="0" id="decl-opening-cash" value="200" required class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-white font-mono font-bold" />
         </div>
 
         <div>
           <label class="block font-bold text-slate-300 mb-1">العد الفعلي للكاش بالدرج (ج.م):</label>
-          <input type="number" step="1" id="decl-actual-cash" required placeholder="المبلغ المعدود باليد" oninput="calculateDrawerReconciliation()" class="w-full px-3 py-2 bg-slate-950 border border-amber-500/60 rounded-xl text-amber-400 font-mono font-black text-sm" />
+          <input type="number" step="1" min="0" id="decl-actual-cash" required placeholder="أدخل المبلغ المعدود فعلياً" class="w-full px-3 py-2 bg-slate-950 border border-amber-500/60 rounded-xl text-amber-400 font-mono font-black text-sm" />
         </div>
 
         <div>
-          <label class="block font-bold text-slate-300 mb-1">ملاحظات العجز / التسوية:</label>
+          <label class="block font-bold text-slate-300 mb-1">ملاحظات التسوية / العهدة:</label>
           <input type="text" id="decl-notes" placeholder="ملاحظات اختيارية" class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-white" />
         </div>
 
-        <!-- Live Variance Result -->
-        <div class="col-span-full bg-slate-950 p-3 rounded-2xl border border-slate-800 flex flex-col md:flex-row items-center justify-between gap-2">
-          <div class="flex items-center gap-4 text-xs font-mono">
-            <span>المتوقع بالدرج: <strong id="rec-expected-val" class="text-blue-400">0 ج.م</strong></span>
-            <span>الفعلي المعدود: <strong id="rec-actual-val" class="text-amber-400">0 ج.م</strong></span>
-            <span>الفارق / العجز: <strong id="rec-variance-val" class="text-emerald-400">0 ج.م</strong></span>
+        <!-- Authorized Variance Bar (Only visible to Manager/Owner) -->
+        <div id="manager-variance-bar" class="hidden col-span-full bg-slate-950 p-3 rounded-2xl border border-slate-800 flex flex-col md:flex-row items-center justify-between gap-2">
+          <div class="flex flex-wrap items-center gap-4 text-xs font-mono">
+            <span>المتوقع بالدرج: <strong id="rec-expected-val" class="text-blue-400">--</strong></span>
+            <span>الفعلي المعدود: <strong id="rec-actual-val" class="text-amber-400">--</strong></span>
+            <span>الفارق / العجز: <strong id="rec-variance-val" class="text-emerald-400">--</strong></span>
           </div>
 
-          <button type="submit" class="px-6 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-xl text-xs shadow-lg cursor-pointer">
-            تأكيد وإغلاق تسوية الوردية 🔒
+          <button type="button" onclick="openZReportModal()" class="px-4 py-2 bg-sky-700 hover:bg-sky-600 text-white font-black rounded-xl text-xs shadow-md cursor-pointer flex items-center gap-1">
+            <span>🧾</span>
+            <span>طباعة تقرير Z المعتمد</span>
+          </button>
+        </div>
+
+        <div class="col-span-full flex justify-end">
+          <button type="submit" id="submit-decl-btn" class="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-black rounded-xl text-xs shadow-lg cursor-pointer transition-all">
+            تأكيد وتسجيل العد الفعلي للدرج 🔒
           </button>
         </div>
       </form>
     </section>
 
-    <!-- Secondary Metrics -->
+    <!-- Operational Metrics Grid (Accessible to Staff / Managers) -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
       <!-- Total Revenue -->
       <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow flex flex-col justify-between">
@@ -151,10 +161,10 @@
           </h3>
           <span id="total-orders-badge" class="px-2 py-0.5 bg-amber-500/10 text-amber-400 rounded text-[10px] font-mono font-bold">0 طلب</span>
         </div>
-        <div id="stat-total-revenue" class="text-2xl font-black text-white font-mono mb-1">0 ج.م</div>
+        <div id="stat-total-revenue" class="text-2xl font-black text-white font-mono mb-1">--</div>
         <div class="text-[10px] text-slate-400 border-t border-slate-800 pt-1.5 flex items-center justify-between">
           <span>متوسط الفاتورة:</span>
-          <span id="stat-avg-ticket" class="font-bold font-mono text-slate-200">0 ج.م</span>
+          <span id="stat-avg-ticket" class="font-bold font-mono text-slate-200">--</span>
         </div>
       </div>
 
@@ -168,11 +178,11 @@
         <div class="space-y-1 text-xs">
           <div class="flex items-center justify-between bg-slate-950 px-2 py-1 rounded">
             <span class="text-slate-400 text-[10px]">سُلف موظفين:</span>
-            <span id="stat-advances" class="font-bold text-amber-400 font-mono">0 ج.م</span>
+            <span id="stat-advances" class="font-bold text-amber-400 font-mono">--</span>
           </div>
           <div class="flex items-center justify-between bg-slate-950 px-2 py-1 rounded">
             <span class="text-slate-400 text-[10px]">مصروفات درج:</span>
-            <span id="stat-drawer-exp" class="font-bold text-rose-400 font-mono">0 ج.م</span>
+            <span id="stat-drawer-exp" class="font-bold text-rose-400 font-mono">--</span>
           </div>
         </div>
       </div>
@@ -185,19 +195,19 @@
         <div class="grid grid-cols-2 gap-1 text-[10px] font-mono">
           <div class="bg-slate-950 p-1.5 rounded flex justify-between">
             <span class="text-slate-400">كاش:</span>
-            <span id="method-cash" class="font-bold text-white">0</span>
+            <span id="method-cash" class="font-bold text-white">--</span>
           </div>
           <div class="bg-slate-950 p-1.5 rounded flex justify-between">
             <span class="text-emerald-400">InstaPay:</span>
-            <span id="method-instapay" class="font-bold text-emerald-400">0</span>
+            <span id="method-instapay" class="font-bold text-emerald-400">--</span>
           </div>
           <div class="bg-slate-950 p-1.5 rounded flex justify-between">
             <span class="text-blue-400">Visa:</span>
-            <span id="method-visa" class="font-bold text-blue-400">0</span>
+            <span id="method-visa" class="font-bold text-blue-400">--</span>
           </div>
           <div class="bg-slate-950 p-1.5 rounded flex justify-between">
             <span class="text-purple-400">محفظة:</span>
-            <span id="method-wallet" class="font-bold text-purple-400">0</span>
+            <span id="method-wallet" class="font-bold text-purple-400">--</span>
           </div>
         </div>
       </div>
@@ -205,15 +215,47 @@
 
   </main>
 
+  <!-- Z-Report Modal -->
+  <div id="z-report-modal" class="fixed inset-0 modal-bg z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-amber-500/50 w-full max-w-lg rounded-3xl p-6 shadow-2xl flex flex-col space-y-4 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div class="flex items-center gap-2">
+          <span class="text-2xl">🧾</span>
+          <div>
+            <h3 class="text-base font-black text-white">تقرير Z المالي الرسمي للإغلاق</h3>
+            <p class="text-[10px] text-slate-400 font-mono" id="z-report-req-id">REF: Z-REP-0000</p>
+          </div>
+        </div>
+        <button onclick="UIState.closeModal('z-report-modal')" class="w-8 h-8 rounded-xl bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center font-bold">✕</button>
+      </div>
+
+      <div id="z-report-content" class="bg-white text-slate-950 p-5 rounded-2xl font-mono text-xs space-y-2 border shadow-inner">
+        <!-- Printable Z-Report Body -->
+      </div>
+
+      <div class="flex items-center justify-between pt-2">
+        <button onclick="window.print()" class="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl text-xs flex items-center gap-1.5 shadow-lg cursor-pointer">
+          <span>🖨️</span> <span>طباعة التقرير</span>
+        </button>
+        <button onclick="UIState.closeModal('z-report-modal')" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl text-xs cursor-pointer">
+          إغلاق
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script>
     let activeShiftFilter = 'ALL';
-    let currentShiftExpected = 0;
+    let currentReportData = null;
 
-    function updateClock() {
-      document.getElementById('live-clock').textContent = new Date().toLocaleTimeString('ar-EG');
+    function isManagerOrOwner() {
+      try {
+        const u = JSON.parse(localStorage.getItem('currentUser') || localStorage.getItem('user') || '{}');
+        return ['SUPER_ADMIN', 'OWNER', 'OP_MANAGER', 'HALL_MANAGER'].includes(u.role);
+      } catch (e) {
+        return false;
+      }
     }
-    setInterval(updateClock, 1000);
-    updateClock();
 
     function selectShiftFilter(shift) {
       activeShiftFilter = shift;
@@ -221,8 +263,8 @@
         const btn = document.getElementById(`shift-btn-${s}`);
         if (btn) {
           btn.className = s === shift 
-            ? 'px-2.5 py-1 rounded-lg font-bold bg-emerald-500 text-slate-950 cursor-pointer shadow'
-            : 'px-2.5 py-1 rounded-lg font-bold text-slate-300 hover:text-white cursor-pointer';
+            ? 'px-2.5 md:px-3 py-1.5 rounded-lg font-bold bg-emerald-500 text-slate-950 cursor-pointer shadow'
+            : 'px-2.5 md:px-3 py-1.5 rounded-lg font-bold text-slate-300 hover:text-white cursor-pointer';
         }
       });
 
@@ -235,25 +277,53 @@
     }
 
     async function fetchReportsData() {
+      const stateContainer = document.getElementById('eod-state-container');
+      const isPrivileged = isManagerOrOwner();
+
+      // Adjust visibility for blind cashier vs privileged manager
+      const managerCard = document.getElementById('manager-reconciliation-card');
+      const varianceBar = document.getElementById('manager-variance-bar');
+      if (managerCard) managerCard.classList.toggle('hidden', !isPrivileged);
+      if (varianceBar) varianceBar.classList.toggle('hidden', !isPrivileged);
+
       try {
+        UIState.render(stateContainer, UIState.STATES.LOADING, {
+          title: 'جاري احتساب ومطابقة بيانات الوردية...',
+          desc: 'يتم جلب الحركات المالية الموثقة مباشرة من سجل العمليات المركزي.'
+        });
+
         const res = await fetch(`/api/reports/eod?shift=${activeShiftFilter}`);
         const data = await res.json();
-        if (data.success && data.report) {
-          renderEodReport(data.report);
+        
+        if (res.ok && data.success && data.report) {
+          currentReportData = data.report;
+          renderEodReport(data.report, isPrivileged);
+          stateContainer.innerHTML = ''; // Clear loading card on success
+        } else {
+          throw new Error(data.error || 'تعذر تحميل التقرير');
         }
-      } catch (err) {}
-      calculateDrawerReconciliation();
+      } catch (err) {
+        UIState.render(stateContainer, UIState.STATES.ERROR, {
+          title: 'فشل تحميل بيانات التقرير المالي',
+          errorMessage: err.message,
+          onRetry: fetchReportsData
+        });
+      }
     }
 
-    function renderEodReport(report) {
-      const expectedCash = report.expected_cash_in_drawer || 0;
-      document.getElementById('hero-expected-cash').textContent = `${expectedCash} ج.م`;
+    function renderEodReport(report, isPrivileged) {
+      if (isPrivileged) {
+        const expectedCash = report.expected_cash_in_drawer || 0;
+        document.getElementById('hero-expected-cash').textContent = `${expectedCash} ج.م`;
 
-      const cashSales = (report.payment_methods && report.payment_methods.CASH) || report.total_revenue || 0;
-      document.getElementById('formula-cash-sales').textContent = `${cashSales} ج.م`;
-      document.getElementById('formula-drawer-expenses').textContent = `-${report.drawer_expenses || 0} ج.م`;
-      document.getElementById('formula-advances').textContent = `-${report.total_advances || 0} ج.م`;
-      document.getElementById('formula-result').textContent = `${expectedCash} ج.م`;
+        const cashSales = (report.payment_methods && report.payment_methods.CASH) || report.total_revenue || 0;
+        document.getElementById('formula-cash-sales').textContent = `${cashSales} ج.م`;
+        document.getElementById('formula-drawer-expenses').textContent = `-${report.drawer_expenses || 0} ج.م`;
+        document.getElementById('formula-advances').textContent = `-${report.total_advances || 0} ج.م`;
+        document.getElementById('formula-result').textContent = `${expectedCash} ج.م`;
+
+        document.getElementById('rec-expected-val').textContent = `${expectedCash} ج.م`;
+      }
 
       document.getElementById('total-orders-badge').textContent = `${report.total_orders || 0} طلب`;
       document.getElementById('stat-total-revenue').textContent = `${report.total_revenue || 0} ج.م`;
@@ -271,70 +341,86 @@
       document.getElementById('method-wallet').textContent = `${methods.WALLET || 0} ج.م`;
     }
 
-    async function calculateDrawerReconciliation() {
-      const shift = document.getElementById('decl-shift-select').value;
-      const openingCash = parseFloat(document.getElementById('decl-opening-cash').value) || 0;
-      const actualCash = parseFloat(document.getElementById('decl-actual-cash').value) || 0;
-
-      try {
-        const res = await fetch(`/api/reports/cash-reconciliation?shift=${shift}`);
-        const data = await res.json();
-        if (res.ok && data.success && data.reconciliation) {
-          const rec = data.reconciliation;
-          const expected = (openingCash + rec.cash_sales) - (rec.cash_expenses + rec.cash_advances);
-          currentShiftExpected = expected;
-
-          document.getElementById('rec-expected-val').textContent = `${expected.toFixed(2)} ج.م`;
-          document.getElementById('rec-actual-val').textContent = `${actualCash.toFixed(2)} ج.م`;
-
-          const variance = actualCash - expected;
-          const varEl = document.getElementById('rec-variance-val');
-          if (variance === 0) {
-            varEl.textContent = '0 ج.م (مطابق تماماً ✅)';
-            varEl.className = 'text-emerald-400 font-bold';
-          } else if (variance < 0) {
-            varEl.textContent = `${variance.toFixed(2)} ج.م (عجز ⚠️)`;
-            varEl.className = 'text-rose-400 font-bold';
-          } else {
-            varEl.textContent = `+${variance.toFixed(2)} ج.م (فائض ➕)`;
-            varEl.className = 'text-purple-400 font-bold';
-          }
-        }
-      } catch (e) {}
-    }
-
     async function submitDrawerDeclaration(e) {
       e.preventDefault();
-      const shift = document.getElementById('decl-shift-select').value;
-      const openingCash = parseFloat(document.getElementById('decl-opening-cash').value) || 0;
-      const actualCash = parseFloat(document.getElementById('decl-actual-cash').value) || 0;
-      const notes = document.getElementById('decl-notes').value;
-      const user = JSON.parse(localStorage.getItem('currentUser') || localStorage.getItem('user') || '{}');
+      const submitBtn = document.getElementById('submit-decl-btn');
+      
+      await UIState.guardButtonAction(submitBtn, async () => {
+        const shift = document.getElementById('decl-shift-select').value;
+        const openingCash = parseFloat(document.getElementById('decl-opening-cash').value) || 0;
+        const actualCash = parseFloat(document.getElementById('decl-actual-cash').value) || 0;
+        const notes = document.getElementById('decl-notes').value;
+        const user = JSON.parse(localStorage.getItem('currentUser') || localStorage.getItem('user') || '{}');
 
-      try {
-        const res = await fetch('/api/drawer/declare-extended', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            shift_type: shift,
-            opening_cash: openingCash,
-            actual_cash: actualCash,
-            user_id: user.id || null,
-            user_name: user.name || 'كاشير الوردية',
-            notes: notes
-          })
-        });
+        try {
+          const res = await fetch('/api/drawer/declare-extended', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              shift_type: shift,
+              opening_cash: openingCash,
+              actual_cash: actualCash,
+              user_id: user.id || null,
+              user_name: user.name || 'كاشير الوردية',
+              notes: notes
+            })
+          });
 
-        const data = await res.json();
-        if (res.ok && data.success) {
-          alert(`تم إثبات تسوية الدرج للوردية ${shift} بنجاح!\nالرصيد الفعلي: ${actualCash} ج.م\nالفارق: ${data.declaration.variance} ج.م`);
-          fetchReportsData();
-        } else {
-          alert(data.error || 'خطأ في تسوية الدرج');
+          const data = await res.json();
+          if (res.ok && data.success) {
+            UIState.showToast('تم تسجيل العد الفعلي للدرج بنجاح 🔒', 'success');
+            if (isManagerOrOwner()) {
+              document.getElementById('rec-actual-val').textContent = `${actualCash} ج.م`;
+              const variance = data.declaration ? data.declaration.variance : 0;
+              const varEl = document.getElementById('rec-variance-val');
+              if (variance === 0) {
+                varEl.textContent = '0 ج.م (مطابق تماماً ✅)';
+                varEl.className = 'text-emerald-400 font-bold';
+              } else if (variance < 0) {
+                varEl.textContent = `${variance} ج.م (عجز ⚠️)`;
+                varEl.className = 'text-rose-400 font-bold';
+              } else {
+                varEl.textContent = `+${variance} ج.م (فائض ➕)`;
+                varEl.className = 'text-purple-400 font-bold';
+              }
+            }
+            fetchReportsData();
+          } else {
+            UIState.showToast(data.error || 'خطأ في تسوية الدرج', 'error');
+          }
+        } catch (e) {
+          UIState.showToast('خطأ في الاتصال بالخادم', 'error');
         }
-      } catch (e) {
-        alert('خطأ بالاتصال بالسيرفر');
-      }
+      });
+    }
+
+    function openZReportModal() {
+      if (!currentReportData) return;
+      const reqId = UIState.generateRequestId('ZREP');
+      document.getElementById('z-report-req-id').textContent = `REF: ${reqId}`;
+      
+      const content = `
+        <div class="text-center font-bold border-b pb-2 mb-2">
+          <p class="text-base">☕ كافيه مزاج ☕</p>
+          <p class="text-[10px]">تقرير نهاية اليوم المالي (Z-REPORT)</p>
+          <p class="text-[9px] text-slate-500">${new Date().toLocaleString('ar-EG')}</p>
+        </div>
+        <div class="flex justify-between"><span>الوردية:</span><span>${activeShiftFilter}</span></div>
+        <div class="flex justify-between"><span>إجمالي الطلبات:</span><span>${currentReportData.total_orders || 0}</span></div>
+        <div class="flex justify-between font-bold border-t pt-1"><span>إجمالي المبيعات:</span><span>${currentReportData.total_revenue || 0} ج.م</span></div>
+        <div class="flex justify-between"><span>- مصروفات الدرج:</span><span>${currentReportData.drawer_expenses || 0} ج.م</span></div>
+        <div class="flex justify-between"><span>- سُلف الموظفين:</span><span>${currentReportData.total_advances || 0} ج.م</span></div>
+        <div class="flex justify-between font-black border-t border-dashed pt-1 text-sm">
+          <span>صافي النقدية المتوقعة:</span>
+          <span>${currentReportData.expected_cash_in_drawer || 0} ج.م</span>
+        </div>
+        <div class="text-center text-[9px] text-slate-500 border-t pt-2 mt-3">
+          *** تقرير Z معتمد - نظام كافيه مزاج V3.1 ***
+        </div>
+      `;
+
+      document.getElementById('z-report-content').innerHTML = content;
+      UIState.openModal('z-report-modal');
     }
 
     fetchReportsData();

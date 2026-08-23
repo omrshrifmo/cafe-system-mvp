@@ -1,0 +1,199 @@
+/**
+ * Enterprise Health & Observability Routes
+ * Endpoints: /api/health/liveness, /api/health/readiness, /api/metrics
+ */
+const express = require('express');
+const router = express.Router();
+const fs = require('fs');
+const path = require('path');
+const { getQuery, allQuery } = require('../../db/connection');
+const { getBackupStatus } = require('../../domain/system/backupService');
+const logger = require('../../observability/logger');
+
+// Simple In-Memory Metrics Collector
+const metrics = {
+  requests_total: 0,
+  requests_2xx: 0,
+  requests_4xx: 0,
+  requests_5xx: 0,
+  auth_failures_total: 0,
+  db_query_time_ms_total: 0,
+  db_queries_total: 0,
+  start_time: Date.now()
+};
+
+function recordRequestMetric(statusCode, durationMs) {
+  metrics.requests_total++;
+  if (statusCode >= 200 && statusCode < 300) metrics.requests_2xx++;
+  else if (statusCode >= 400 && statusCode < 500) metrics.requests_4xx++;
+  else if (statusCode >= 500) metrics.requests_5xx++;
+}
+
+function recordAuthFailure() {
+  metrics.auth_failures_total++;
+}
+
+/**
+ * GET /api/health/liveness
+ * Lightweight liveness probe for Kubernetes / Process Supervisors
+ */
+router.get('/health/liveness', (req, res) => {
+  res.status(200).json({
+    success: true,
+    status: 'UP',
+    uptime_seconds: Math.floor(process.uptime()),
+    timestamp: new Date().toISOString()
+  });
+});
+
+/**
+ * GET /api/health/readiness
+ * Deep readiness probe verifying DB integrity, migrations, outbox lag, backup freshness
+ */
+router.get('/health/readiness', async (req, res) => {
+  const readiness = {
+    success: true,
+    status: 'READY',
+    checks: {},
+    timestamp: new Date().toISOString()
+  };
+  let isHealthy = true;
+
+  // 1. Database Connectivity & PRAGMA integrity_check
+  try {
+    const integrityRow = await getQuery('PRAGMA integrity_check;');
+    const isOk = integrityRow && (integrityRow.integrity_check === 'ok' || integrityRow['integrity_check'] === 'ok');
+    readiness.checks.database_integrity = {
+      status: isOk ? 'PASS' : 'FAIL',
+      details: isOk ? 'SQLite database passed PRAGMA integrity_check' : integrityRow
+    };
+    if (!isOk) isHealthy = false;
+  } catch (err) {
+    readiness.checks.database_integrity = { status: 'FAIL', error: err.message };
+    isHealthy = false;
+  }
+
+  // 2. Migration Status
+  try {
+    const migrationsDir = path.join(__dirname, '../../db/migrations');
+    const availableMigrations = fs.readdirSync(migrationsDir).filter(f => f.endsWith('.sql'));
+    let appliedCount = 0;
+    
+    try {
+      const appliedRows = await allQuery('SELECT version FROM schema_migrations WHERE status = \'SUCCESS\';');
+      appliedCount = appliedRows ? appliedRows.length : 0;
+    } catch (e) {
+      appliedCount = 0;
+    }
+
+    readiness.checks.migrations = {
+      status: appliedCount >= availableMigrations.length ? 'PASS' : 'WARN',
+      applied_count: appliedCount,
+      total_migrations: availableMigrations.length
+    };
+  } catch (err) {
+    readiness.checks.migrations = { status: 'FAIL', error: err.message };
+  }
+
+  // 3. Outbox Queue Lag
+  try {
+    let pendingOutbox = 0;
+    try {
+      const outboxRow = await getQuery("SELECT COUNT(*) as count FROM outbox_events WHERE status = 'PENDING';");
+      pendingOutbox = outboxRow ? outboxRow.count : 0;
+    } catch (e) {}
+
+    readiness.checks.outbox_queue = {
+      status: pendingOutbox < 500 ? 'PASS' : 'WARN',
+      pending_events_count: pendingOutbox
+    };
+  } catch (err) {
+    readiness.checks.outbox_queue = { status: 'FAIL', error: err.message };
+  }
+
+  // 4. Backup Freshness & Age
+  try {
+    const backupStatus = await getBackupStatus();
+    readiness.checks.backup_age = {
+      status: backupStatus.is_stale ? 'WARN' : 'PASS',
+      last_backup: backupStatus.last_backup_time,
+      age_hours: backupStatus.age_hours,
+      alert: backupStatus.alert
+    };
+  } catch (err) {
+    readiness.checks.backup_age = { status: 'WARN', error: err.message };
+  }
+
+  // 5. System Resources
+  const memUsage = process.memoryUsage();
+  readiness.checks.system_resources = {
+    rss_mb: (memUsage.rss / 1024 / 1024).toFixed(2),
+    heap_used_mb: (memUsage.heapUsed / 1024 / 1024).toFixed(2),
+    uptime_hours: (process.uptime() / 3600).toFixed(2),
+    node_version: process.version
+  };
+
+  readiness.status = isHealthy ? 'READY' : 'DEGRADED';
+  const statusCode = isHealthy ? 200 : 503;
+
+  res.status(statusCode).json(readiness);
+});
+
+/**
+ * GET /api/metrics
+ * Exposes Prometheus / JSON metrics for scraping
+ */
+router.get('/metrics', (req, res) => {
+  const memUsage = process.memoryUsage();
+  const format = req.query.format || 'json';
+
+  if (format === 'prometheus') {
+    res.setHeader('Content-Type', 'text/plain');
+    return res.send(`
+# HELP cafe_http_requests_total Total HTTP requests
+# TYPE cafe_http_requests_total counter
+cafe_http_requests_total ${metrics.requests_total}
+cafe_http_requests_2xx ${metrics.requests_2xx}
+cafe_http_requests_4xx ${metrics.requests_4xx}
+cafe_http_requests_5xx ${metrics.requests_5xx}
+
+# HELP cafe_auth_failures_total Total failed authentication attempts
+# TYPE cafe_auth_failures_total counter
+cafe_auth_failures_total ${metrics.auth_failures_total}
+
+# HELP cafe_process_memory_rss_bytes Process RSS memory
+# TYPE cafe_process_memory_rss_bytes gauge
+cafe_process_memory_rss_bytes ${memUsage.rss}
+cafe_process_memory_heap_used_bytes ${memUsage.heapUsed}
+cafe_process_uptime_seconds ${Math.floor(process.uptime())}
+`.trim());
+  }
+
+  res.json({
+    success: true,
+    metrics: {
+      requests: {
+        total: metrics.requests_total,
+        success_2xx: metrics.requests_2xx,
+        client_error_4xx: metrics.requests_4xx,
+        server_error_5xx: metrics.requests_5xx
+      },
+      auth: {
+        failed_attempts: metrics.auth_failures_total
+      },
+      process: {
+        uptime_seconds: Math.floor(process.uptime()),
+        rss_bytes: memUsage.rss,
+        heap_used_bytes: memUsage.heapUsed,
+        heap_total_bytes: memUsage.heapTotal
+      }
+    },
+    timestamp: new Date().toISOString()
+  });
+});
+
+module.exports = {
+  router,
+  recordRequestMetric,
+  recordAuthFailure
+};

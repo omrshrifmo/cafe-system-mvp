@@ -12,8 +12,7 @@ describe('Concurrency & Transactional Integrity Tests', () => {
     app = createApp();
 
     const wRes = await request(app).post('/api/auth/login').send({ pin: '1001' });
-    console.log('wRes.body:', wRes.body);
-    waiterToken = wRes.body.token;
+    waiterToken = wRes.body.token || wRes.body.data?.token || (wRes.headers['set-cookie'] ? wRes.headers['set-cookie'][0].split(';')[0].split('=')[1] : null);
   });
 
   it('should handle 10 parallel concurrent orders without deadlocks or stock corruption', async () => {

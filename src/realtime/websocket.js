@@ -17,12 +17,27 @@ function setupWebSocketServer(httpServer) {
     const url = new URL(req.url, 'http://localhost');
     const token = url.searchParams.get('token');
     
+    let venueId = url.searchParams.get('venueId');
+    let stationId = url.searchParams.get('stationId');
+    let cursor = parseInt(url.searchParams.get('cursor'), 10) || 0;
+    
     let user = null;
     if (token) {
       user = await validateSession(token);
     }
 
+    if (!user || !venueId) {
+      ws.close(4001, 'Unauthorized or missing venue');
+      return;
+    }
+
     ws.user = user;
+    ws.venueId = venueId;
+    ws.stationId = stationId;
+    ws.isAlive = true;
+
+    // Immediately trigger a replay from the cursor
+    replayEventsForClient(ws, cursor).catch(e => logger.error('Replay error', { error: e.message }));
     ws.isAlive = true;
 
     ws.on('pong', () => { ws.isAlive = true; });
@@ -66,10 +81,13 @@ async function dispatchPendingOutboxEvents() {
         payload
       });
 
-      // Broadcast to connected clients
+      // Broadcast to connected clients, scoping to venue and station
       wss.clients.forEach((client) => {
-        if (client.readyState === 1) { // OPEN
-          client.send(msgString);
+        if (client.readyState === 1 && client.venueId === evt.venue_id) { 
+          // If event has a station, only broadcast to that station or HALL (runners/managers)
+          if (!evt.station_id || client.stationId === evt.station_id || client.stationId === 'HALL' || client.stationId === 'MANAGER') {
+            client.send(msgString);
+          }
         }
       });
 
@@ -80,6 +98,32 @@ async function dispatchPendingOutboxEvents() {
     }
   } catch (e) {
     // Suppress loop error
+  }
+}
+
+async function replayEventsForClient(ws, cursor) {
+  const events = await allQuery(
+    `SELECT * FROM outbox_events WHERE venue_id = ? AND sequence > ? ORDER BY sequence ASC LIMIT 500`,
+    [ws.venueId, cursor]
+  );
+
+  for (const evt of events) {
+    if (evt.station_id && ws.stationId !== evt.station_id && ws.stationId !== 'HALL' && ws.stationId !== 'MANAGER') {
+      continue;
+    }
+
+    let payload = {};
+    try { payload = JSON.parse(evt.payload_json); } catch (e) {}
+
+    const msgString = JSON.stringify({
+      topic: evt.topic,
+      aggregate_type: evt.aggregate_type,
+      aggregate_id: evt.aggregate_id,
+      sequence: evt.sequence,
+      payload
+    });
+
+    ws.send(msgString);
   }
 }
 

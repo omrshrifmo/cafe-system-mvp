@@ -6,6 +6,7 @@
   <title>كافيه مزاج - نظام الكاشير ونقطة البيع وإدارة الطاولات</title>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/modules/ui-state.js"></script>
   <script src="/nav.js"></script>
   <!-- Cairo Font -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -697,9 +698,21 @@
           </div>
         </div>
 
-        <div class="flex items-center gap-2">
-          <button type="button" onclick="autofillPayment('CASH')" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-[11px] font-bold border border-slate-700 cursor-pointer">دفع كاش بالكامل</button>
-          <button type="button" onclick="autofillPayment('INSTAPAY')" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-emerald-300 rounded-lg text-[11px] font-bold border border-slate-700 cursor-pointer">دفع InstaPay بالكامل</button>
+        <!-- Quick Cash Denominations for Fast Counter Touch Service -->
+        <div class="space-y-1.5 pt-1">
+          <span class="text-[10px] font-bold text-slate-400 block">فئات النقد السريع (Quick Tender):</span>
+          <div class="grid grid-cols-5 gap-1.5 text-xs font-mono font-bold">
+            <button type="button" onclick="addCashAmount(10)" class="py-1.5 bg-slate-800 hover:bg-slate-700 active:scale-95 text-amber-300 rounded-lg border border-slate-700">+10</button>
+            <button type="button" onclick="addCashAmount(20)" class="py-1.5 bg-slate-800 hover:bg-slate-700 active:scale-95 text-amber-300 rounded-lg border border-slate-700">+20</button>
+            <button type="button" onclick="addCashAmount(50)" class="py-1.5 bg-slate-800 hover:bg-slate-700 active:scale-95 text-amber-300 rounded-lg border border-slate-700">+50</button>
+            <button type="button" onclick="addCashAmount(100)" class="py-1.5 bg-slate-800 hover:bg-slate-700 active:scale-95 text-amber-300 rounded-lg border border-slate-700">+100</button>
+            <button type="button" onclick="addCashAmount(200)" class="py-1.5 bg-slate-800 hover:bg-slate-700 active:scale-95 text-amber-300 rounded-lg border border-slate-700">+200</button>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 pt-1">
+          <button type="button" onclick="autofillPayment('CASH')" class="flex-1 px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-bold border border-slate-700 cursor-pointer">دفع كاش بالكامل (CASH)</button>
+          <button type="button" onclick="autofillPayment('INSTAPAY')" class="flex-1 px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-emerald-300 rounded-lg text-xs font-bold border border-slate-700 cursor-pointer">دفع InstaPay بالكامل</button>
         </div>
 
         <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between text-xs">
@@ -708,8 +721,8 @@
         </div>
 
         <div class="pt-2 border-t border-slate-800 flex items-center justify-end gap-2">
-          <button type="button" onclick="closeCheckoutModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold cursor-pointer">إلغاء</button>
-          <button type="submit" class="px-5 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs shadow-md cursor-pointer">إتمام الدفع وإغلاق الحساب</button>
+          <button type="button" onclick="closeCheckoutModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold cursor-pointer">إلغاء (Esc)</button>
+          <button type="submit" id="pos-submit-checkout-btn" class="px-5 py-2 bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-slate-950 font-black rounded-xl text-xs shadow-md cursor-pointer">إتمام الدفع وإغلاق الحساب (Enter)</button>
         </div>
       </form>
     </div>
@@ -2067,6 +2080,13 @@
       }
     }
 
+    function addCashAmount(val) {
+      const cashInput = document.getElementById('pay-cash');
+      const current = Number(cashInput.value) || 0;
+      cashInput.value = current + val;
+      updateCheckoutRemaining();
+    }
+
     function autofillPayment(method) {
       const redeemToggle = document.getElementById('redeem-points-toggle');
       let pointsDiscount = 0;
@@ -2090,67 +2110,100 @@
       event.preventDefault();
       if (!confirm(`هل أنت متأكد من إغلاق الحساب وتحصيل الدفع للطاولة رقم ${selectedTableNumber || 'سفري'}؟`)) return;
 
-      const cash = Number(document.getElementById('pay-cash').value) || 0;
-      const instapay = Number(document.getElementById('pay-instapay').value) || 0;
-      const visa = Number(document.getElementById('pay-visa').value) || 0;
-      const wallet = Number(document.getElementById('pay-wallet').value) || 0;
+      const submitBtn = document.getElementById('pos-submit-checkout-btn');
+      await UIState.guardButtonAction(submitBtn, async () => {
+        const cash = Number(document.getElementById('pay-cash').value) || 0;
+        const instapay = Number(document.getElementById('pay-instapay').value) || 0;
+        const visa = Number(document.getElementById('pay-visa').value) || 0;
+        const wallet = Number(document.getElementById('pay-wallet').value) || 0;
 
-      const payments = [];
-      if (cash > 0) payments.push({ method: 'CASH', amount: cash });
-      if (instapay > 0) payments.push({ method: 'INSTAPAY', amount: instapay });
-      if (visa > 0) payments.push({ method: 'VISA', amount: visa });
-      if (wallet > 0) payments.push({ method: 'WALLET', amount: wallet });
+        const payments = [];
+        if (cash > 0) payments.push({ method: 'CASH', amount: cash });
+        if (instapay > 0) payments.push({ method: 'INSTAPAY', amount: instapay });
+        if (visa > 0) payments.push({ method: 'VISA', amount: visa });
+        if (wallet > 0) payments.push({ method: 'WALLET', amount: wallet });
 
-      const customerPhone = document.getElementById('customer-phone').value.trim();
-      const tipAmount = Number(document.getElementById('pay-tip').value) || 0;
-      const redeemToggle = document.getElementById('redeem-points-toggle');
-      let pointsRedeemed = 0;
-      if (redeemToggle && redeemToggle.checked && currentCustomerData) {
-        pointsRedeemed = Math.min(currentCheckoutTotal, currentCustomerData.points || 0);
-      }
-
-      const currentUser = JSON.parse(localStorage.getItem('currentUser') || localStorage.getItem('user') || '{}');
-
-      // Combined checkout items: active table items + new cart items
-      const combinedItems = [...activeTableOrders, ...cart];
-
-      try {
-        const response = await fetch('/api/checkout', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            table_number: selectedTableNumber,
-            subtotal: currentCheckoutSubtotal,
-            total_amount: currentCheckoutTotal,
-            payments,
-            items: combinedItems,
-            cashier_name: currentUser.name || 'الكاشير',
-            customer_phone: customerPhone || null,
-            points_redeemed: pointsRedeemed,
-            tip_amount: tipAmount
-          })
-        });
-
-        const data = await response.json();
-        if (response.ok && data.success) {
-          showToast('تم إغلاق الفاتورة وطباعة الإيصال وتسجيل الدفع بنجاح! 🖨️', true);
-          closeCheckoutModal();
-          cart = [];
-          activeTableOrders = [];
-          activeTableTotals = null;
-          renderCartUI();
-          if (selectedTableNumber > 0) {
-            await fetchTableSessions();
-            selectTable(0);
-          }
-        } else {
-          showToast(data.error || 'حدث خطأ أثناء الدفع', false);
+        const customerPhone = document.getElementById('customer-phone').value.trim();
+        const tipAmount = Number(document.getElementById('pay-tip').value) || 0;
+        const redeemToggle = document.getElementById('redeem-points-toggle');
+        let pointsRedeemed = 0;
+        if (redeemToggle && redeemToggle.checked && currentCustomerData) {
+          pointsRedeemed = Math.min(currentCheckoutTotal, currentCustomerData.points || 0);
         }
-      } catch (err) {
-        console.error('Error submitting checkout:', err);
-        showToast('خطأ في الاتصال بالخادم', false);
-      }
+
+        const currentUser = JSON.parse(localStorage.getItem('currentUser') || localStorage.getItem('user') || '{}');
+
+        // Combined checkout items: active table items + new cart items
+        const combinedItems = [...activeTableOrders, ...cart];
+
+        try {
+          const response = await fetch('/api/checkout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              table_number: selectedTableNumber,
+              subtotal: currentCheckoutSubtotal,
+              total_amount: currentCheckoutTotal,
+              payments,
+              items: combinedItems,
+              cashier_name: currentUser.name || 'الكاشير',
+              customer_phone: customerPhone || null,
+              points_redeemed: pointsRedeemed,
+              tip_amount: tipAmount
+            })
+          });
+
+          const data = await response.json();
+          if (response.ok && data.success) {
+            UIState.showToast('تم إغلاق الفاتورة وطباعة الإيصال وتسجيل الدفع بنجاح! 🖨️', 'success');
+            closeCheckoutModal();
+            cart = [];
+            activeTableOrders = [];
+            activeTableTotals = null;
+            renderCartUI();
+            if (selectedTableNumber > 0) {
+              await fetchTableSessions();
+              selectTable(0);
+            }
+          } else {
+            UIState.showToast(data.error || 'حدث خطأ أثناء الدفع', 'error');
+          }
+        } catch (err) {
+          console.error('Error submitting checkout:', err);
+          UIState.showToast('خطأ في الاتصال بالخادم', 'error');
+        }
+      });
     }
+
+    // Global POS Keyboard Shortcuts
+    window.addEventListener('keydown', (e) => {
+      // F2 -> Search Menu
+      if (e.key === 'F2') {
+        e.preventDefault();
+        const searchInput = document.getElementById('menu-search-input') || document.querySelector('input[type="search"]');
+        if (searchInput) searchInput.focus();
+      }
+      // F4 -> Quick Checkout
+      if (e.key === 'F4') {
+        e.preventDefault();
+        if (cart.length > 0 || activeTableOrders.length > 0) {
+          openCheckoutModal();
+        } else {
+          UIState.showToast('لا توجد عناصر مفتوحة لإتمام الحساب', 'warning');
+        }
+      }
+      // F8 -> Print Check
+      if (e.key === 'F8') {
+        e.preventDefault();
+        printTableCheckBill();
+      }
+      // Escape -> Close all modals
+      if (e.key === 'Escape') {
+        closeCheckoutModal();
+        closeModifierModal();
+        closeTableMapModal();
+      }
+    });
 
     // WebSocket Real-time Synchronization
     function connectWebSocket() {
@@ -2173,7 +2226,6 @@
     function initNetworkMonitor() {
       const dot = document.getElementById('net-status-dot');
       const text = document.getElementById('net-status-text');
-      const actionBtns = document.querySelectorAll('#send-orders-btn, button[type="submit"]');
 
       function updateStatus(online) {
         if (dot && text) {
