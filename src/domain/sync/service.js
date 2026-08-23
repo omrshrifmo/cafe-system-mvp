@@ -64,11 +64,12 @@ async function processClientSyncBatch(commands = [], actor = null) {
         throw new Error(`UNKNOWN_ACTION: أمر المزامنة غير مدعوم [${action}]`);
       }
 
-      // Record idempotency record (Assuming v3 standard now)
+      // Record idempotency record
+      const payloadHash = crypto.createHash('sha256').update(JSON.stringify(payload || {})).digest('hex');
       await runQuery(
-        `INSERT INTO idempotency_keys (key, response_body, payload_hash)
-         VALUES (?, ?, ?)`,
-        [key, JSON.stringify(commandResult), crypto.createHash('sha256').update(JSON.stringify(payload)).digest('hex')]
+        `INSERT INTO idempotency_keys (key, actor_id, operation, request_hash, response_status, response_json, expires_at)
+         VALUES (?, ?, ?, ?, 200, ?, datetime('now', '+7 days'))`,
+        [key, actor ? actor.id : null, action, payloadHash, JSON.stringify(commandResult)]
       );
 
       results.push({

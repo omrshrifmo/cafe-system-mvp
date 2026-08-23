@@ -114,7 +114,7 @@ async function validateSession(rawSessionToken, touch = true) {
   const sessionHash = hashToken(rawSessionToken);
   const session = await getQuery(
     `SELECT s.id as session_id, s.user_id, s.venue_id, s.absolute_expiry_at, s.inactivity_expiry_at, s.revoked_at,
-            u.name, u.role_id, u.is_active, r.name as role_name
+            u.name, u.role_id, u.is_active, COALESCE(r.name, u.role_id) as role_name
      FROM v3_user_sessions s
      JOIN v3_users u ON s.user_id = u.id
      LEFT JOIN roles r ON u.role_id = r.id

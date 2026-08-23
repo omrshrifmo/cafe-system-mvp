@@ -3,6 +3,7 @@
  */
 const crypto = require('crypto');
 const { allQuery, getQuery, runQuery } = require('../../db/connection');
+const { runTransaction } = require('../../db/transaction');
 const { getMenuItemWithActivePriceAndBOM } = require('../catalog/service');
 const { getActiveOffers, evaluateOffer } = require('../catalog/offers');
 const { deductBOM } = require('../inventory/service');

@@ -9,7 +9,7 @@ const { requireAuth } = require('../middleware/auth');
 const { allQuery, runQuery } = require('../../db/connection');
 
 // Get canonical hierarchical menu for POS, QR, and KDS
-router.get('/menu', async (req, res, next) => {
+router.get(['/menu', '/catalog/menu'], async (req, res, next) => {
   try {
     const menu = await getMenu();
     res.json({
@@ -22,7 +22,7 @@ router.get('/menu', async (req, res, next) => {
 });
 
 // Public menu snapshot for guest QR
-router.get('/public/menu', async (req, res, next) => {
+router.get(['/public/menu', '/public/catalog/menu'], async (req, res, next) => {
   try {
     const menu = await getMenu();
     res.json({
@@ -35,7 +35,7 @@ router.get('/public/menu', async (req, res, next) => {
 });
 
 // Categories management (Menu Manager)
-router.get('/menu/categories', async (req, res, next) => {
+router.get(['/menu/categories', '/catalog/menu/categories'], async (req, res, next) => {
   try {
     const categories = await allQuery(
       `SELECT c.*, COUNT(m.id) as item_count 
@@ -53,7 +53,7 @@ router.get('/menu/categories', async (req, res, next) => {
   }
 });
 
-router.post('/menu/categories', requireAuth, requirePermission('menu:write'), async (req, res, next) => {
+router.post(['/menu/categories', '/catalog/menu/categories'], requireAuth, requirePermission('menu:write'), async (req, res, next) => {
   try {
     const { name, name_en, icon = '☕', color = '#f59e0b', sort_order = 0 } = req.body;
     if (!name || !name.trim()) {
@@ -69,7 +69,7 @@ router.post('/menu/categories', requireAuth, requirePermission('menu:write'), as
   }
 });
 
-router.put('/menu/categories/:id', requireAuth, requirePermission('menu:write'), async (req, res, next) => {
+router.put(['/menu/categories/:id', '/catalog/menu/categories/:id'], requireAuth, requirePermission('menu:write'), async (req, res, next) => {
   try {
     const { name, name_en, icon, color, sort_order, is_active } = req.body;
     const catId = req.params.id;
@@ -98,7 +98,7 @@ router.put('/menu/categories/:id', requireAuth, requirePermission('menu:write'),
 });
 
 // Items management (Menu Manager)
-router.get('/menu/items', async (req, res, next) => {
+router.get(['/menu/items', '/catalog/menu/items'], async (req, res, next) => {
   try {
     const items = await allQuery(
       `SELECT m.id, m.category_id, m.name, m.name_en, m.description, m.department, 
@@ -121,7 +121,7 @@ router.get('/menu/items', async (req, res, next) => {
   }
 });
 
-router.post('/menu/items', requireAuth, requirePermission('menu:write'), async (req, res, next) => {
+router.post(['/menu/items', '/catalog/menu/items'], requireAuth, requirePermission('menu:write'), async (req, res, next) => {
   try {
     const { sku, name, name_en, category_id, department = 'BARISTA', price_minor, price, description, is_featured = 0, sort_order = 0, instructions } = req.body;
     
@@ -148,14 +148,14 @@ router.post('/menu/items', requireAuth, requirePermission('menu:write'), async (
 
     res.json({ success: true, item_id: itemId, message: 'تم إضافة الصنف بنجاح (DRAFT)' });
   } catch (err) {
-    if (err.message.includes('duplicate')) {
+    if (err.message && (err.message.includes('duplicate') || err.message.includes('Duplicate'))) {
       return res.status(409).json({ success: false, error: err.message });
     }
     next(err);
   }
 });
 
-router.post('/menu/items/:id/publish', requireAuth, requirePermission('menu:write'), async (req, res, next) => {
+router.post(['/menu/items/:id/publish', '/catalog/menu/items/:id/publish'], requireAuth, requirePermission('menu:write'), async (req, res, next) => {
   try {
     const itemId = req.params.id;
     await publishMenuItem(itemId, req.user ? req.user.id : null);

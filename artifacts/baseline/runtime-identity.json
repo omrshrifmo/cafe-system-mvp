@@ -1,0 +1,16 @@
+{
+  "repository": "omrshrifmo/cafe-system-mvp",
+  "branch": "main",
+  "commit_sha": "e8224a1ea063b8ee0010586664ac9ee9570bd2ad",
+  "process_id": 2436689,
+  "port": 3000,
+  "schema_version": "019_reporting_and_equity.sql",
+  "migration_version": "019",
+  "service_worker_version": "cafe-os-v3.1",
+  "environment_mode": "development",
+  "server_instance_id": "a272a935-0b51-44f8-8dc9-91790a733806",
+  "database_identity": "test/fixtures/full_day_fixture.db",
+  "fixture_id": "full_day_fixture.db",
+  "app_mode": "DEMO",
+  "generated_at": "2026-08-23T17:55:33.323Z"
+}

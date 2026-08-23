@@ -42,7 +42,15 @@ async function getMenu() {
 }
 
 async function getMenuItemWithActivePriceAndBOM(menuItemId) {
-  const item = await getQuery(
+  if (!menuItemId) return null;
+  const rawQueryStr = String(menuItemId).trim();
+  const normalizedStr = rawQueryStr
+    .replace(/[أإآ]/g, 'ا')
+    .replace(/ة/g, 'ه')
+    .replace(/ى/g, 'ي');
+
+  // Try exact / substring lookup first
+  let item = await getQuery(
     `SELECT m.id, m.category_id, m.name, m.department, m.is_available, m.lifecycle_state, m.sku, m.publication_version,
             COALESCE(p.amount_minor, 0) as price_minor,
             COALESCE(p.currency, 'ج.م') as currency,
@@ -51,9 +59,32 @@ async function getMenuItemWithActivePriceAndBOM(menuItemId) {
      FROM menu_items m
      LEFT JOIN menu_prices p ON m.id = p.menu_item_id AND (p.valid_to IS NULL OR p.valid_to > datetime('now', 'localtime'))
      LEFT JOIN recipe_versions r ON m.id = r.menu_item_id AND (r.active_to IS NULL OR r.active_to > datetime('now', 'localtime'))
-     WHERE m.id = ? OR m.sku = ? OR m.name = ?`,
-    [menuItemId, menuItemId, menuItemId]
+     WHERE m.id = ? OR m.sku = ? OR m.name = ? OR m.name_en = ? OR m.name LIKE ? LIMIT 1`,
+    [menuItemId, menuItemId, rawQueryStr, rawQueryStr, `%${rawQueryStr}%`]
   );
+
+  // If not found, try normalized Arabic matching
+  if (!item) {
+    const allItems = await allQuery(
+      `SELECT m.id, m.category_id, m.name, m.department, m.is_available, m.lifecycle_state, m.sku, m.publication_version,
+              COALESCE(p.amount_minor, 0) as price_minor,
+              COALESCE(p.currency, 'ج.م') as currency,
+              r.id as recipe_version_id, r.version as recipe_version,
+              r.instructions, r.tolerance_percent_basis_points
+       FROM menu_items m
+       LEFT JOIN menu_prices p ON m.id = p.menu_item_id AND (p.valid_to IS NULL OR p.valid_to > datetime('now', 'localtime'))
+       LEFT JOIN recipe_versions r ON m.id = r.menu_item_id AND (r.active_to IS NULL OR r.active_to > datetime('now', 'localtime'))
+       WHERE m.is_available = 1`
+    );
+
+    for (const it of allItems) {
+      const normName = it.name.replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي');
+      if (normName.includes(normalizedStr) || normalizedStr.includes(normName)) {
+        item = it;
+        break;
+      }
+    }
+  }
 
   if (!item) return null;
 
@@ -98,8 +129,8 @@ async function validateUniqueItem(sku, name, name_en, excludeId = null) {
   
   if (existing.length > 0) {
     const dup = existing[0];
-    if (dup.sku === sku && sku) throw new Error(`SKU ${sku} is already in use by item ${dup.id}`);
-    if (dup.name === name || dup.name_en === name_en) throw new Error(`Name duplicate detected with item ${dup.id}`);
+    if (dup.sku === sku && sku) throw new Error(`Duplicate SKU: ${sku} is already in use by item ${dup.id}`);
+    if (dup.name === name || dup.name_en === name_en) throw new Error(`Duplicate Name: duplicate detected with item ${dup.id}`);
   }
 }
 

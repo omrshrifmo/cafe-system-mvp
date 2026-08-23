@@ -1,0 +1,37 @@
+{
+  "timestamp": "2026-08-23T17:55:28.004Z",
+  "guard_name": "MutationGuard",
+  "rules": [
+    "Strictly forbids tests or fixture operations from modifying cafe.db or unapproved production databases",
+    "Permits mutations exclusively on isolated test fixture databases (test/fixtures/*.db or sqlite memory)"
+  ],
+  "test_cases": [
+    {
+      "target": "cafe.db",
+      "operation": "INSERT",
+      "result": "PASSED",
+      "error_code": "MUTATION_GUARD_VIOLATION",
+      "error_message": "MUTATION_GUARD_VIOLATION: [INSERT INTO orders] Attempted mutation on unapproved or production database: \"cafe.db\". Tests and fixture operations MUST only target isolated fixture databases in test/fixtures/ (e.g., full_day_fixture.db, test_*.db)."
+    },
+    {
+      "target": "/home/omrshrifmo/cafe-system-mvp/cafe.db",
+      "operation": "DELETE",
+      "result": "PASSED",
+      "error_code": "MUTATION_GUARD_VIOLATION",
+      "error_message": "MUTATION_GUARD_VIOLATION: [DELETE FROM users] Attempted mutation on unapproved or production database: \"cafe.db\". Tests and fixture operations MUST only target isolated fixture databases in test/fixtures/ (e.g., full_day_fixture.db, test_*.db)."
+    },
+    {
+      "target": "/var/data/prod_cafe.db",
+      "operation": "UPDATE",
+      "result": "PASSED",
+      "error_code": "MUTATION_GUARD_VIOLATION",
+      "error_message": "MUTATION_GUARD_VIOLATION: [UPDATE settings] Attempted mutation on unapproved or production database: \"prod_cafe.db\". Tests and fixture operations MUST only target isolated fixture databases in test/fixtures/ (e.g., full_day_fixture.db, test_*.db)."
+    },
+    {
+      "target": "/home/omrshrifmo/cafe-system-mvp/test/fixtures/full_day_fixture.db",
+      "operation": "INSERT",
+      "result": "PASSED",
+      "approved": true
+    }
+  ]
+}

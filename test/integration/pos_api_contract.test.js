@@ -10,7 +10,7 @@ describe('POS API Contract Validation', () => {
   before(async () => {
     const loginRes = await request(app)
       .post('/api/auth/login')
-      .send({ pin: '9999' }); // Admin PIN
+      .send({ pin: '1001' }); // Admin PIN
     
     adminCookie = loginRes.headers['set-cookie'];
   });

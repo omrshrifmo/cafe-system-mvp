@@ -10,10 +10,13 @@ describe('Catalog Lifecycle & POS Contract Integration Tests', () => {
   let itemId;
 
   before(async () => {
+    const { runQuery } = require('../../src/db/connection');
+    await runQuery(`DELETE FROM menu_items WHERE sku = 'V60-001'`);
+
     // Authenticate as Admin
     const loginRes = await request(app)
       .post('/api/auth/login')
-      .send({ pin: '9999' }); // Admin PIN
+      .send({ pin: '1001' }); // Admin PIN
     
     adminCookie = loginRes.headers['set-cookie'];
   });
@@ -44,7 +47,7 @@ describe('Catalog Lifecycle & POS Contract Integration Tests', () => {
       .post('/api/catalog/menu/items')
       .set('Cookie', adminCookie)
       .send({
-        name: 'V60 Coffee',
+        name: 'V60 Coffee Special',
         sku: 'V60-001',
         category_id: 1,
         department: 'BARISTA',
@@ -77,6 +80,8 @@ describe('Catalog Lifecycle & POS Contract Integration Tests', () => {
     const res = await request(app)
       .post(`/api/catalog/menu/items/${itemId}/publish`)
       .set('Cookie', adminCookie)
+      .set('X-CSRF-Token', '1')
+      .send({})
       .expect(200);
 
     assert.strictEqual(res.body.success, true);

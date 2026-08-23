@@ -18,8 +18,8 @@ function getMode() {
     return currentModeCache;
   }
 
-  if (env.NODE_ENV === 'test') {
-    currentModeCache = MODES.LIVE;
+  if (process.env.APP_MODE && MODES[process.env.APP_MODE]) {
+    currentModeCache = process.env.APP_MODE;
     return currentModeCache;
   }
 
@@ -35,12 +35,27 @@ function getMode() {
     }
   }
   
+  if (env.NODE_ENV === 'test') {
+    currentModeCache = MODES.LIVE;
+    return currentModeCache;
+  }
+
   // Default to ONBOARDING if no valid file is found
   currentModeCache = MODES.ONBOARDING;
   return currentModeCache;
 }
 
 function getDatabasePath() {
+  if (env.NODE_ENV === 'test') {
+    if (process.env.TEST_DB_PATH) {
+      return process.env.TEST_DB_PATH;
+    }
+    if (process.env.DB_PATH && !process.env.DB_PATH.endsWith('cafe.db')) {
+      return process.env.DB_PATH;
+    }
+    return path.join(__dirname, '../../../test/fixtures/full_day_fixture.db');
+  }
+
   const mode = getMode();
   if (mode === MODES.DEMO) {
     return path.join(path.dirname(env.DB_PATH), 'demo.sqlite');

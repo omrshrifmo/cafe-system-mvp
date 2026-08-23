@@ -10,6 +10,7 @@
     "db:status": "node src/db/cli.js status",
     "db:backup": "node src/db/cli.js backup",
     "db:restore": "node src/db/cli.js restore",
+    "db:fixtures": "node src/domain/system/fixtureService.js",
     "lint": "eslint src/ test/ public/modules/",
     "format:check": "echo \"Checking code format... OK\"",
     "typecheck": "node -e 'console.log(\"Typecheck passed: Vanilla JS + Node 22 CommonJS modules syntax verified.\")'",

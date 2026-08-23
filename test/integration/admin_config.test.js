@@ -14,11 +14,11 @@ describe('Admin Configuration & Cafe Information Tests', () => {
     app = createApp();
 
     // Login as Owner (SUPER_ADMIN / OWNER)
-    const ownerRes = await request(app).post('/api/auth/login').send({ pin: '9999' });
+    const ownerRes = await request(app).post('/api/auth/login').send({ pin: '1009' });
     ownerToken = ownerRes.body.token;
 
     // Login as Cashier (OP_ASSISTANT_CASHIER)
-    const cashierRes = await request(app).post('/api/auth/login').send({ pin: '1004' });
+    const cashierRes = await request(app).post('/api/auth/login').send({ pin: '1007' });
     cashierToken = cashierRes.body.token;
   });
 
@@ -64,7 +64,7 @@ describe('Admin Configuration & Cafe Information Tests', () => {
       .post('/api/admin/policies')
       .set('Cookie', [`session_token=${ownerToken}`])
       .send({
-        pin: '9999',
+        pin: '1009',
         payload: { tax_percent: 15, service_charge_percent: 10 }
       });
 
@@ -84,7 +84,7 @@ describe('Admin Configuration & Cafe Information Tests', () => {
       .post('/api/admin/policies')
       .set('Cookie', [`session_token=${ownerToken}`])
       .send({
-        pin: '9999',
+        pin: '1009',
         payload: { tax_percent: 150 }
       });
 
@@ -111,7 +111,9 @@ describe('Admin Configuration & Cafe Information Tests', () => {
     // 2. Revoke device
     const revokeRes = await request(app)
       .post(`/api/admin/devices/${deviceId}/revoke`)
-      .set('Cookie', [`session_token=${ownerToken}`]);
+      .set('Cookie', [`session_token=${ownerToken}`])
+      .set('X-CSRF-Token', '1')
+      .send({});
 
     assert.strictEqual(revokeRes.status, 200);
     assert.strictEqual(revokeRes.body.success, true);

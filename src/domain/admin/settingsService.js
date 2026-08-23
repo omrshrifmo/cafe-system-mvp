@@ -86,13 +86,14 @@ async function listDevices(branchId) {
 }
 
 async function registerDevice(branchId, payload) {
+  const resolvedBranchId = (!branchId || branchId === 'B_DEFAULT') ? 'BR_DEFAULT' : branchId;
   const deviceId = `DEV_${Date.now()}`;
   await runQuery(`
     INSERT INTO devices (id, branch_id, name, device_type, station_id, capabilities)
     VALUES (?, ?, ?, ?, ?, ?)
-  `, [deviceId, branchId, payload.name, payload.device_type, payload.station_id || null, payload.capabilities ? JSON.stringify(payload.capabilities) : null]);
+  `, [deviceId, resolvedBranchId, payload.name, payload.device_type, payload.station_id || null, payload.capabilities ? JSON.stringify(payload.capabilities) : null]);
   
-  return { id: deviceId };
+  return { id: deviceId, name: payload.name, device_type: payload.device_type, branch_id: resolvedBranchId };
 }
 
 async function recordDeviceHeartbeat(deviceId) {

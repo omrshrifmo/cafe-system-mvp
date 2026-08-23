@@ -5,12 +5,27 @@ const sqlite3 = require('sqlite3').verbose();
 const env = require('../config/env');
 const logger = require('../observability/logger');
 const modeService = require('../domain/system/modeService');
+const { assertSafeMutationTarget } = require('../domain/system/mutationGuard');
 
 let dbInstance = null;
+let currentDbPath = null;
 
 function getDb(customPath = null) {
+  const dbPath = customPath || modeService.getDatabasePath();
+
+  if (customPath && customPath !== currentDbPath && dbInstance) {
+    try {
+      dbInstance.close();
+    } catch (e) {}
+    dbInstance = null;
+  }
+
   if (!dbInstance) {
-    const dbPath = customPath || modeService.getDatabasePath();
+    currentDbPath = dbPath;
+    if (process.env.NODE_ENV === 'test' || customPath) {
+      assertSafeMutationTarget(dbPath, 'DB Connection Initialized');
+    }
+
     dbInstance = new sqlite3.Database(dbPath, (err) => {
       if (err) {
         logger.error('Failed to connect to SQLite database', { error: err.message, path: dbPath });
@@ -38,9 +53,11 @@ function closeDb() {
           return reject(err);
         }
         dbInstance = null;
+        currentDbPath = null;
         resolve();
       });
     } else {
+      currentDbPath = null;
       resolve();
     }
   });

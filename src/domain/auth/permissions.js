@@ -96,7 +96,7 @@ const ROLE_PERMISSIONS = {
 
 function hasPermission(userRole, requiredPermission) {
   if (!userRole) return false;
-  const role = String(userRole).toUpperCase();
+  const role = String(userRole).toUpperCase().replace(/^ROLE_/, '');
   const permissions = ROLE_PERMISSIONS[role] || [];
   
   if (permissions.includes('*')) return true;
@@ -111,7 +111,7 @@ function hasPermission(userRole, requiredPermission) {
 
 function getRolePermissions(userRole) {
   if (!userRole) return [];
-  const role = String(userRole).toUpperCase();
+  const role = String(userRole).toUpperCase().replace(/^ROLE_/, '');
   return ROLE_PERMISSIONS[role] || [];
 }
 

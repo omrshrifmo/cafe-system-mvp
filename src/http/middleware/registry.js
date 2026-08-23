@@ -7,6 +7,7 @@ const routeRegistry = [
   // Public Auth endpoints
   { method: 'POST', pathRegex: /^\/api\/auth\/login$/, permission: 'public' },
   { method: 'GET', pathRegex: /^\/api\/auth\/logout$/, permission: 'public' },
+  { method: 'POST', pathRegex: /^\/api\/auth\/logout$/, permission: 'public' },
   
   // Public APIs
   { method: 'GET', pathRegex: /^\/api\/build-info$/, permission: 'public' },
@@ -18,53 +19,55 @@ const routeRegistry = [
   { method: 'GET', pathRegex: /^\/api\/auth\/me$/, permission: 'authenticated' },
   
   // Menu & Catalog (Public Read, Write requires menu:write)
-  { method: 'GET', pathRegex: /^\/api\/menu(\/.*)?$/, permission: 'public' },
-  { method: 'POST', pathRegex: /^\/api\/menu(\/.*)?$/, permission: 'menu:write' },
-  { method: 'PUT', pathRegex: /^\/api\/menu(\/.*)?$/, permission: 'menu:write' },
-  { method: 'DELETE', pathRegex: /^\/api\/menu(\/.*)?$/, permission: 'menu:write' },
+  { method: 'GET', pathRegex: /^\/api\/(menu|catalog)(\/.*)?$/, permission: 'public' },
+  { method: 'POST', pathRegex: /^\/api\/(menu|catalog)(\/.*)?$/, permission: 'menu:write' },
+  { method: 'PUT', pathRegex: /^\/api\/(menu|catalog)(\/.*)?$/, permission: 'menu:write' },
+  { method: 'DELETE', pathRegex: /^\/api\/(menu|catalog)(\/.*)?$/, permission: 'menu:write' },
 
   // Orders & POS (Granular permissions checked in route handlers)
   { method: 'ALL', pathRegex: /^\/api\/orders/, permission: 'authenticated' },
   { method: 'ALL', pathRegex: /^\/api\/tables/, permission: 'authenticated' },
   { method: 'ALL', pathRegex: /^\/api\/payments/, permission: 'authenticated' },
+  { method: 'ALL', pathRegex: /^\/api\/quotes?/, permission: 'authenticated' },
+  { method: 'ALL', pathRegex: /^\/api\/checkout/, permission: 'authenticated' },
+  { method: 'ALL', pathRegex: /^\/api\/receipts/, permission: 'authenticated' },
   
   // Shifts
   { method: 'POST', pathRegex: /^\/api\/shifts\/clock-/, permission: 'authenticated' },
   { method: 'GET', pathRegex: /^\/api\/shifts\/me$/, permission: 'authenticated' },
-  { method: 'POST', pathRegex: /^\/api\/shifts\/declare-cash-extended$/, permission: 'authenticated' },
-  { method: 'GET', pathRegex: /^\/api\/shifts\//, permission: 'shifts:read' },
+  { method: 'POST', pathRegex: /^\/api\/shifts\/declare-/, permission: 'authenticated' },
+  { method: 'ALL', pathRegex: /^\/api\/shifts/, permission: 'shifts:read' },
   
   // Reports & Financial
   { method: 'GET', pathRegex: /^\/api\/reports\/bom-reconciliation$/, permission: 'reports:inventory' },
-  { method: 'ALL', pathRegex: /^\/api\/reports\//, permission: 'reports:financial' },
-  { method: 'GET', pathRegex: /^\/api\/expenses$/, permission: 'reports:financial' },
-  { method: 'POST', pathRegex: /^\/api\/expenses$/, permission: 'reports:financial' },
-  { method: 'GET', pathRegex: /^\/api\/advances$/, permission: 'reports:financial' },
-  { method: 'POST', pathRegex: /^\/api\/advances$/, permission: 'reports:financial' },
+  { method: 'ALL', pathRegex: /^\/api\/reports/, permission: 'reports:financial' },
+  { method: 'ALL', pathRegex: /^\/api\/expenses/, permission: 'reports:financial' },
+  { method: 'ALL', pathRegex: /^\/api\/advances/, permission: 'reports:financial' },
   
-  // Inventory
-  { method: 'ALL', pathRegex: /^\/api\/inventory/, permission: 'inventory:manage' },
+  // Inventory & Purchasing & Suppliers
+  { method: 'ALL', pathRegex: /^\/api\/inventory/, permission: 'inventory:read' },
+  { method: 'ALL', pathRegex: /^\/api\/purchases?/, permission: 'inventory:purchase' },
+  { method: 'ALL', pathRegex: /^\/api\/suppliers/, permission: 'inventory:read' },
   
-  // HR / Users
-  { method: 'ALL', pathRegex: /^\/api\/hr\//, permission: 'hr:manage' },
-  { method: 'ALL', pathRegex: /^\/api\/users/, permission: 'hr:manage' },
+  // HR / Payroll / Users
+  { method: 'ALL', pathRegex: /^\/api\/hr/, permission: 'shifts:manage' },
+  { method: 'ALL', pathRegex: /^\/api\/payroll/, permission: 'payroll:read' },
+  { method: 'ALL', pathRegex: /^\/api\/users/, permission: 'shifts:manage' },
   
-  // Checkout & Quotations
-  { method: 'ALL', pathRegex: /^\/api\/quote/, permission: 'authenticated' },
-  { method: 'ALL', pathRegex: /^\/api\/checkout/, permission: 'authenticated' },
-
-  // Settings & Sync
-  { method: 'ALL', pathRegex: /^\/api\/config/, permission: 'hr:manage' },
+  // CRM / Hospitality / Quality / Audit
+  { method: 'ALL', pathRegex: /^\/api\/crm/, permission: 'crm:read' },
+  { method: 'ALL', pathRegex: /^\/api\/reservations/, permission: 'reservations:read' },
+  { method: 'ALL', pathRegex: /^\/api\/quality/, permission: 'qa:read' },
+  { method: 'ALL', pathRegex: /^\/api\/audit/, permission: 'system:settings' },
+  
+  // Realtime & Sync
+  { method: 'ALL', pathRegex: /^\/api\/realtime/, permission: 'authenticated' },
   { method: 'ALL', pathRegex: /^\/api\/sync/, permission: 'authenticated' },
   
-  // CRM
-  { method: 'ALL', pathRegex: /^\/api\/crm/, permission: 'orders:write' },
-  
-  // Printers
-  { method: 'ALL', pathRegex: /^\/api\/print/, permission: 'orders:write' },
-  
-  // Admin & System Configuration
-  { method: 'ALL', pathRegex: /^\/api\/admin/, permission: 'system:settings' }
+  // Settings & Admin & Hardware
+  { method: 'ALL', pathRegex: /^\/api\/config/, permission: 'system:settings' },
+  { method: 'ALL', pathRegex: /^\/api\/admin/, permission: 'system:settings' },
+  { method: 'ALL', pathRegex: /^\/api\/print/, permission: 'authenticated' }
 ];
 
 function enforceRegistry(req, res, next) {

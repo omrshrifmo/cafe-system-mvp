@@ -401,7 +401,7 @@
     }
 
     // Top Unified Header Bar HTML (Height: 46px)
-    const demoBannerHtml = appMode === 'DEMO' ? `<div class="w-full bg-rose-600 text-white text-[10px] font-black text-center py-0.5 tracking-widest z-[100] relative">وضع التجربة (DEMO MODE) - جميع الإجراءات هنا معزولة عن بيانات النظام الفعلي</div>` : '';
+    const demoBannerHtml = appMode === 'DEMO' ? `<div id="demo-mode-banner" class="demo-banner w-full bg-rose-600 text-white text-xs font-black text-center py-1.5 tracking-widest z-[100] relative border-b border-rose-500 shadow-md">⚠️ وضع التجربة المعزول (DEMO MODE) - جميع العمليات والبيانات هنا تجريبية ومعزولة تماماً عن النظام الفعلي</div>` : '';
     const topBarHTML = `
       <a href="#app-content-area" class="skip-link">انتقل للمحتوى الرئيسي (Tab)</a>
       ${demoBannerHtml}
