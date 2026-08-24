@@ -265,13 +265,18 @@
   }
 
   async function logout() {
+    if (window.AuthModule && typeof window.AuthModule.logout === 'function') {
+      await window.AuthModule.logout();
+      return;
+    }
     try {
-      await fetch('/api/auth/logout', { method: 'POST' });
+      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
     } catch (e) {}
     localStorage.removeItem('user');
     localStorage.removeItem('currentUser');
     localStorage.removeItem('userTools');
     localStorage.removeItem('session_token');
+    localStorage.removeItem('mazaj_session_reference');
     sessionStorage.clear();
     document.body.innerHTML = `
       <div class="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-center text-slate-200" style="font-family: 'Tajawal', sans-serif;">
@@ -280,7 +285,7 @@
         <p class="text-xs text-slate-400">جاري التوجيه لصفحة الدخول...</p>
       </div>
     `;
-    window.location.href = '/index.html';
+    window.location.replace('/index.html');
   }
 
   function updateClock() {
@@ -453,8 +458,14 @@
             <span class="text-amber-400 text-[10px] font-mono font-black">(${userRole})</span>
           </div>
 
-          <button onclick="window.MazajNav.logout()" title="تسجيل الخروج" class="px-2 md:px-2.5 py-1 bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 border border-rose-500/30 rounded-lg text-[11px] font-bold cursor-pointer transition-colors">
-            🚪 <span class="hidden xs:inline">خروج</span>
+          <button onclick="window.AuthModule ? window.AuthModule.lockScreen() : null" title="قفل الشاشة مؤقتاً" class="px-2 md:px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 rounded-lg text-[11px] font-bold cursor-pointer transition-colors flex items-center gap-1">
+            <span>🔒</span>
+            <span class="hidden xs:inline">قفل</span>
+          </button>
+
+          <button onclick="window.MazajNav.logout()" title="تسجيل الخروج" class="px-2 md:px-2.5 py-1 bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 border border-rose-500/30 rounded-lg text-[11px] font-bold cursor-pointer transition-colors flex items-center gap-1">
+            <span>🚪</span>
+            <span class="hidden xs:inline">خروج</span>
           </button>
         </div>
       </header>
@@ -612,6 +623,12 @@
     logout,
     initNav: validateSessionAndRender
   };
+
+  window.addEventListener('pageshow', (event) => {
+    if (event.persisted) {
+      validateSessionAndRender();
+    }
+  });
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', validateSessionAndRender);

@@ -94,9 +94,38 @@ const ROLE_PERMISSIONS = {
   ]
 };
 
+const ROLE_DEFAULT_ROUTES = {
+  SUPER_ADMIN: '/portal.html',
+  OWNER: '/portal.html',
+  OP_MANAGER: '/portal.html',
+  OP_ASSISTANT_CASHIER: '/pos.html',
+  CASHIER: '/pos.html',
+  BARISTA: '/kds.html',
+  CHEF: '/kitchen.html',
+  SHISHA: '/shisha.html',
+  WAITER: '/pos.html',
+  RUNNER: '/runner.html',
+  HALL_MANAGER: '/tables.html',
+  JOKER: '/pos.html',
+  BOM_MANAGER: '/menu-manager.html',
+  HR_PAYROLL: '/hr.html',
+  QA: '/qa.html',
+  READ_ONLY: '/bi.html'
+};
+
+function normalizeRole(userRole) {
+  if (!userRole) return 'WAITER';
+  return String(userRole).toUpperCase().replace(/^ROLE_/, '');
+}
+
+function getRoleDefaultRoute(userRole) {
+  const role = normalizeRole(userRole);
+  return ROLE_DEFAULT_ROUTES[role] || '/portal.html';
+}
+
 function hasPermission(userRole, requiredPermission) {
   if (!userRole) return false;
-  const role = String(userRole).toUpperCase().replace(/^ROLE_/, '');
+  const role = normalizeRole(userRole);
   const permissions = ROLE_PERMISSIONS[role] || [];
   
   if (permissions.includes('*')) return true;
@@ -111,12 +140,23 @@ function hasPermission(userRole, requiredPermission) {
 
 function getRolePermissions(userRole) {
   if (!userRole) return [];
-  const role = String(userRole).toUpperCase().replace(/^ROLE_/, '');
+  const role = normalizeRole(userRole);
   return ROLE_PERMISSIONS[role] || [];
+}
+
+function getClientSafePermissions(userRole) {
+  const perms = getRolePermissions(userRole);
+  // Never expose raw wildcard '*' to the client
+  return perms.filter(p => p !== '*');
 }
 
 module.exports = {
   ROLE_PERMISSIONS,
+  ROLE_DEFAULT_ROUTES,
+  normalizeRole,
+  getRoleDefaultRoute,
   hasPermission,
-  getRolePermissions
+  getRolePermissions,
+  getClientSafePermissions
 };
+

@@ -72,10 +72,10 @@
         pinDots.className = "text-amber-400 tracking-widest text-3xl font-mono";
         pinDots.textContent = "•".repeat(currentPin.length);
       }
-      hideError();
     }
 
     function pressNum(num) {
+      hideError(); // Clear error on new entry
       if (currentPin.length < 6) {
         currentPin += num;
         updateDisplay();
@@ -109,12 +109,19 @@
            throw new Error('وحدة التحقق غير متوفرة');
         }
         
-        await window.AuthModule.loginWithPin(currentPin);
+        const loginData = await window.AuthModule.loginWithPin(currentPin);
         
-        // Let the router handle the redirect dynamically based on what the user is permitted to see
-        window.location.replace('/portal.html');
+        // Read server-authorized default route or safe returnUrl
+        const urlParams = new URLSearchParams(window.location.search);
+        const returnUrl = urlParams.get('returnUrl');
+        const defaultRoute = (loginData.user && loginData.user.defaultRoute) || '/portal.html';
+        const target = (returnUrl && returnUrl.startsWith('/') && !returnUrl.startsWith('//') && !returnUrl.includes('index.html'))
+          ? returnUrl
+          : defaultRoute;
+
+        window.location.replace(target);
       } catch (err) {
-        showError(err.message || "تعذر الاتصال بالخادم. يرجى المحاولة لاحقاً.");
+        showError(err.message || "رمز الدخول السري غير صحيح");
         currentPin = "";
         updateDisplay();
       }
@@ -139,7 +146,13 @@
       
       const user = await window.AuthModule.checkAuthSession();
       if (user) {
-        window.location.replace('/portal.html');
+        const urlParams = new URLSearchParams(window.location.search);
+        const returnUrl = urlParams.get('returnUrl');
+        const defaultRoute = user.defaultRoute || '/portal.html';
+        const target = (returnUrl && returnUrl.startsWith('/') && !returnUrl.startsWith('//') && !returnUrl.includes('index.html'))
+          ? returnUrl
+          : defaultRoute;
+        window.location.replace(target);
       }
     });
   </script>

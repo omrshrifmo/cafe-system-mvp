@@ -4,21 +4,21 @@
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const { getQuery, runQuery, allQuery } = require('../../db/connection');
-const { getRolePermissions } = require('./permissions');
+const { getRolePermissions, getRoleDefaultRoute, getClientSafePermissions, normalizeRole } = require('./permissions');
 const env = require('../../config/env');
 const logger = require('../../observability/logger');
 
 const MAX_FAILED_ATTEMPTS = 5;
 const LOCKOUT_MINUTES = 15;
 const ABSOLUTE_EXPIRY_HOURS = 24;
-const INACTIVITY_EXPIRY_MINUTES = 15; // By default, session needs pinging
+const INACTIVITY_EXPIRY_MINUTES = 15; // Inactivity limit
 
 function hashToken(token) {
   return crypto.createHash('sha256').update(token + env.SESSION_SECRET).digest('hex');
 }
 
 async function hashPin(pin) {
-  return bcrypt.hash(String(pin).trim(), env.BCRYPT_WORK_FACTOR);
+  return bcrypt.hash(String(pin).trim(), env.BCRYPT_WORK_FACTOR || 10);
 }
 
 async function verifyPin(pin, hash) {
@@ -34,7 +34,7 @@ async function logAudit(venueId, userId, action, targetType, targetId, details, 
     await runQuery(
       `INSERT INTO v3_audit_logs (id, venue_id, user_id, action, target_type, target_id, details)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [crypto.randomUUID(), venueId, userId, action, targetType, targetId, detailsJson]
+      [crypto.randomUUID(), venueId || 'V_DEFAULT', userId, action, targetType, targetId, detailsJson]
     );
   } catch (e) {
     logger.error('Failed to write audit log', e);
@@ -42,42 +42,57 @@ async function logAudit(venueId, userId, action, targetType, targetId, details, 
 }
 
 async function authenticateWithPin(pin, ip = null, userAgent = null, deviceId = null) {
-  const cleanPin = String(pin).trim();
-  if (!cleanPin) {
-    throw new Error('AUTH_PIN_REQUIRED: يرجى إدخال رمز الدخول السري');
+  const cleanPin = String(pin || '').trim();
+  if (!cleanPin || cleanPin.length < 4) {
+    throw new Error('AUTH_PIN_REQUIRED: رمز الدخول السري يجب ألا يقل عن 4 أرقام');
   }
 
-  // Use a timing-safe generic approach:
-  // Since we use PINs, finding the user by PIN directly is an option, BUT to support lockout we need to find by some other ID, or we check ALL active users to prevent timing attacks revealing if a PIN exists.
-  // We'll fetch all active users and test. 
-  const users = await allQuery(`SELECT id, venue_id, name, role_id, pin_hash, is_active, failed_attempts, locked_until FROM v3_users WHERE is_active = 1`);
+  // Fetch all users to check active state, locks, and PIN matches
+  const users = await allQuery(`SELECT id, venue_id, name, role_id, pin_hash, is_active, failed_attempts, locked_until FROM v3_users`);
   let matchedUser = null;
+  let isLockedOut = false;
+  let isDisabled = false;
 
   for (const user of users) {
-    if (user.locked_until && new Date(user.locked_until).getTime() > Date.now()) {
-      continue; // Skip locked users during matching
-    }
     if (user.pin_hash && (await verifyPin(cleanPin, user.pin_hash))) {
+      if (user.is_active === 0) {
+        isDisabled = true;
+        matchedUser = user;
+        break;
+      }
+      if (user.locked_until && new Date(user.locked_until).getTime() > Date.now()) {
+        isLockedOut = true;
+        matchedUser = user;
+        break;
+      }
       matchedUser = user;
       break;
     }
   }
 
+  if (isDisabled) {
+    await logAudit(matchedUser.venue_id, matchedUser.id, 'LOGIN_FAILED', 'USER', matchedUser.id, { reason: 'ACCOUNT_DISABLED' }, ip);
+    throw new Error('ACCOUNT_DISABLED: هذا الحساب معطل حالياً، يرجى مراجعة إدارة النظام');
+  }
+
+  if (isLockedOut) {
+    await logAudit(matchedUser.venue_id, matchedUser.id, 'LOGIN_FAILED', 'USER', matchedUser.id, { reason: 'ACCOUNT_LOCKED' }, ip);
+    throw new Error('ACCOUNT_LOCKED: الحساب مقفول مؤقتاً لمدة 15 دقيقة بسبب تكرار المحاولات الخاطئة');
+  }
+
   if (!matchedUser) {
-    // We cannot easily increment failed attempts without knowing WHO failed if they only provide a PIN.
-    // If they provide a username/ID, we could lock them out. For a pure PIN system, rate limiting by IP is vital (handled by Express rate limit).
-    // If we assume a generic PIN failure, we just throw.
     logger.warn('Failed login attempt with invalid PIN', { ip });
-    throw new Error('INVALID_CREDENTIALS: رمز الدخول السري غير صحيح أو الحساب مقفول');
+    throw new Error('INVALID_CREDENTIALS: رمز الدخول السري غير صحيح أو الحساب غير موجود');
   }
 
   // Reset failed attempts for the successful user
-  if (matchedUser.failed_attempts > 0) {
+  if (matchedUser.failed_attempts > 0 || matchedUser.locked_until) {
     await runQuery(`UPDATE v3_users SET failed_attempts = 0, locked_until = NULL WHERE id = ?`, [matchedUser.id]);
   }
 
   const roleRow = await getQuery(`SELECT name FROM roles WHERE id = ?`, [matchedUser.role_id]);
-  const roleName = roleRow ? roleRow.name : 'READ_ONLY';
+  const roleName = normalizeRole(roleRow ? roleRow.name : matchedUser.role_id);
+  const defaultRoute = getRoleDefaultRoute(roleName);
 
   const rawSessionToken = crypto.randomBytes(32).toString('hex');
   const sessionHash = hashToken(rawSessionToken);
@@ -93,7 +108,7 @@ async function authenticateWithPin(pin, ip = null, userAgent = null, deviceId = 
     [sessionId, matchedUser.id, matchedUser.venue_id, deviceId, sessionHash, absoluteExpiry, inactivityExpiry, ip, userAgent]
   );
 
-  await logAudit(matchedUser.venue_id, matchedUser.id, 'LOGIN', 'SESSION', sessionId, { deviceId }, ip);
+  await logAudit(matchedUser.venue_id, matchedUser.id, 'LOGIN_SUCCESS', 'SESSION', sessionId, { deviceId, role: roleName }, ip);
   logger.info('User successfully authenticated', { userId: matchedUser.id, role: roleName, ip });
 
   return {
@@ -102,9 +117,11 @@ async function authenticateWithPin(pin, ip = null, userAgent = null, deviceId = 
       id: matchedUser.id,
       name: matchedUser.name,
       role: roleName,
-      venueId: matchedUser.venue_id
+      venueId: matchedUser.venue_id,
+      defaultRoute,
+      permissions: getClientSafePermissions(roleName)
     },
-    permissions: getRolePermissions(roleName)
+    permissions: getClientSafePermissions(roleName)
   };
 }
 
@@ -207,12 +224,38 @@ async function verifyReauthentication(userId, pin) {
   return true;
 }
 
+async function rotateUserPin(userId, oldPin, newPin, actorId = null, ip = null) {
+  const cleanNewPin = String(newPin || '').trim();
+  if (!cleanNewPin || cleanNewPin.length < 4) {
+    throw new Error('VALIDATION_ERROR: رمز الدخول الجديد يجب أن يتكون من 4 أرقام على الأقل');
+  }
+
+  const user = await getQuery(`SELECT id, venue_id, pin_hash FROM v3_users WHERE id = ?`, [userId]);
+  if (!user) throw new Error('USER_NOT_FOUND: المستخدم غير موجود');
+
+  // If oldPin provided, verify it first
+  if (oldPin) {
+    const valid = await verifyPin(oldPin, user.pin_hash);
+    if (!valid) throw new Error('INVALID_PIN: الرمز السري الحالي غير صحيح');
+  }
+
+  const newHash = await hashPin(cleanNewPin);
+  await runQuery(`UPDATE v3_users SET pin_hash = ?, failed_attempts = 0, locked_until = NULL, updated_at = datetime('now', 'localtime') WHERE id = ?`, [newHash, userId]);
+
+  // Revoke all existing sessions for this user to force re-login with new credentials
+  await revokeAllUserSessions(userId);
+
+  await logAudit(user.venue_id, actorId || userId, 'PIN_ROTATION', 'USER', userId, { rotated_by: actorId || userId }, ip);
+  return true;
+}
+
 module.exports = {
   authenticateWithPin,
   validateSession,
   revokeSession,
   revokeAllUserSessions,
   verifyReauthentication,
+  rotateUserPin,
   hashPin,
   verifyPin,
   logAudit

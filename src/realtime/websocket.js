@@ -2,6 +2,7 @@
  * Authenticated Realtime WebSocket Server & Outbox Publisher
  */
 const { WebSocketServer } = require('ws');
+const { URL } = require('url');
 const { validateSession } = require('../domain/auth/service');
 const { allQuery, runQuery } = require('../db/connection');
 const logger = require('../observability/logger');
@@ -13,11 +14,15 @@ function setupWebSocketServer(httpServer) {
   wss = new WebSocketServer({ server: httpServer, path: '/ws' });
 
   wss.on('connection', async (ws, req) => {
-    // Extract token from query params or cookie
     const url = new URL(req.url, 'http://localhost');
-    const token = url.searchParams.get('token');
+    let token = url.searchParams.get('token');
     
-    let venueId = url.searchParams.get('venueId');
+    if (!token && req.headers.cookie) {
+      const match = req.headers.cookie.match(/session_token=([^;]+)/);
+      if (match) token = match[1];
+    }
+    
+    let venueId = url.searchParams.get('venueId') || 'V_DEFAULT';
     let stationId = url.searchParams.get('stationId');
     let cursor = parseInt(url.searchParams.get('cursor'), 10) || 0;
     
@@ -26,8 +31,8 @@ function setupWebSocketServer(httpServer) {
       user = await validateSession(token);
     }
 
-    if (!user || !venueId) {
-      ws.close(4001, 'Unauthorized or missing venue');
+    if (!user) {
+      ws.close(4001, 'AUTH_REQUIRED: Invalid or expired session');
       return;
     }
 

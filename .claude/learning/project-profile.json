@@ -41,5 +41,5 @@
   "detectedAt": "2026-08-20T05:45:57.002Z",
   "appliedAt": "2026-08-20T05:45:57.002Z",
   "userPlan": "accept-detected",
-  "rationale": "Git analysis: 2598 tracked files, 1 branch (1 local, 1 remote), 21 commits (21 last 30d), 1 author (30d), moderate activity, ~15 KB git objects. Remote git (https://github.com/omrshrifmo/cafe-system-mvp.git): 1 remote branch, 1 remote author (30d), via cache. Solo, low-intensity product — branch profiles with token-saving focus."
+  "rationale": "Git analysis: 2557 tracked files, 1 branch (1 local, 1 remote), 22 commits (22 last 30d), 1 author (30d), moderate activity, ~15 KB git objects. Remote git (https://github.com/omrshrifmo/cafe-system-mvp.git): 1 remote branch, 1 remote author (30d), via cache. Solo, low-intensity product — branch profiles with token-saving focus."
 }

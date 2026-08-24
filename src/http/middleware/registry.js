@@ -14,9 +14,10 @@ const routeRegistry = [
   { method: 'GET', pathRegex: /^\/api\/health\//, permission: 'public' },
   { method: 'GET', pathRegex: /^\/api\/metrics$/, permission: 'public' },
   { method: 'ALL', pathRegex: /^\/api\/public\//, permission: 'public' },
-  
+
   // Basic Authenticated User Endpoints
   { method: 'GET', pathRegex: /^\/api\/auth\/me$/, permission: 'authenticated' },
+  { method: 'POST', pathRegex: /^\/api\/auth\/(unlock|verify-pin|rotate-pin|revoke-all|ping)$/, permission: 'authenticated' },
   
   // Menu & Catalog (Public Read, Write requires menu:write)
   { method: 'GET', pathRegex: /^\/api\/(menu|catalog)(\/.*)?$/, permission: 'public' },
