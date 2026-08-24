@@ -9,7 +9,7 @@ const { requireAuth } = require('../middleware/auth');
 const { allQuery, runQuery } = require('../../db/connection');
 
 // Get canonical hierarchical menu for POS, QR, and KDS
-router.get(['/menu', '/catalog/menu'], async (req, res, next) => {
+router.get(['/menu', '/catalog', '/catalog/menu'], async (req, res, next) => {
   try {
     const menu = await getMenu();
     res.json({

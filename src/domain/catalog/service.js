@@ -7,19 +7,19 @@ async function getMenu() {
   const categories = await allQuery(
     `SELECT id, name, name_en, icon, color, sort_order, is_active 
      FROM menu_categories 
-     WHERE is_active = 1 
+     WHERE is_active = 1 AND (is_quarantined = 0 OR is_quarantined IS NULL)
      ORDER BY sort_order ASC, id ASC`
   );
 
   const items = await allQuery(
     `SELECT m.id, m.category_id, m.name, m.name_en, m.description, m.department, 
             m.is_available, m.is_featured, m.sort_order, m.sku, m.image_ref,
-            m.allergens, m.tax_class, m.lifecycle_state,
+            m.allergens, m.tax_class, m.lifecycle_state, m.effective_from,
             COALESCE(p.amount_minor, 0) as price_minor,
             COALESCE(p.currency, 'ج.م') as currency
      FROM menu_items m
      LEFT JOIN menu_prices p ON m.id = p.menu_item_id AND (p.valid_to IS NULL OR p.valid_to > datetime('now', 'localtime'))
-     WHERE m.is_available = 1 AND m.lifecycle_state = 'PUBLISHED'
+     WHERE m.is_available = 1 AND m.lifecycle_state = 'PUBLISHED' AND (m.is_quarantined = 0 OR m.is_quarantined IS NULL)
      ORDER BY m.sort_order ASC, m.id ASC`
   );
 
@@ -28,10 +28,17 @@ async function getMenu() {
     if (!itemsByCategory.has(item.category_id)) {
       itemsByCategory.set(item.category_id, []);
     }
+    let parsedAllergens = [];
+    try {
+      parsedAllergens = item.allergens ? (typeof item.allergens === 'string' ? JSON.parse(item.allergens) : item.allergens) : [];
+    } catch (e) {
+      parsedAllergens = [];
+    }
+
     itemsByCategory.get(item.category_id).push({
       ...item,
       price: (item.price_minor / 100).toFixed(2),
-      allergens: item.allergens ? JSON.parse(item.allergens) : []
+      allergens: parsedAllergens
     });
   }
 

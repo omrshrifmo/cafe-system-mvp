@@ -230,11 +230,14 @@ async function settleSession(checkoutPayload, actor = null) {
 
     // 6. Close Session & Table
     if (session) {
+      const activePol = await tx.get(`SELECT version FROM v3_policies ORDER BY version DESC LIMIT 1`);
+      const polVer = activePol ? activePol.version : 1;
+
       await tx.run(
         `UPDATE order_sessions SET status = 'SETTLED', closed_at = datetime('now', 'localtime'),
-                subtotal_minor = ?, service_minor = ?, tax_minor = ?, discount_minor = ?, tip_minor = ?, total_minor = ?
+                subtotal_minor = ?, service_minor = ?, tax_minor = ?, discount_minor = ?, tip_minor = ?, total_minor = ?, policy_version = ?
          WHERE id = ?`,
-        [subtotalMinor, serviceMinor, taxMinor, totalDiscountMinor, tipMinor, finalBillMinor, session.id]
+        [subtotalMinor, serviceMinor, taxMinor, totalDiscountMinor, tipMinor, finalBillMinor, polVer, session.id]
       );
     }
 

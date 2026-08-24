@@ -193,7 +193,7 @@ router.get('/reports/cash-reconciliation', requireAuth, requirePermission('repor
 router.get('/reports/bom-reconciliation', requireAuth, requirePermission('reports:inventory'), async (req, res, next) => {
   try {
     const reconciliation = await allQuery(
-      `SELECT i.id, i.name, i.unit, i.category as department,
+      `SELECT i.id, i.name, i.unit, i.category as department, i.cost_per_unit_minor,
               (i.current_stock_microunits / 1000000.0) as current_stock,
               COALESCE(SUM(CASE WHEN l.event_type = 'CONSUMPTION' THEN ABS(l.quantity_delta_microunits) ELSE 0 END), 0) / 1000000.0 as bom_consumption,
               COALESCE(SUM(CASE WHEN l.event_type = 'WASTE' THEN ABS(l.quantity_delta_microunits) ELSE 0 END), 0) / 1000000.0 as manual_waste
@@ -205,14 +205,35 @@ router.get('/reports/bom-reconciliation', requireAuth, requirePermission('report
 
     res.json({
       success: true,
-      reconciliation: reconciliation.map(r => ({
-        ...r,
-        current_stock: Math.round(r.current_stock * 100) / 100,
-        bom_consumption: Math.round(r.bom_consumption * 100) / 100,
-        manual_waste: Math.round(r.manual_waste * 100) / 100,
-        auto_waste_allowance: Math.round(r.bom_consumption * 0.05 * 100) / 100,
-        status: 'مطابق ✅'
-      }))
+      reconciliation: reconciliation.map(r => {
+        const currentStock = Math.round(r.current_stock * 100) / 100;
+        const bomConsumption = Math.round(r.bom_consumption * 100) / 100;
+        const manualWaste = Math.round(r.manual_waste * 100) / 100;
+        const autoWasteAllowance = Math.round(bomConsumption * 0.05 * 100) / 100;
+
+        let status = 'مطابق ✅';
+        if (!r.unit || r.unit === '') {
+          status = 'ERROR: وحدة القياس مفقودة ❌';
+        } else if (r.cost_per_unit_minor === 0 && bomConsumption === 0 && currentStock === 0) {
+          status = 'UNRECONCILED: غير مسجل تكلفة أو استهلاك ⚠️';
+        } else if (manualWaste > autoWasteAllowance * 2) {
+          status = 'تحذير: تجاوز نسبة الهالك المسموح بها ⚠️';
+        }
+
+        return {
+          id: r.id,
+          name: r.name,
+          unit: r.unit,
+          department: r.department,
+          cost_basis: 'WEIGHTED_AVERAGE',
+          unit_cost: (r.cost_per_unit_minor || 0) / 100,
+          current_stock: currentStock,
+          bom_consumption: bomConsumption,
+          manual_waste: manualWaste,
+          auto_waste_allowance: autoWasteAllowance,
+          status
+        };
+      })
     });
   } catch (err) {
     next(err);

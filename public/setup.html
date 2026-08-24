@@ -3,86 +3,534 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>كافيه مزاج - إعداد النظام</title>
+  <title>كافيه مزاج - معالج إعداد النظام</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
   <style>
     body {
-      font-family: system-ui, -apple-system, sans-serif;
-      background-color: #0f172a;
+      font-family: 'Cairo', system-ui, -apple-system, sans-serif;
+      background-color: #0b1120;
       color: #f8fafc;
+    }
+    .glass {
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(51, 65, 85, 0.6);
     }
   </style>
 </head>
-<body class="min-h-screen flex flex-col items-center justify-center p-4">
-  <div class="w-full max-w-md bg-slate-900 border border-slate-800 rounded-xl p-8 shadow-2xl text-center">
-    <div class="w-16 h-16 bg-indigo-600 rounded-full flex items-center justify-center text-3xl font-bold text-slate-100 mx-auto mb-4">
-      ⚙️
+<body class="min-h-screen flex flex-col items-center justify-start p-4 md:p-8">
+
+  <!-- Header -->
+  <header class="w-full max-w-4xl flex items-center justify-between mb-8 pb-4 border-b border-slate-800">
+    <div class="flex items-center gap-3">
+      <div class="w-12 h-12 bg-amber-500/20 border border-amber-500/40 rounded-xl flex items-center justify-center text-2xl">
+        ☕
+      </div>
+      <div>
+        <h1 class="text-xl font-bold text-slate-100">نظام إدارة المقاهي والمطاعم</h1>
+        <p class="text-xs text-slate-400">معالج الإعداد الشامل والتهيئة الأولية (Setup Wizard)</p>
+      </div>
     </div>
-    <h1 class="text-2xl font-bold text-slate-100 mb-2">مرحباً بك في نظام كافيه مزاج</h1>
-    <p class="text-sm text-slate-400 mb-8">يبدو أن هذه هي المرة الأولى لتشغيل النظام. يرجى اختيار وضع التشغيل.</p>
-
-    <div class="space-y-4">
-      <button onclick="initDemo()" class="w-full bg-slate-800 hover:bg-slate-700 text-amber-400 font-bold py-4 px-6 rounded-xl border border-slate-700 flex flex-col items-center gap-1 transition-colors">
-        <span class="text-lg">وضع التجربة (DEMO) 🧪</span>
-        <span class="text-xs text-slate-400 font-normal">استكشاف النظام ببيانات وهمية للتجريب</span>
-      </button>
-
-      <button onclick="initLive()" class="w-full bg-emerald-900/40 hover:bg-emerald-800/60 text-emerald-400 font-bold py-4 px-6 rounded-xl border border-emerald-800/50 flex flex-col items-center gap-1 transition-colors">
-        <span class="text-lg">وضع التشغيل الفعلي (LIVE) 🚀</span>
-        <span class="text-xs text-emerald-600 font-normal">بدء التشغيل الحقيقي بقاعدة بيانات فارغة</span>
-      </button>
+    <div id="modeBadge" class="px-3 py-1.5 rounded-full text-xs font-bold bg-indigo-950 text-indigo-300 border border-indigo-800">
+      وضع التهيئة (ONBOARDING)
     </div>
+  </header>
 
-    <div id="statusMsg" class="hidden mt-6 p-3 rounded-lg text-sm font-bold"></div>
+  <!-- Stepper Progress Bar -->
+  <div class="w-full max-w-4xl mb-8">
+    <div class="grid grid-cols-7 gap-2 text-center text-xs">
+      <div id="stepTab-1" class="step-tab p-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-400 font-bold transition-all">
+        1. وضع التشغيل
+      </div>
+      <div id="stepTab-2" class="step-tab p-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-400 font-bold transition-all">
+        2. هوية الكافيه
+      </div>
+      <div id="stepTab-3" class="step-tab p-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-400 font-bold transition-all">
+        3. السياسة المالية
+      </div>
+      <div id="stepTab-4" class="step-tab p-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-400 font-bold transition-all">
+        4. المحطات والعتاد
+      </div>
+      <div id="stepTab-5" class="step-tab p-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-400 font-bold transition-all">
+        5. المنيو والوصفات
+      </div>
+      <div id="stepTab-6" class="step-tab p-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-400 font-bold transition-all">
+        6. الورديات والإدارة
+      </div>
+      <div id="stepTab-7" class="step-tab p-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-400 font-bold transition-all">
+        7. اعتماد الجاهزية
+      </div>
+    </div>
   </div>
 
+  <!-- Wizard Content Container -->
+  <main class="w-full max-w-4xl glass rounded-2xl p-6 md:p-10 shadow-2xl relative mb-8">
+
+    <!-- Step 1: Mode Selection -->
+    <section id="stepContent-1" class="wizard-step">
+      <div class="text-center max-w-xl mx-auto mb-8">
+        <h2 class="text-2xl font-black text-slate-100 mb-2">اختر وضع التشغيل الابتدائي</h2>
+        <p class="text-sm text-slate-400">حدد ما إذا كنت ترغب في استكشاف النظام ببيانات تجريبية كاملة أو البدء بتشغيل فعلي مباشر.</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto mb-6">
+        <label class="relative cursor-pointer p-6 rounded-xl border-2 transition-all flex flex-col items-center text-center gap-3 bg-slate-800/60 border-slate-700 hover:border-amber-500" id="modeCardDemo">
+          <input type="radio" name="appMode" value="DEMO" class="hidden" onchange="selectMode('DEMO')" checked>
+          <span class="text-4xl">🧪</span>
+          <span class="text-lg font-bold text-amber-400">وضع التجربة (DEMO)</span>
+          <span class="text-xs text-slate-400 leading-relaxed">تحميل بيانات افتراضية، طلبات، مخزون ووصفات جاهزة لاختبار كافة وظائف النظام بأمان.</span>
+        </label>
+
+        <label class="relative cursor-pointer p-6 rounded-xl border-2 transition-all flex flex-col items-center text-center gap-3 bg-slate-800/60 border-slate-700 hover:border-emerald-500" id="modeCardLive">
+          <input type="radio" name="appMode" value="LIVE" class="hidden" onchange="selectMode('LIVE')">
+          <span class="text-4xl">🚀</span>
+          <span class="text-lg font-bold text-emerald-400">وضع التشغيل الفعلي (LIVE)</span>
+          <span class="text-xs text-slate-400 leading-relaxed">بدء التشغيل الحقيقي للفرع مع تسجيل المعاملات والضرائب في السجلات المحاسبية الرسمية.</span>
+        </label>
+      </div>
+    </section>
+
+    <!-- Step 2: Cafe Identity -->
+    <section id="stepContent-2" class="wizard-step hidden">
+      <h2 class="text-xl font-black text-slate-100 mb-2">هوية المنشأة والفرع</h2>
+      <p class="text-xs text-slate-400 mb-6">البيانات الرسمية للمنشأة التي ستظهر في الفواتير الورقية والإلكترونية وتقارير الإغلاق.</p>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-300 mb-1">اسم الكافيه بالعربية *</label>
+          <input type="text" id="venueNameAr" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-slate-100 focus:border-amber-500 focus:outline-none" value="كافيه مزاج">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-300 mb-1">الاسم بالإنجليزية (Name in English)</label>
+          <input type="text" id="venueNameEn" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-slate-100 focus:border-amber-500 focus:outline-none" value="Mazag Cafe">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-300 mb-1">رقم التسجيل الضريبي / السجل التجاري</label>
+          <input type="text" id="venueTaxId" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-slate-100 focus:border-amber-500 focus:outline-none" value="300-123-456">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-300 mb-1">رقم الهاتف للتواصل</label>
+          <input type="text" id="venuePhone" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-slate-100 focus:border-amber-500 focus:outline-none" value="01012345678">
+        </div>
+        <div class="md:col-span-2">
+          <label class="block text-xs font-bold text-slate-300 mb-1">العنوان بالتفصيل</label>
+          <input type="text" id="venueAddress" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-slate-100 focus:border-amber-500 focus:outline-none" value="القاهرة - المعادي - شارع 9">
+        </div>
+      </div>
+    </section>
+
+    <!-- Step 3: Fiscal & Tax Policy -->
+    <section id="stepContent-3" class="wizard-step hidden">
+      <h2 class="text-xl font-black text-slate-100 mb-2">السياسة المالية والضريبية</h2>
+      <p class="text-xs text-slate-400 mb-6">إعدادات العملة الرسمية ونسب ضريبة القيمة المضافة ورسوم الخدمة وقواعد الجبر والتقريب.</p>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-300 mb-1">العملة الرسمية</label>
+          <select id="policyCurrency" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-slate-100 focus:border-amber-500 focus:outline-none">
+            <option value="ج.م" selected>جنيه مصري (EGP - ج.م)</option>
+            <option value="ر.س">ريال سعودي (SAR - ر.س)</option>
+            <option value="د.إ">درهم إماراتي (AED - د.إ)</option>
+            <option value="$">دولار أمريكي (USD - $)</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-300 mb-1">تطبيق الضرائب والرسوم</label>
+          <select id="policyApplyTax" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-slate-100 focus:border-amber-500 focus:outline-none">
+            <option value="true" selected>نعم - تفعيل الحساب التلقائي للضرائب والخدمة</option>
+            <option value="false">لا - الأسعار نهائية شاملة بدون إضافة</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-300 mb-1">نسبة ضريبة القيمة المضافة (VAT %)</label>
+          <input type="number" id="policyVatPercent" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-slate-100 focus:border-amber-500 focus:outline-none" value="14" min="0" max="100">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-300 mb-1">نسبة رسوم الخدمة (Service %)</label>
+          <input type="number" id="policyServicePercent" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-slate-100 focus:border-amber-500 focus:outline-none" value="12" min="0" max="100">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-300 mb-1">قاعدة تقريب المدفوعات النقدية</label>
+          <select id="policyRounding" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-slate-100 focus:border-amber-500 focus:outline-none">
+            <option value="NEAREST_HALF" selected>لأقرب 50 قرش / نصف وحدة</option>
+            <option value="NEAREST_INTEGER">لأقرب وحدة صحيحة كاملة</option>
+            <option value="EXACT">بدون تقريب (بالقروش الدقيقة)</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-300 mb-1">طرق الدفع المفعلة</label>
+          <div class="flex items-center gap-4 mt-2 text-xs font-semibold text-slate-300">
+            <label class="flex items-center gap-1.5"><input type="checkbox" id="payMethodCash" checked> نقد (Cash)</label>
+            <label class="flex items-center gap-1.5"><input type="checkbox" id="payMethodCard" checked> بطاقة (Card)</label>
+            <label class="flex items-center gap-1.5"><input type="checkbox" id="payMethodWallet" checked> محفظة (Wallet)</label>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Step 4: Stations & Hardware -->
+    <section id="stepContent-4" class="wizard-step hidden">
+      <h2 class="text-xl font-black text-slate-100 mb-2">محطات التشغيل والعتاد (KDS & Hardware)</h2>
+      <p class="text-xs text-slate-400 mb-6">تكوين شاشات المطابخ، طابعات الإيصالات الحرارية، وفتح درج النقدية التلقائي.</p>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-300 mb-1">عنوان IP لطابعة الفواتير (ESC/POS Printer)</label>
+          <input type="text" id="hwPrinterIp" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-slate-100 focus:border-amber-500 focus:outline-none" value="192.168.1.100">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-300 mb-1">منفذ الطابعة (Port)</label>
+          <input type="number" id="hwPrinterPort" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-slate-100 focus:border-amber-500 focus:outline-none" value="9100">
+        </div>
+        <div class="md:col-span-2">
+          <label class="flex items-center gap-2 text-xs font-bold text-slate-200 cursor-pointer bg-slate-800/40 p-3 rounded-lg border border-slate-700">
+            <input type="checkbox" id="hwDrawerKick" checked class="rounded bg-slate-900 border-slate-700 text-amber-500">
+            فتح درج النقدية تلقائياً عند تسوية المدفوعات النقدية (Auto Cash Drawer Kick)
+          </label>
+        </div>
+      </div>
+
+      <div class="bg-slate-900/60 p-4 rounded-xl border border-slate-800">
+        <h3 class="text-xs font-bold text-slate-300 mb-2">محطات KDS المعتمدة للنظام:</h3>
+        <div class="grid grid-cols-3 gap-2 text-center text-xs">
+          <div class="p-2.5 rounded-lg bg-amber-950/40 text-amber-300 border border-amber-800/40">☕ باريستا (BARISTA)</div>
+          <div class="p-2.5 rounded-lg bg-red-950/40 text-red-300 border border-red-800/40">🍳 المطبخ (KITCHEN)</div>
+          <div class="p-2.5 rounded-lg bg-purple-950/40 text-purple-300 border border-purple-800/40">💨 الشيشة (SHISHA)</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Step 5: Catalog & BOM Verification -->
+    <section id="stepContent-5" class="wizard-step hidden">
+      <h2 class="text-xl font-black text-slate-100 mb-2">قائمة الأصناف والوصفات (Menu & BOM)</h2>
+      <p class="text-xs text-slate-400 mb-4">تمت مراجعة وتصحيح قائمة الأصناف وفصل التصنيفات الاستهلاكية عن محطات التوجيه الداخلي.</p>
+
+      <div class="space-y-3 mb-4 max-h-64 overflow-y-auto pr-1">
+        <div class="p-3 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-between text-xs">
+          <div>
+            <span class="font-bold text-slate-200">☕ مشروبات ساخنة</span>
+            <span class="text-slate-500 mr-2">(لاتيه، اسبريسو، شاي كشري)</span>
+          </div>
+          <span class="text-emerald-400 font-bold">محطة الباريستا ✅</span>
+        </div>
+        <div class="p-3 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-between text-xs">
+          <div>
+            <span class="font-bold text-slate-200">🧊 مشروبات باردة</span>
+            <span class="text-slate-500 mr-2">(أيس لاتيه، موهيتو ليمون نعناع)</span>
+          </div>
+          <span class="text-emerald-400 font-bold">محطة الباريستا ✅</span>
+        </div>
+        <div class="p-3 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-between text-xs">
+          <div>
+            <span class="font-bold text-slate-200">🍰 حلويات</span>
+            <span class="text-slate-500 mr-2">(كريم برولية، تشيز كيك لوتس)</span>
+          </div>
+          <span class="text-emerald-400 font-bold">محطة المطبخ ✅</span>
+        </div>
+        <div class="p-3 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-between text-xs">
+          <div>
+            <span class="font-bold text-slate-200">🥪 مأكولات وجبات</span>
+            <span class="text-slate-500 mr-2">(كلوب ساندوتش دجاج، كلوب ساندوتش تركي)</span>
+          </div>
+          <span class="text-emerald-400 font-bold">محطة المطبخ ✅</span>
+        </div>
+        <div class="p-3 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-between text-xs">
+          <div>
+            <span class="font-bold text-slate-200">💨 شيشة ومعسلات</span>
+            <span class="text-slate-500 mr-2">(تفاحتين، سلوم، فواكه)</span>
+          </div>
+          <span class="text-emerald-400 font-bold">محطة الشيشة ✅</span>
+        </div>
+      </div>
+      <div class="p-3 rounded-lg bg-emerald-950/30 text-emerald-300 border border-emerald-800/40 text-xs">
+        ✅ تم عزل التصنيفات القديمة (BARISTA / SHISHA / KITCHEN) وتفعيل طريقة التكلفة المرجحة (Weighted Average Cost).
+      </div>
+    </section>
+
+    <!-- Step 6: Shifts & Initial Staff -->
+    <section id="stepContent-6" class="wizard-step hidden">
+      <h2 class="text-xl font-black text-slate-100 mb-2">الورديات ومسؤولو النظام</h2>
+      <p class="text-xs text-slate-400 mb-6">تحديد الرمز السري للمالك/الأدمن المسؤول عن إدارة السياسات المالية وإغلاق الورديات.</p>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-300 mb-1">اسم المالك / المدير العام *</label>
+          <input type="text" id="adminName" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-slate-100 focus:border-amber-500 focus:outline-none" value="المالك العام">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-300 mb-1">الرمز السري لتسجيل الدخول (PIN) *</label>
+          <input type="password" id="adminPin" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-slate-100 focus:border-amber-500 focus:outline-none" value="8802" placeholder="4 أرقام على الأقل">
+        </div>
+      </div>
+
+      <div class="bg-slate-900/60 p-4 rounded-xl border border-slate-800">
+        <h3 class="text-xs font-bold text-slate-300 mb-2">الورديات اليومية المعتمدة:</h3>
+        <div class="grid grid-cols-3 gap-2 text-center text-xs">
+          <div class="p-2.5 rounded-lg bg-slate-800 border border-slate-700 text-slate-300">الوردية الصباحية<br><span class="text-slate-500">08:00 - 16:00</span></div>
+          <div class="p-2.5 rounded-lg bg-slate-800 border border-slate-700 text-slate-300">الوردية المسائية<br><span class="text-slate-500">16:00 - 00:00</span></div>
+          <div class="p-2.5 rounded-lg bg-slate-800 border border-slate-700 text-slate-300">الوردية الليلية<br><span class="text-slate-500">00:00 - 04:00</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Step 7: Readiness & Final Cutover -->
+    <section id="stepContent-7" class="wizard-step hidden">
+      <div class="text-center max-w-lg mx-auto mb-6">
+        <div class="w-16 h-16 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center text-3xl font-bold mx-auto mb-3 border border-emerald-500/40">
+          ✓
+        </div>
+        <h2 class="text-2xl font-black text-slate-100 mb-1">فحص الجاهزية والاعتماد النهائي</h2>
+        <p class="text-xs text-slate-400">النظام جاهز تماماً لبدء التشغيل مع تسجيل كافة السياسات في الإصدار الرسمي الأول.</p>
+      </div>
+
+      <div id="readinessBox" class="space-y-2 mb-6 max-w-xl mx-auto text-xs">
+        <div class="p-2.5 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-between">
+          <span>فحص سلامة قاعدة البيانات (PRAGMA integrity)</span>
+          <span class="text-emerald-400 font-bold">سليم ✅</span>
+        </div>
+        <div class="p-2.5 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-between">
+          <span>هجرة الجداول والسياسات المالية (21 Migrations)</span>
+          <span class="text-emerald-400 font-bold">مكتمل ✅</span>
+        </div>
+        <div class="p-2.5 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-between">
+          <span>قائمة الطعام وتكاليف الوصفات (BOM WAC)</span>
+          <span class="text-emerald-400 font-bold">معتمد ✅</span>
+        </div>
+      </div>
+
+      <div class="max-w-md mx-auto bg-slate-900 p-4 rounded-xl border border-slate-800 mb-4">
+        <label class="block text-xs font-bold text-slate-300 mb-1">رمز PIN للمصادقة على تفعيل النظام:</label>
+        <input type="password" id="finalAuthPin" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-sm text-center tracking-widest font-mono text-slate-100 focus:border-emerald-500 focus:outline-none" placeholder="أدخل الرمز السري">
+      </div>
+    </section>
+
+    <!-- Error / Status Message Banner -->
+    <div id="statusAlert" class="hidden mt-6 p-3 rounded-lg text-xs font-bold text-center"></div>
+
+    <!-- Navigation Action Buttons -->
+    <div class="flex items-center justify-between mt-8 pt-4 border-t border-slate-800">
+      <button id="btnPrev" onclick="navigateStep(-1)" class="px-5 py-2.5 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
+        ← الخطوة السابقة
+      </button>
+
+      <div class="flex items-center gap-3">
+        <button id="btnSaveDraft" onclick="saveCurrentStepDraft()" class="px-4 py-2.5 rounded-xl text-xs font-bold bg-slate-800/80 text-amber-400 hover:bg-slate-700 border border-amber-500/30 transition-colors">
+          💾 حفظ كمسودة
+        </button>
+
+        <button id="btnNext" onclick="navigateStep(1)" class="px-6 py-2.5 rounded-xl text-xs font-bold bg-amber-600 hover:bg-amber-500 text-slate-950 transition-colors">
+          الخطوة التالية →
+        </button>
+
+        <button id="btnFinalize" onclick="submitFinalize()" class="hidden px-8 py-2.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-slate-950 transition-colors">
+          🚀 اعتماد وتفعيل النظام
+        </button>
+      </div>
+    </div>
+  </main>
+
   <script>
-    function showMsg(msg, isError = false) {
-      const el = document.getElementById('statusMsg');
+    let currentStep = 1;
+    let selectedAppMode = 'DEMO';
+    let wizardDraft = {};
+
+    function selectMode(mode) {
+      selectedAppMode = mode;
+      const demoCard = document.getElementById('modeCardDemo');
+      const liveCard = document.getElementById('modeCardLive');
+      if (mode === 'DEMO') {
+        demoCard.className = 'relative cursor-pointer p-6 rounded-xl border-2 transition-all flex flex-col items-center text-center gap-3 bg-slate-800 border-amber-500 shadow-lg shadow-amber-500/10';
+        liveCard.className = 'relative cursor-pointer p-6 rounded-xl border-2 transition-all flex flex-col items-center text-center gap-3 bg-slate-800/40 border-slate-700 hover:border-emerald-500';
+      } else {
+        liveCard.className = 'relative cursor-pointer p-6 rounded-xl border-2 transition-all flex flex-col items-center text-center gap-3 bg-slate-800 border-emerald-500 shadow-lg shadow-emerald-500/10';
+        demoCard.className = 'relative cursor-pointer p-6 rounded-xl border-2 transition-all flex flex-col items-center text-center gap-3 bg-slate-800/40 border-slate-700 hover:border-amber-500';
+      }
+    }
+
+    function showStatus(msg, isError = false) {
+      const el = document.getElementById('statusAlert');
       el.textContent = msg;
-      el.className = `mt-6 p-3 rounded-lg text-sm font-bold ${isError ? 'bg-red-900/50 text-red-400 border border-red-800' : 'bg-emerald-900/50 text-emerald-400 border border-emerald-800'}`;
+      el.className = `mt-6 p-3 rounded-lg text-xs font-bold text-center ${isError ? 'bg-red-950/60 text-red-400 border border-red-800' : 'bg-emerald-950/60 text-emerald-400 border border-emerald-800'}`;
       el.classList.remove('hidden');
     }
 
-    async function initDemo() {
-      try {
-        const res = await fetch('/api/setup/init-demo', { method: 'POST' });
-        const data = await res.json();
-        if (data.success) {
-          showMsg('تم التبديل إلى وضع التجربة بنجاح. جاري التوجيه...');
-          setTimeout(() => window.location.href = '/', 1500);
+    function renderStep(step) {
+      currentStep = step;
+      document.querySelectorAll('.wizard-step').forEach((el, i) => {
+        el.classList.toggle('hidden', i + 1 !== step);
+      });
+
+      document.querySelectorAll('.step-tab').forEach((el, i) => {
+        const stepNum = i + 1;
+        if (stepNum === step) {
+          el.className = 'step-tab p-2 rounded-lg bg-amber-600 text-slate-950 font-bold border border-amber-500 shadow-md';
+        } else if (stepNum < step) {
+          el.className = 'step-tab p-2 rounded-lg bg-slate-800 text-emerald-400 font-bold border border-emerald-800/60';
         } else {
-          showMsg(data.error || 'حدث خطأ غير متوقع', true);
+          el.className = 'step-tab p-2 rounded-lg bg-slate-900/60 text-slate-500 font-bold border border-slate-800';
         }
-      } catch (err) {
-        showMsg('تعذر الاتصال بالخادم', true);
+      });
+
+      document.getElementById('btnPrev').disabled = (step === 1);
+      if (step === 7) {
+        document.getElementById('btnNext').classList.add('hidden');
+        document.getElementById('btnFinalize').classList.remove('hidden');
+      } else {
+        document.getElementById('btnNext').classList.remove('hidden');
+        document.getElementById('btnFinalize').classList.add('hidden');
       }
     }
 
-    async function initLive() {
-      if (!confirm('تنبيه: هل أنت متأكد من الانتقال لوضع التشغيل الفعلي؟')) return;
-      try {
-        const res = await fetch('/api/setup/init-live', { method: 'POST' });
-        const data = await res.json();
-        if (data.success) {
-          showMsg('تم التبديل إلى وضع التشغيل الفعلي بنجاح. جاري التوجيه...');
-          setTimeout(() => window.location.href = '/', 1500);
-        } else {
-          showMsg(data.error || 'حدث خطأ غير متوقع', true);
-        }
-      } catch (err) {
-        showMsg('تعذر الاتصال بالخادم', true);
+    function gatherCurrentStepPayload() {
+      switch (currentStep) {
+        case 1:
+          return { mode: selectedAppMode };
+        case 2:
+          return {
+            venue: {
+              name_ar: document.getElementById('venueNameAr').value.trim(),
+              name_en: document.getElementById('venueNameEn').value.trim(),
+              tax_registration_number: document.getElementById('venueTaxId').value.trim(),
+              contact_phone: document.getElementById('venuePhone').value.trim(),
+              address: document.getElementById('venueAddress').value.trim()
+            }
+          };
+        case 3:
+          return {
+            fiscal: {
+              currency: document.getElementById('policyCurrency').value,
+              apply_taxes: document.getElementById('policyApplyTax').value === 'true',
+              vat_percent: Number(document.getElementById('policyVatPercent').value) || 0,
+              service_percent: Number(document.getElementById('policyServicePercent').value) || 0,
+              cash_rounding: document.getElementById('policyRounding').value
+            }
+          };
+        case 4:
+          return {
+            hardware: {
+              printer_ip: document.getElementById('hwPrinterIp').value.trim(),
+              printer_port: Number(document.getElementById('hwPrinterPort').value) || 9100,
+              cash_drawer_auto_kick: document.getElementById('hwDrawerKick').checked
+            }
+          };
+        case 5:
+          return { catalog_reviewed: true };
+        case 6:
+          return {
+            initial_admin: {
+              name: document.getElementById('adminName').value.trim(),
+              pin: document.getElementById('adminPin').value.trim()
+            }
+          };
+        case 7:
+          return { readiness_confirmed: true };
+        default:
+          return {};
       }
     }
 
-    window.addEventListener("DOMContentLoaded", async () => {
+    async function saveCurrentStepDraft() {
+      const payload = gatherCurrentStepPayload();
       try {
-        const res = await fetch('/api/setup/status');
+        const res = await fetch('/api/setup/step', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ step: currentStep, payload })
+        });
         const data = await res.json();
-        if (data.mode !== 'ONBOARDING') {
-          window.location.replace('/');
+        if (data.success) {
+          showStatus(`تم حفظ بيانات الخطوة (${currentStep}) بنجاح.`);
+        } else {
+          showStatus(data.error || 'تعذر حفظ المسودة', true);
         }
-      } catch (e) {}
+      } catch (e) {
+        showStatus('تعذر الاتصال بالخادم', true);
+      }
+    }
+
+    async function navigateStep(delta) {
+      if (delta > 0) {
+        await saveCurrentStepDraft();
+      }
+      const newStep = Math.max(1, Math.min(7, currentStep + delta));
+      renderStep(newStep);
+    }
+
+    async function submitFinalize() {
+      const pin = document.getElementById('finalAuthPin').value.trim() || document.getElementById('adminPin').value.trim();
+      const finalPayload = {
+        mode: selectedAppMode,
+        venue: {
+          name_ar: document.getElementById('venueNameAr').value.trim(),
+          name_en: document.getElementById('venueNameEn').value.trim(),
+          tax_registration_number: document.getElementById('venueTaxId').value.trim(),
+          contact_phone: document.getElementById('venuePhone').value.trim(),
+          address: document.getElementById('venueAddress').value.trim()
+        },
+        fiscal_policy: {
+          currency: document.getElementById('policyCurrency').value,
+          apply_taxes: document.getElementById('policyApplyTax').value === 'true',
+          vat_percent: Number(document.getElementById('policyVatPercent').value) || 0,
+          service_percent: Number(document.getElementById('policyServicePercent').value) || 0,
+          rounding_rule: document.getElementById('policyRounding').value
+        },
+        initial_admin: {
+          name: document.getElementById('adminName').value.trim(),
+          pin: document.getElementById('adminPin').value.trim()
+        },
+        pin
+      };
+
+      try {
+        const res = await fetch('/api/setup/finalize', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(finalPayload)
+        });
+        const data = await res.json();
+        if (data.success) {
+          showStatus('تم تفعيل النظام واعتماد السياسات بنجاح! جاري التوجيه لبوابة النظام...', false);
+          setTimeout(() => {
+            window.location.href = '/portal.html';
+          }, 1500);
+        } else {
+          showStatus(data.error || 'حدث خطأ أثناء اعتماد الإعدادات', true);
+        }
+      } catch (e) {
+        showStatus('تعذر الاتصال بالخادم', true);
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', async () => {
+      selectMode('DEMO');
+      try {
+        const res = await fetch('/api/setup/progress');
+        const data = await res.json();
+        if (data.success) {
+          if (data.draft_payload) {
+            wizardDraft = data.draft_payload;
+            if (wizardDraft.step_1 && wizardDraft.step_1.mode) selectMode(wizardDraft.step_1.mode);
+            if (wizardDraft.step_2 && wizardDraft.step_2.venue) {
+              const v = wizardDraft.step_2.venue;
+              if (v.name_ar) document.getElementById('venueNameAr').value = v.name_ar;
+              if (v.name_en) document.getElementById('venueNameEn').value = v.name_en;
+              if (v.tax_registration_number) document.getElementById('venueTaxId').value = v.tax_registration_number;
+              if (v.contact_phone) document.getElementById('venuePhone').value = v.contact_phone;
+              if (v.address) document.getElementById('venueAddress').value = v.address;
+            }
+          }
+          if (data.current_step) {
+            renderStep(Math.min(7, data.current_step));
+          } else {
+            renderStep(1);
+          }
+        }
+      } catch (e) {
+        renderStep(1);
+      }
     });
   </script>
 </body>

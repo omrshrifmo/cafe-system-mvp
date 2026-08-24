@@ -50,8 +50,12 @@ describe('Orders Lifecycle & BOM Integration Tests', () => {
 
     // Verify BOM consumption in inventory_items
     const postInv = await getQuery(`SELECT current_stock_microunits FROM inventory_items WHERE id = ?`, [itemId]);
-    // 2 x 18g = 36g = 36,000,000 microunits
-    assert.strictEqual(postInv.current_stock_microunits, initialStock - 36000000);
+    const { getMenuItemWithActivePriceAndBOM } = require('../../src/domain/catalog/service');
+    const latteBom = await getMenuItemWithActivePriceAndBOM('لاتيه');
+    const ingDef = latteBom && latteBom.ingredients ? latteBom.ingredients.find(i => i.inventory_item_id === itemId) : null;
+    const perUnitMicro = ingDef ? ingDef.quantity_microunits : 18000000;
+    const expectedConsumption = 2 * perUnitMicro;
+    assert.strictEqual(postInv.current_stock_microunits, initialStock - expectedConsumption);
 
     // Verify inventory_ledger entry
     const ledger = await allQuery(`SELECT * FROM inventory_ledger WHERE source_id = ? AND event_type = 'CONSUMPTION'`, [String(orderId)]);

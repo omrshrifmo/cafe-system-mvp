@@ -66,7 +66,15 @@ async function runMigrations(customDb = null) {
         .filter(stmt => stmt.length > 0);
 
       for (const statement of cleanSql) {
-        await tx.run(statement);
+        try {
+          await tx.run(statement);
+        } catch (err) {
+          if (statement.toUpperCase().includes('ALTER TABLE') && err.message.includes('duplicate column name')) {
+            logger.warn(`Column already exists during migration: ${statement}`);
+            continue;
+          }
+          throw err;
+        }
       }
 
       const duration = Date.now() - startTime;
