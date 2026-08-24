@@ -25,7 +25,7 @@ const ROLE_PERMISSIONS = {
     'payments:take', 'payments:settle',
     'tables:read', 'tables:seat', 'tables:move', 'tables:vacate',
     'shifts:declare_cash', 'shifts:clock',
-    'crm:read'
+    'crm:read', 'crm:write', 'reservations:read', 'reservations:write'
   ],
   
   BARISTA: [
@@ -48,7 +48,8 @@ const ROLE_PERMISSIONS = {
   
   WAITER: [
     'orders:create', 'orders:read',
-    'tables:read', 'tables:seat', 'tables:move',
+    'tables:read', 'tables:seat', 'tables:move', 'tables:vacate',
+    'crm:read', 'crm:write', 'reservations:read', 'reservations:write',
     'shifts:clock'
   ],
   

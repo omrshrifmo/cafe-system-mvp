@@ -27,7 +27,7 @@
       </div>
       <div>
         <h1 class="text-lg font-black text-white">إدارة وتوزيع طاولات الصالة</h1>
-        <p class="text-xs text-slate-400">متابعة دورة حياة الطاولات، المباشرة، الطلبات، وطلب الشيك لحظياً</p>
+        <p class="text-xs text-slate-400">متابعة دورة حياة الطاولات، المباشرة، الطلبات، وطلب الشيك لحظياً من المصدر الموحد</p>
       </div>
     </div>
 
@@ -41,6 +41,8 @@
         <span class="text-amber-400 font-bold">مشغولة: <strong id="stat-occupied">0</strong></span>
         <span class="text-slate-600">|</span>
         <span class="text-rose-400 font-bold">طلب شيك: <strong id="stat-check">0</strong></span>
+        <span class="text-slate-600">|</span>
+        <span class="text-purple-400 font-bold">محجوزة: <strong id="stat-held">0</strong></span>
       </div>
 
       <button onclick="openCustomTableModal()" class="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl text-xs font-black flex items-center gap-1.5 cursor-pointer shadow-lg transition-colors">
@@ -48,6 +50,17 @@
         <span>إعداد طاولة مخصصة</span>
       </button>
     </div>
+  </div>
+
+  <!-- Waiter Assistance Notification Banner -->
+  <div id="assist-banner" class="hidden bg-amber-950/80 border-b border-amber-500/40 px-6 py-2 flex items-center justify-between text-xs text-amber-200">
+    <div class="flex items-center gap-2">
+      <span class="text-base animate-bounce">🏃</span>
+      <span id="assist-banner-text" class="font-bold">تنبيه ويتر: توجد طاولات تحتاج متابعة ضيافة</span>
+    </div>
+    <button onclick="fetchAssistanceTasks(true)" class="px-2.5 py-1 bg-amber-500 text-slate-950 rounded-lg text-[10px] font-black hover:bg-amber-400 cursor-pointer">
+      عرض المهام
+    </button>
   </div>
 
   <!-- Zone Filter Bar -->
@@ -81,17 +94,67 @@
   <!-- Tables Grid Container -->
   <main class="w-full p-4 flex-1 flex flex-col min-h-0 overflow-y-auto">
     <div id="tables-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3.5">
-      <!-- Injected Dynamically -->
+      <div class="col-span-full py-16 text-center text-slate-500 text-xs">جاري تحميل خريطة الطاولات...</div>
     </div>
   </main>
 
-  <!-- Custom Table Modal -->
-  <div id="custom-table-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+  <!-- Open Table Modal -->
+  <div id="open-table-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
     <div class="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md p-5 shadow-2xl text-right">
       <div class="flex items-center justify-between border-b border-slate-800 pb-2.5 mb-3">
         <div class="flex items-center gap-2">
           <span class="text-xl">🪑</span>
-          <h3 id="table-modal-title" class="text-sm font-black text-amber-400">إعداد وتخصيص طاولة جديدة</h3>
+          <h3 id="open-modal-title" class="text-sm font-black text-amber-400">فتح وجلوس طاولة</h3>
+        </div>
+        <button onclick="closeOpenTableModal()" class="w-7 h-7 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center font-bold text-xs cursor-pointer">✕</button>
+      </div>
+
+      <form onsubmit="submitOpenTable(event)" class="space-y-3 text-xs">
+        <input type="hidden" id="open-table-number" />
+        <input type="hidden" id="open-table-version" />
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block font-bold text-slate-300 mb-1">رقم الطاولة:</label>
+            <input type="text" id="open-table-display" readonly class="w-full px-3 py-1.5 bg-slate-950 border border-slate-700 rounded-xl text-amber-400 font-mono font-black text-center" />
+          </div>
+          <div>
+            <label class="block font-bold text-slate-300 mb-1">عدد الضيوف (Pax):</label>
+            <input type="number" id="open-guest-count" value="2" min="1" max="50" required class="w-full px-3 py-1.5 bg-slate-950 border border-slate-700 rounded-xl text-white font-mono font-bold focus:border-amber-500 focus:outline-none" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-300 mb-1">اسم مخصص / ملاحظة داخلية (اختياري):</label>
+          <input type="text" id="open-custom-name" placeholder="مثال: ركن العائلات / VIP" class="w-full px-3 py-1.5 bg-slate-950 border border-slate-700 rounded-xl text-white focus:border-amber-500 focus:outline-none" />
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block font-bold text-slate-300 mb-1">اسم العميل (اختياري):</label>
+            <input type="text" id="open-customer-name" placeholder="أحمد محمد" class="w-full px-3 py-1.5 bg-slate-950 border border-slate-700 rounded-xl text-white focus:border-amber-500 focus:outline-none" />
+          </div>
+          <div>
+            <label class="block font-bold text-slate-300 mb-1">هاتف العميل (اختياري):</label>
+            <input type="tel" id="open-customer-phone" placeholder="01xxxxxxxxx" class="w-full px-3 py-1.5 bg-slate-950 border border-slate-700 rounded-xl text-white font-mono focus:border-amber-500 focus:outline-none" />
+          </div>
+        </div>
+
+        <div class="pt-3 border-t border-slate-800 flex items-center justify-end gap-2">
+          <button type="button" onclick="closeOpenTableModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-bold">إلغاء</button>
+          <button type="submit" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-black shadow-lg">تأكيد فتح الطاولة 🪑</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Custom Table Setup Modal -->
+  <div id="custom-table-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md p-5 shadow-2xl text-right">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-2.5 mb-3">
+        <div class="flex items-center gap-2">
+          <span class="text-xl">⚙️</span>
+          <h3 class="text-sm font-black text-amber-400">إعداد وتخصيص طاولة</h3>
         </div>
         <button onclick="closeCustomTableModal()" class="w-7 h-7 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center font-bold text-xs cursor-pointer">✕</button>
       </div>
@@ -103,14 +166,14 @@
             <input type="number" id="modal-table-number" required placeholder="مثال: 12" class="w-full px-3 py-1.5 bg-slate-950 border border-slate-700 rounded-xl text-white font-mono font-black focus:border-amber-500 focus:outline-none" />
           </div>
           <div>
-            <label class="block font-bold text-slate-300 mb-1">السعة (عدد المقاعد):</label>
+            <label class="block font-bold text-slate-300 mb-1">السعة (Pax):</label>
             <input type="number" id="modal-table-capacity" value="4" min="1" max="50" class="w-full px-3 py-1.5 bg-slate-950 border border-slate-700 rounded-xl text-white font-mono font-bold focus:border-amber-500 focus:outline-none" />
           </div>
         </div>
 
         <div>
           <label class="block font-bold text-slate-300 mb-1">اسم مخصص للطاولة (اختياري):</label>
-          <input type="text" id="modal-table-name" placeholder="مثال: VIP ركن العائلات / طاولة 12" class="w-full px-3 py-1.5 bg-slate-950 border border-slate-700 rounded-xl text-white focus:border-amber-500 focus:outline-none" />
+          <input type="text" id="modal-table-name" placeholder="مثال: VIP ركن العائلات" class="w-full px-3 py-1.5 bg-slate-950 border border-slate-700 rounded-xl text-white focus:border-amber-500 focus:outline-none" />
         </div>
 
         <div>
@@ -119,23 +182,16 @@
             <option value="INDOOR_1">صالة داخلية 1 (INDOOR_1)</option>
             <option value="INDOOR_2">صالة داخلية 2 (INDOOR_2)</option>
             <option value="INDOOR_3">صالة داخلية 3 (INDOOR_3)</option>
-            <option value="OUTDOOR_RIGHT">تراس خارجي يمين (OUTDOOR_RIGHT)</option>
-            <option value="OUTDOOR_LEFT">تراس خارجي يسار (OUTDOOR_LEFT)</option>
+            <option value="OUTDOOR_RIGHT">تراس يمين (OUTDOOR_RIGHT)</option>
+            <option value="OUTDOOR_LEFT">تراس يسار (OUTDOOR_LEFT)</option>
             <option value="OUTDOOR_GATE">البوابة والمدخل (OUTDOOR_GATE)</option>
           </select>
         </div>
 
-        <div class="border-t border-slate-800/80 pt-2">
-          <label class="block font-bold text-slate-300 mb-1">ربط عميل مخصص (CRM / ضيف):</label>
-          <div class="grid grid-cols-2 gap-2">
-            <input type="text" id="modal-cust-name" placeholder="اسم العميل (اختياري)" class="w-full px-3 py-1.5 bg-slate-950 border border-slate-700 rounded-xl text-white focus:border-amber-500 focus:outline-none" />
-            <input type="tel" id="modal-cust-phone" placeholder="هاتف العميل" class="w-full px-3 py-1.5 bg-slate-950 border border-slate-700 rounded-xl text-white focus:border-amber-500 focus:outline-none" />
-          </div>
+        <div class="pt-3 border-t border-slate-800 flex items-center justify-end gap-2">
+          <button type="button" onclick="closeCustomTableModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-bold">إلغاء</button>
+          <button type="submit" class="px-5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl font-black shadow-lg">حفظ الطاولة 💾</button>
         </div>
-
-        <button type="submit" class="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl text-xs shadow-lg cursor-pointer mt-2">
-          حفظ وتفعيل الطاولة 🪑
-        </button>
       </form>
     </div>
   </div>
@@ -143,6 +199,7 @@
   <script>
     let allTables = [];
     let currentZoneFilter = 'ALL';
+    let assistTasks = [];
     let ws = null;
 
     const ZONE_NAMES = {
@@ -173,6 +230,7 @@
           const data = JSON.parse(event.data);
           if (data.type === 'TABLE_LIFECYCLE_CHANGED' || data.type === 'TABLE_SEATED' || data.type === 'TABLE_VACATED' || data.type === 'TABLE_CHECK_REQUESTED' || data.type === 'TABLE_CREATED_OR_UPDATED' || data.type === 'NEW_ORDER') {
             fetchTables();
+            fetchAssistanceTasks();
           }
         } catch (e) {}
       };
@@ -182,13 +240,52 @@
     async function fetchTables() {
       try {
         const res = await fetch('/api/tables');
-        const data = await res.json();
-        if (res.ok && data.success && Array.isArray(data.tables)) {
-          allTables = data.tables;
+        const json = await res.json();
+        if (res.ok && json.success) {
+          allTables = json.tables || (json.data && json.data.tables) || [];
           renderTables();
-          updateStats();
+          updateStats(json.stats || (json.data && json.data.stats));
+        } else {
+          renderErrorState(json.error || 'فشل تحميل بيانات الطاولات');
+        }
+      } catch (e) {
+        renderErrorState('تعذر الاتصال بالخادم. اضغط إعادة المحاولة.');
+      }
+    }
+
+    async function fetchAssistanceTasks(showAlert = false) {
+      try {
+        const res = await fetch('/api/tables/assistance?threshold=30');
+        const json = await res.json();
+        if (res.ok && json.success) {
+          assistTasks = json.tasks || (json.data && json.data.tasks) || [];
+          const banner = document.getElementById('assist-banner');
+          const bannerText = document.getElementById('assist-banner-text');
+          if (assistTasks.length > 0) {
+            banner.classList.remove('hidden');
+            bannerText.textContent = `تنبيه خدمة: توجد ${assistTasks.length} طاولات تجاوزت 30 دقيقة بدون طلبات.`;
+            if (showAlert) {
+              showToast(`يوجد ${assistTasks.length} مهام مباشرة نشطة`, true);
+            }
+          } else {
+            banner.classList.add('hidden');
+          }
+          renderTables();
         }
       } catch (e) {}
+    }
+
+    function renderErrorState(errMsg) {
+      const grid = document.getElementById('tables-grid');
+      grid.innerHTML = `
+        <div class="col-span-full py-16 text-center">
+          <div class="text-3xl mb-2">⚠️</div>
+          <p class="text-xs text-rose-400 font-bold mb-3">${errMsg}</p>
+          <button onclick="fetchTables()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold cursor-pointer">
+            🔄 إعادة المحاولة
+          </button>
+        </div>
+      `;
     }
 
     function filterZone(zone) {
@@ -204,16 +301,18 @@
       renderTables();
     }
 
-    function updateStats() {
-      const total = allTables.length;
-      const vacant = allTables.filter(t => t.status === 'VACANT').length;
-      const check = allTables.filter(t => t.status === 'CHECK_REQUESTED').length;
-      const occupied = total - vacant;
+    function updateStats(serverStats) {
+      const total = serverStats ? serverStats.total : allTables.length;
+      const vacant = serverStats ? serverStats.available : allTables.filter(t => t.status === 'AVAILABLE').length;
+      const occupied = serverStats ? serverStats.occupied : allTables.filter(t => t.status === 'OCCUPIED' || t.status === 'ORDER_OPEN').length;
+      const check = serverStats ? serverStats.requested_check : allTables.filter(t => t.status === 'REQUESTED_CHECK').length;
+      const held = serverStats ? serverStats.held_for_reservation : allTables.filter(t => t.status === 'HELD_FOR_RESERVATION').length;
 
       document.getElementById('stat-total').textContent = total;
       document.getElementById('stat-vacant').textContent = vacant;
       document.getElementById('stat-occupied').textContent = occupied;
       document.getElementById('stat-check').textContent = check;
+      document.getElementById('stat-held').textContent = held;
 
       document.getElementById('count-zone-ALL').textContent = total;
       ['INDOOR_1', 'INDOOR_2', 'INDOOR_3', 'OUTDOOR_RIGHT', 'OUTDOOR_LEFT', 'OUTDOOR_GATE'].forEach(z => {
@@ -244,41 +343,38 @@
 
     function createTableCard(t) {
       const card = document.createElement('div');
-      const status = t.status || 'VACANT';
+      const status = t.status || 'AVAILABLE';
+      const hasAssistTask = assistTasks.some(at => at.table_number === t.table_number);
 
       let statusBg = 'bg-slate-900 border-slate-800';
       let statusBadge = 'bg-slate-800 text-emerald-400 border-emerald-500/30';
       let statusText = '🟢 متاحة';
 
-      if (status === 'OPENED' || status === 'OCCUPIED') {
+      if (status === 'OCCUPIED' || status === 'ORDER_OPEN') {
         statusBg = 'bg-slate-900 border-blue-500/40';
         statusBadge = 'bg-blue-500/20 text-blue-300 border-blue-500/30';
-        statusText = '🔵 تم الفتح';
-      } else if (status === 'WAITER_APPROACHED') {
-        statusBg = 'bg-slate-900 border-purple-500/40';
-        statusBadge = 'bg-purple-500/20 text-purple-300 border-purple-500/30';
-        statusText = '🟣 مباشرة ويتر 1';
-      } else if (status === 'ORDERED') {
-        statusBg = 'bg-slate-900 border-amber-500/40';
-        statusBadge = 'bg-amber-500/20 text-amber-300 border-amber-500/30';
-        statusText = '🟡 تم الطلب';
-      } else if (status === 'REAPPROACHED') {
-        statusBg = 'bg-slate-900 border-orange-500/40';
-        statusBadge = 'bg-orange-500/20 text-orange-300 border-orange-500/30';
-        statusText = '🟠 متابعة ثانية';
-      } else if (status === 'REORDERED') {
-        statusBg = 'bg-slate-900 border-indigo-500/40';
-        statusBadge = 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30';
-        statusText = '🟤 طلب إضافي';
-      } else if (status === 'CHECK_REQUESTED') {
+        statusText = status === 'ORDER_OPEN' ? '🟡 طلب مفتوح' : '🔵 مشغولة';
+      } else if (status === 'REQUESTED_CHECK') {
         statusBg = 'bg-rose-950/40 border-rose-500 animate-pulse';
         statusBadge = 'bg-rose-500/20 text-rose-300 border-rose-500/40';
         statusText = '🔴 طلب الشيك 🧾';
+      } else if (status === 'PAYMENT_PENDING' || status === 'PAID_PENDING_CLEAR') {
+        statusBg = 'bg-amber-950/40 border-amber-500/50';
+        statusBadge = 'bg-amber-500/20 text-amber-300 border-amber-500/30';
+        statusText = '🟠 مسددة / بانتظار التفريغ';
+      } else if (status === 'HELD_FOR_RESERVATION') {
+        statusBg = 'bg-purple-950/40 border-purple-500/50';
+        statusBadge = 'bg-purple-500/20 text-purple-300 border-purple-500/30';
+        statusText = '🟣 محجوزة';
+      } else if (status === 'CLEANING') {
+        statusBg = 'bg-teal-950/40 border-teal-500/50';
+        statusBadge = 'bg-teal-500/20 text-teal-300 border-teal-500/30';
+        statusText = '🧹 جاري التنظيف';
       }
 
       const zoneName = ZONE_NAMES[t.zone] || t.zone || 'صالة داخلية';
 
-      card.className = `${statusBg} border rounded-2xl p-3.5 flex flex-col justify-between shadow-lg text-right transition-none`;
+      card.className = `${statusBg} border rounded-2xl p-3.5 flex flex-col justify-between shadow-lg text-right transition-all`;
 
       card.innerHTML = `
         <div>
@@ -286,15 +382,16 @@
           <div class="flex items-center justify-between border-b border-slate-800 pb-1.5 mb-2">
             <div class="flex items-center gap-1.5">
               <span class="text-sm font-mono font-black text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">#${t.table_number}</span>
-              <span class="text-[10px] text-slate-400 font-bold">👥 ${t.capacity || 4} مقاعد</span>
+              <span class="text-[10px] text-slate-400 font-bold">👥 ${t.guest_count || t.capacity || 2} Pax</span>
             </div>
             <span class="text-[10px] font-bold px-2 py-0.5 rounded-full border ${statusBadge}">${statusText}</span>
           </div>
 
           <!-- Name & Zone -->
           <h3 class="text-sm font-black text-white truncate">${t.custom_name || `طاولة ${t.table_number}`}</h3>
-          <div class="flex items-center gap-1 mt-1 text-[10px] text-slate-400">
+          <div class="flex items-center justify-between mt-1 text-[10px] text-slate-400">
             <span>📍 ${zoneName}</span>
+            <span class="text-[9px] font-mono text-slate-500">v${t.version || 1}</span>
           </div>
 
           <!-- Customer badge -->
@@ -305,111 +402,174 @@
             </div>
           ` : ''}
 
+          <!-- Waiter Assistance Badge -->
+          ${hasAssistTask ? `
+            <div class="mt-2 p-1.5 bg-amber-500/20 border border-amber-500/40 rounded-xl text-[10px] text-amber-300 flex items-center justify-between animate-pulse">
+              <span>🏃 مباشرة ويتر مطلوبة</span>
+              <span class="font-mono font-bold">${t.idle_minutes || 30} دقيقة خمول</span>
+            </div>
+          ` : ''}
+
+          <!-- Order Summary if active -->
+          ${(t.active_items_count > 0 || t.active_total_amount > 0) ? `
+            <div class="mt-2 p-1.5 bg-slate-950/80 rounded-xl border border-slate-800 text-[10px] flex items-center justify-between font-mono">
+              <span class="text-slate-400 font-bold">${t.active_items_count} أصناف</span>
+              <span class="text-emerald-400 font-black">${t.active_total_amount.toFixed(2)} ج.م</span>
+            </div>
+          ` : ''}
+
           <!-- Lifecycle Times -->
           <div class="mt-2 text-[9px] text-slate-500 space-y-0.5 font-mono">
-            ${t.opened_at ? `<div>فتح: ${new Date(t.opened_at).toLocaleTimeString('ar-EG')}</div>` : ''}
-            ${t.waiter_approached_at ? `<div>مباشرة: ${new Date(t.waiter_approached_at).toLocaleTimeString('ar-EG')}</div>` : ''}
-            ${t.reapproached_at ? `<div>متابعة 2: ${new Date(t.reapproached_at).toLocaleTimeString('ar-EG')}</div>` : ''}
-            ${t.check_requested_at ? `<div class="text-rose-400 font-bold">طلب شيك: ${new Date(t.check_requested_at).toLocaleTimeString('ar-EG')}</div>` : ''}
+            ${t.seated_minutes ? `<div>وقت الجلوس: ${t.seated_minutes} دقيقة</div>` : ''}
+            ${t.check_requested_minutes ? `<div class="text-rose-400 font-bold">طلب شيك منذ: ${t.check_requested_minutes} دقيقة</div>` : ''}
           </div>
         </div>
 
         <!-- Action Buttons -->
         <div class="mt-3 pt-2 border-t border-slate-800 space-y-1">
-          ${status === 'VACANT' ? `
-            <button onclick="setTableLifecycle(${t.table_number}, 'OPENED')" class="w-full py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-[11px] cursor-pointer shadow">
+          ${status === 'AVAILABLE' || status === 'CLEANING' ? `
+            <button onclick="openSeatModal(${t.table_number}, ${t.version || 1})" class="w-full py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-[11px] cursor-pointer shadow">
               فتح وجلوس عميل 🪑
             </button>
           ` : ''}
 
-          ${status === 'OPENED' ? `
-            <button onclick="setTableLifecycle(${t.table_number}, 'WAITER_APPROACHED')" class="w-full py-1.5 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl text-[11px] cursor-pointer shadow">
-              مباشرة ويتر الأولى 🏃
-            </button>
-          ` : ''}
-
-          ${status === 'WAITER_APPROACHED' || status === 'OPENED' || status === 'OCCUPIED' ? `
+          ${status === 'OCCUPIED' || status === 'ORDER_OPEN' ? `
             <button onclick="goToPOS(${t.table_number})" class="w-full py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl text-[11px] cursor-pointer shadow">
               أخذ الطلب في POS 💳
             </button>
+            <div class="grid grid-cols-2 gap-1 mt-1">
+              <button onclick="requestCheck(${t.table_number}, ${t.version || 1})" class="py-1 bg-rose-950 hover:bg-rose-900 text-rose-300 border border-rose-500/30 rounded-lg text-[10px] font-bold cursor-pointer">
+                طلب شيك 🧾
+              </button>
+              <button onclick="revertOpen(${t.table_number})" class="py-1 bg-slate-800 hover:bg-slate-700 text-slate-400 rounded-lg text-[10px] font-bold cursor-pointer">
+                إلغاء الفتح ↩️
+              </button>
+            </div>
           ` : ''}
 
-          ${status === 'ORDERED' ? `
-            <button onclick="setTableLifecycle(${t.table_number}, 'REAPPROACHED')" class="w-full py-1.5 bg-orange-600 hover:bg-orange-500 text-white font-bold rounded-xl text-[11px] cursor-pointer shadow">
-              إعادة مباشرة ويتر 🏃
-            </button>
-          ` : ''}
-
-          ${status === 'REAPPROACHED' ? `
-            <button onclick="goToPOS(${t.table_number})" class="w-full py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-[11px] cursor-pointer shadow">
-              طلب إضافي في POS ➕
-            </button>
-          ` : ''}
-
-          ${status !== 'VACANT' && status !== 'CHECK_REQUESTED' ? `
-            <button onclick="setTableLifecycle(${t.table_number}, 'CHECK_REQUESTED')" class="w-full py-1 bg-rose-950/80 hover:bg-rose-900/90 text-rose-300 border border-rose-500/30 rounded-lg text-[10px] font-bold cursor-pointer">
-              طلب الشيك / الحساب 🧾
-            </button>
-          ` : ''}
-
-          ${status === 'CHECK_REQUESTED' ? `
+          ${status === 'REQUESTED_CHECK' ? `
             <button onclick="goToPOS(${t.table_number})" class="w-full py-1.5 bg-rose-600 hover:bg-rose-500 text-white font-black rounded-xl text-[11px] cursor-pointer shadow">
-              محاسبة وإنهاء الشيك في POS 💳
+              تحصيل الحساب في POS 💰
             </button>
           ` : ''}
 
-          ${status !== 'VACANT' ? `
-            <button onclick="vacateTableAction(${t.table_number})" class="w-full py-1 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-lg text-[10px] font-bold cursor-pointer">
-              إخلاء وتفريغ الطاولة 🧹
+          ${status === 'PAID_PENDING_CLEAR' ? `
+            <button onclick="clearTable(${t.table_number}, ${t.version || 1})" class="w-full py-1.5 bg-teal-600 hover:bg-teal-500 text-white font-black rounded-xl text-[11px] cursor-pointer shadow">
+              تفريغ وتنظيف الطاولة 🧹
             </button>
           ` : ''}
         </div>
       `;
+
       return card;
     }
 
-    async function setTableLifecycle(tableNumber, newStatus) {
-      const user = JSON.parse(localStorage.getItem('currentUser') || localStorage.getItem('user') || '{}');
+    function openSeatModal(tableNumber, version) {
+      document.getElementById('open-table-number').value = tableNumber;
+      document.getElementById('open-table-version').value = version;
+      document.getElementById('open-table-display').value = `طاولة #${tableNumber}`;
+      document.getElementById('open-table-modal').classList.remove('hidden');
+    }
+
+    function closeOpenTableModal() {
+      document.getElementById('open-table-modal').classList.add('hidden');
+    }
+
+    async function submitOpenTable(event) {
+      event.preventDefault();
+      const tableNumber = document.getElementById('open-table-number').value;
+      const expectedVersion = document.getElementById('open-table-version').value;
+      const guestCount = document.getElementById('open-guest-count').value;
+      const customName = document.getElementById('open-custom-name').value;
+      const customerName = document.getElementById('open-customer-name').value;
+      const customerPhone = document.getElementById('open-customer-phone').value;
+
       try {
-        const res = await fetch(`/api/tables/${tableNumber}/lifecycle`, {
-          method: 'PUT',
+        const res = await fetch('/api/tables/open', {
+          method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            status: newStatus,
-            user_id: user.id || null,
-            waiter_id: user.name || null
+            table_number: tableNumber,
+            expected_version: expectedVersion,
+            guest_count: guestCount,
+            custom_name: customName || null,
+            customer_name: customerName || null,
+            customer_phone: customerPhone || null
           })
         });
-        const data = await res.json();
-        if (res.ok && data.success) {
-          showToast(`تم تحديث حالة الطاولة #${tableNumber} إلى ${newStatus}`, false);
+        const json = await res.json();
+        if (res.ok && json.success) {
+          closeOpenTableModal();
+          showToast(`تم فتح طاولة #${tableNumber} بنجاح`, false);
           fetchTables();
         } else {
-          showToast(data.error || 'خطأ في تحديث حالة الطاولة', true);
+          showToast(json.error || 'فشل فتح الطاولة', true);
         }
       } catch (e) {
-        showToast('خطأ بالاتصال بالسيرفر', true);
+        showToast('خطأ في الاتصال بالخادم', true);
       }
     }
 
-    async function vacateTableAction(tableNumber) {
-      if (!confirm(`هل أنت متأكد من تفريغ وإخلاء طاولة #${tableNumber}؟`)) return;
+    async function requestCheck(tableNumber, version) {
       try {
-        const res = await fetch('/api/tables/vacate', {
+        const res = await fetch(`/api/tables/${tableNumber}/state`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'REQUESTED_CHECK', expected_version: version })
+        });
+        const json = await res.json();
+        if (res.ok && json.success) {
+          showToast(`تم تسجيل طلب الشيك لطاولة #${tableNumber}`, false);
+          fetchTables();
+        } else {
+          showToast(json.error || 'تعذر تسجيل طلب الشيك', true);
+        }
+      } catch (e) {
+        showToast('خطأ في الاتصال بالخادم', true);
+      }
+    }
+
+    async function revertOpen(tableNumber) {
+      if (!confirm(`هل أنت متأكد من إلغاء فتح طاولة #${tableNumber}؟`)) return;
+      try {
+        const res = await fetch(`/api/tables/${tableNumber}/revert`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ table_number: tableNumber })
+          body: JSON.stringify({ reason: 'إلغاء بواسطة المستخدم' })
         });
-        const data = await res.json();
-        if (res.ok && data.success) {
-          showToast(`تم إخلاء طاولة #${tableNumber} بنجاح`, false);
+        const json = await res.json();
+        if (res.ok && json.success) {
+          showToast(`تم إلغاء فتح طاولة #${tableNumber} بنجاح`, false);
           fetchTables();
+        } else {
+          showToast(json.error || 'تعذر إلغاء الفتح', true);
         }
-      } catch (e) {}
+      } catch (e) {
+        showToast('خطأ في الاتصال بالخادم', true);
+      }
+    }
+
+    async function clearTable(tableNumber, version) {
+      try {
+        const res = await fetch(`/api/tables/${tableNumber}/state`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'AVAILABLE', expected_version: version })
+        });
+        const json = await res.json();
+        if (res.ok && json.success) {
+          showToast(`تم تفريغ وإتاحة طاولة #${tableNumber}`, false);
+          fetchTables();
+        } else {
+          showToast(json.error || 'تعذر تفريغ الطاولة', true);
+        }
+      } catch (e) {
+        showToast('خطأ في الاتصال بالخادم', true);
+      }
     }
 
     function goToPOS(tableNumber) {
-      window.location.href = `/pos.html?table=${tableNumber}`;
+      location.href = `/pos.html?table=${tableNumber}`;
     }
 
     function openCustomTableModal() {
@@ -420,44 +580,43 @@
       document.getElementById('custom-table-modal').classList.add('hidden');
     }
 
-    async function submitCustomTable(e) {
-      e.preventDefault();
-      const tableNumber = document.getElementById('modal-table-number').value;
-      const customName = document.getElementById('modal-table-name').value;
+    async function submitCustomTable(event) {
+      event.preventDefault();
+      const num = document.getElementById('modal-table-number').value;
+      const cap = document.getElementById('modal-table-capacity').value;
+      const name = document.getElementById('modal-table-name').value;
       const zone = document.getElementById('modal-table-zone').value;
-      const capacity = document.getElementById('modal-table-capacity').value;
-      const customerName = document.getElementById('modal-cust-name').value;
-      const customerPhone = document.getElementById('modal-cust-phone').value;
 
       try {
         const res = await fetch('/api/tables', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            table_number: parseInt(tableNumber, 10),
-            custom_name: customName || `طاولة ${tableNumber}`,
-            zone: zone,
-            capacity: parseInt(capacity, 10) || 4,
-            customer_name: customerName || null,
-            customer_phone: customerPhone || null
+            table_number: num,
+            capacity: cap,
+            custom_name: name,
+            zone: zone
           })
         });
-
-        const data = await res.json();
-        if (res.ok && data.success) {
-          showToast(`تم إعداد طاولة #${tableNumber} بنجاح 🪑`, false);
+        const json = await res.json();
+        if (res.ok && json.success) {
           closeCustomTableModal();
+          showToast(`تم حفظ وتخصيص طاولة #${num}`, false);
           fetchTables();
         } else {
-          showToast(data.error || 'خطأ في إعداد الطاولة', true);
+          showToast(json.error || 'فشل حفظ الطاولة', true);
         }
       } catch (e) {
-        showToast('خطأ بالاتصال بالسيرفر', true);
+        showToast('خطأ في الاتصال بالخادم', true);
       }
     }
 
-    fetchTables();
-    connectWebSocket();
+    document.addEventListener('DOMContentLoaded', () => {
+      fetchTables();
+      fetchAssistanceTasks();
+      connectWebSocket();
+      setInterval(fetchAssistanceTasks, 60000); // Check idle assist tasks every minute
+    });
   </script>
 </body>
 </html>

@@ -58,7 +58,7 @@ const routeRegistry = [
   { method: 'ALL', pathRegex: /^\/api\/users/, permission: 'shifts:manage' },
   
   // CRM / Hospitality / Quality / Audit
-  { method: 'ALL', pathRegex: /^\/api\/crm/, permission: 'crm:read' },
+  { method: 'ALL', pathRegex: /^\/api\/(crm|customers)/, permission: 'crm:read' },
   { method: 'ALL', pathRegex: /^\/api\/reservations/, permission: 'reservations:read' },
   { method: 'ALL', pathRegex: /^\/api\/quality/, permission: 'qa:read' },
   { method: 'ALL', pathRegex: /^\/api\/audit/, permission: 'system:settings' },
