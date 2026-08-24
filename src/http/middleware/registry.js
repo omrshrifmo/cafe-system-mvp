@@ -64,10 +64,11 @@ const routeRegistry = [
   { method: 'ALL', pathRegex: /^\/api\/quality/, permission: 'qa:read' },
   { method: 'ALL', pathRegex: /^\/api\/audit/, permission: 'system:settings' },
   
-  // Realtime & Sync
+  // Realtime & Sync & Stations
   { method: 'GET', pathRegex: /^\/api\/realtime\/health$/, permission: 'public' },
   { method: 'ALL', pathRegex: /^\/api\/realtime/, permission: 'authenticated' },
   { method: 'ALL', pathRegex: /^\/api\/sync/, permission: 'authenticated' },
+  { method: 'ALL', pathRegex: /^\/api\/(kds|runner|floor)/, permission: 'authenticated' },
   
   // Settings & Admin & Hardware
   { method: 'ALL', pathRegex: /^\/api\/config/, permission: 'system:settings' },

@@ -6,6 +6,9 @@
   <title>شاشة البارستا - كافيه مزاج</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="/nav.js"></script>
+  <script src="/modules/db.js"></script>
+  <script src="/modules/realtime.js"></script>
+  <script src="/modules/sync.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
@@ -311,41 +314,41 @@
       } catch (e) {}
     }
 
+    let rtClient = null;
+
     function connectWebSocket() {
-      const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-      ws = new WebSocket(`${protocol}//${location.host}`);
+      rtClient = new RealtimeClient({
+        venueId: 'V_DEFAULT',
+        stationId: 'BARISTA'
+      });
 
-      ws.onopen = () => {
-        document.getElementById('ws-status-text').textContent = 'متصل (Realtime)';
-      };
+      rtClient.onStateChange((state) => {
+        rtClient.updateHealthBadge('ws-status');
+      });
 
-      ws.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          if ((data.type === 'NEW_ORDER' || data.type === 'KDS_STATUS_UPDATED' || data.type === 'CANCEL_REQUESTED' || data.type === 'CANCEL_RESOLVED') && data.order && data.order.category === STATION_DEPARTMENT) {
-            playBeep();
-            const ord = data.order;
-            const status = (ord.kds_status || ord.status || 'PENDING').toUpperCase();
-            // Automatically remove DELIVERED / COMPLETED from live lanes!
-            if (status === 'DELIVERED' || status === 'COMPLETED') {
-              ordersMap.delete(ord.id);
-            } else {
-              ordersMap.set(ord.id, ord);
-            }
-            renderAllLanes();
-          } else if (data.type === 'ORDER_COMPLETED' && data.orderId) {
-            ordersMap.delete(data.orderId);
-            renderAllLanes();
-          } else if (data.type === 'MATERIAL_TRANSFERRED') {
-            showToast(`🔄 تحويل خام: ${data.transfer.item_name} من ${data.transfer.from_department} إلى ${data.transfer.to_department}`, false);
-            fetchLocalInventory();
-          } else {
-            fetchPendingOrders();
-          }
-        } catch (err) {}
-      };
+      rtClient.on('KDS_ORDER_CREATED', (payload) => {
+        playBeep();
+        fetchPendingOrders();
+      });
 
-      ws.onclose = () => setTimeout(connectWebSocket, 3000);
+      rtClient.on('KDS_LINE_UPDATED', (payload) => {
+        playBeep();
+        fetchPendingOrders();
+      });
+
+      rtClient.on('MATERIAL_TRANSFERRED', (data) => {
+        showToast(`🔄 تحويل خام: ${data.transfer ? data.transfer.item_name : 'خامة'}`, false);
+        fetchLocalInventory();
+      });
+
+      rtClient.on('*', (msg) => {
+        if (msg.topic === 'NEW_ORDER' || msg.topic === 'KDS_STATUS_UPDATED') {
+          playBeep();
+          fetchPendingOrders();
+        }
+      });
+
+      rtClient.connect();
     }
 
     async function fetchPendingOrders() {

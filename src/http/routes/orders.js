@@ -122,4 +122,107 @@ router.post('/public/order', async (req, res, next) => {
   }
 });
 
+// ==========================================
+// KDS Station Endpoints
+// ==========================================
+const { getKdsOrdersByStation, updateKdsLineState } = require('../../domain/kds/kdsService');
+const { getRunnerTasks, claimTask, completeTask } = require('../../domain/floor/runnerService');
+
+// Get active KDS orders for a station
+router.get('/kds/orders', requireAuth, async (req, res, next) => {
+  try {
+    const station = (req.query.station || req.user.role || 'KITCHEN').toUpperCase();
+    const venueId = req.query.venueId || 'V_DEFAULT';
+    const orders = await getKdsOrdersByStation(venueId, station);
+    res.json({
+      success: true,
+      station,
+      orders
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Update KDS Line Status
+router.post('/kds/lines/:id/status', requireAuth, async (req, res, next) => {
+  try {
+    const { status, state, expected_version } = req.body;
+    const targetState = status || state;
+    const result = await updateKdsLineState(
+      req.params.id,
+      targetState,
+      req.user ? req.user.id : null,
+      expected_version,
+      req.user ? req.user.role : null
+    );
+    res.json({
+      success: true,
+      ...result
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.put('/kds/lines/:id/status', requireAuth, async (req, res, next) => {
+  req.url = `/kds/lines/${req.params.id}/status`;
+  return router.handle(req, res, next);
+});
+
+// ==========================================
+// Runner / Waiter Tasks Endpoints
+// ==========================================
+
+// Get active runner tasks
+router.get('/runner/tasks', requireAuth, async (req, res, next) => {
+  try {
+    const venueId = req.query.venueId || 'V_DEFAULT';
+    const status = req.query.status || null;
+    const tasks = await getRunnerTasks(venueId, status);
+    res.json({
+      success: true,
+      tasks
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Claim runner task
+router.post('/runner/tasks/:id/claim', requireAuth, async (req, res, next) => {
+  try {
+    const { expected_version } = req.body;
+    const result = await claimTask(
+      req.params.id,
+      req.user ? req.user.id : '109',
+      expected_version
+    );
+    res.json({
+      success: true,
+      ...result
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Complete runner task
+router.post('/runner/tasks/:id/complete', requireAuth, async (req, res, next) => {
+  try {
+    const { expected_version } = req.body;
+    const result = await completeTask(
+      req.params.id,
+      req.user ? req.user.id : '109',
+      expected_version
+    );
+    res.json({
+      success: true,
+      ...result
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 module.exports = router;

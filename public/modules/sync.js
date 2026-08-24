@@ -8,15 +8,24 @@ async function syncPendingOfflineCommands() {
   isSyncing = true;
 
   try {
-    const pending = await window.OfflineDB.getPendingOfflineCommands();
+    const pending = await window.OfflineDB.getPendingCommands();
     if (pending.length === 0) {
       isSyncing = false;
       return;
     }
 
     console.log(`Syncing ${pending.length} offline command(s) with server...`);
+
+    // Mark as SYNCING locally
+    for (const p of pending) {
+      await window.OfflineDB.updateCommandStatus(p.client_command_id, {
+        status: 'SYNCING',
+        attempts: (p.attempts || 0) + 1
+      });
+    }
+
     const commandsPayload = pending.map(p => ({
-      client_command_id: p.id,
+      client_command_id: p.client_command_id,
       idempotency_key: p.idempotency_key,
       action: p.action,
       payload: p.payload
@@ -33,12 +42,23 @@ async function syncPendingOfflineCommands() {
       const data = await response.json();
       if (data.results) {
         for (const res of data.results) {
-          if (res.status === 'APPLIED' || res.status === 'DUPLICATE') {
-            await window.OfflineDB.markOfflineCommandCompleted(res.client_command_id);
-          }
+          await window.OfflineDB.updateCommandStatus(res.client_command_id, {
+            status: res.status, // ACCEPTED, DUPLICATE, REJECTED, CONFLICT
+            result: res.result || null,
+            last_error: res.error || null
+          });
         }
       }
       console.log('✅ Offline synchronization complete.');
+      window.dispatchEvent(new CustomEvent('offline-sync-completed', { detail: data }));
+    } else {
+      // Server returned error: revert to QUEUED with backoff
+      for (const p of pending) {
+        await window.OfflineDB.updateCommandStatus(p.client_command_id, {
+          status: 'QUEUED',
+          last_error: `HTTP Error: ${response.status}`
+        });
+      }
     }
   } catch (err) {
     console.warn('Sync attempt failed:', err.message);
