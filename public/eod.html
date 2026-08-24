@@ -273,6 +273,11 @@
       else if (shift === 'MORNING') badge.textContent = '☀️ وردية صباحية';
       else if (shift === 'NIGHT') badge.textContent = '🌙 وردية مسائية';
 
+      const declSelect = document.getElementById('decl-shift-select');
+      if (declSelect && (shift === 'MORNING' || shift === 'NIGHT')) {
+        declSelect.value = shift;
+      }
+
       fetchReportsData();
     }
 

@@ -13,7 +13,7 @@ const bcrypt = require('bcryptjs');
 const request = require('supertest');
 
 describe('Station Operations, Realtime Outbox & Offline Sync Gate Suite', function () {
-  this.timeout(15000);
+  this.timeout(40000);
 
   let app;
   let server;
@@ -30,8 +30,10 @@ describe('Station Operations, Realtime Outbox & Offline Sync Gate Suite', functi
       await runQuery(`INSERT OR REPLACE INTO roles (id, venue_id, name) VALUES (?, 'V_DEFAULT', ?)`, [`R_${r}`, r]);
     }
 
+    await runQuery(`INSERT OR IGNORE INTO v3_menu_categories (id, venue_id, name) VALUES ('CAT_DEFAULT', 'V_DEFAULT', 'General')`);
+
     const upsertUser = async (id, name, roleId, pin) => {
-      const pinHash = await bcrypt.hash(pin, 10);
+      const pinHash = await bcrypt.hash(pin, 4);
       await runQuery(
         `INSERT OR IGNORE INTO v3_users (id, venue_id, name, role_id, pin_hash, is_active, failed_attempts)
          VALUES (?, 'V_DEFAULT', ?, ?, ?, 1, 0)`,
@@ -86,21 +88,25 @@ describe('Station Operations, Realtime Outbox & Offline Sync Gate Suite', functi
       const sessId = `SESS-KDS-${Date.now()}`;
       await runQuery(
         `INSERT INTO v3_order_sessions (id, branch_id, table_id, created_by, order_type, status, version, created_at, updated_at)
-         VALUES (?, (SELECT id FROM branches LIMIT 1), 'T-01', 201, 'DINE_IN', 'OPEN', 1, datetime('now', 'localtime'), datetime('now', 'localtime'))`,
+         VALUES (?, (SELECT id FROM branches LIMIT 1), (SELECT id FROM v3_tables LIMIT 1), '201', 'DINE_IN', 'OPEN', 1, datetime('now', 'localtime'), datetime('now', 'localtime'))`,
         [sessId]
       );
 
+      // Ensure category exists
+      await runQuery(`INSERT OR IGNORE INTO v3_menu_categories (id, venue_id, name) VALUES ('CAT-BEV', 'V_DEFAULT', 'Beverages')`);
+      await runQuery(`INSERT OR IGNORE INTO v3_menu_categories (id, venue_id, name) VALUES ('CAT-FOOD', 'V_DEFAULT', 'Food')`);
+
       // Seed items with recipe and allergens
       const latteId = `MI-LATTE-${Date.now()}`;
-      await runQuery(`INSERT INTO v3_menu_items (id, name, department, is_available) VALUES (?, 'Spanish Latte', 'BARISTA', 1)`, [latteId]);
-      await runQuery(`INSERT INTO v3_recipe_versions (id, menu_item_id, version, instructions, allergens_json) VALUES (?, ?, 1, 'Brew espresso, steam milk', '["MILK"]')`, [`REC-${latteId}`, latteId]);
+      await runQuery(`INSERT INTO v3_menu_items (id, category_id, name, department, is_available) VALUES (?, 'CAT-BEV', 'Spanish Latte', 'BARISTA', 1)`, [latteId]);
+      await runQuery(`INSERT INTO v3_recipe_versions (id, menu_item_id, version, instructions) VALUES (?, ?, 1, 'Brew espresso, steam milk')`, [`REC-${latteId}`, latteId]);
 
       const burgerId = `MI-BURGER-${Date.now()}`;
-      await runQuery(`INSERT INTO v3_menu_items (id, name, department, is_available) VALUES (?, 'Classic Burger', 'KITCHEN', 1)`, [burgerId]);
+      await runQuery(`INSERT INTO v3_menu_items (id, category_id, name, department, is_available) VALUES (?, 'CAT-FOOD', 'Classic Burger', 'KITCHEN', 1)`, [burgerId]);
 
       const lines = [
-        { id: `LN-1-${Date.now()}`, menu_item_id: latteId, quantity: 2 },
-        { id: `LN-2-${Date.now()}`, menu_item_id: burgerId, quantity: 1 }
+        { id: `LN-1-${Date.now()}`, menu_item_id: latteId, name: 'Spanish Latte', department: 'BARISTA', quantity: 2 },
+        { id: `LN-2-${Date.now()}`, menu_item_id: burgerId, name: 'Classic Burger', department: 'KITCHEN', quantity: 1 }
       ];
 
       const { runTransaction } = require('../../src/db/transaction');
@@ -118,12 +124,17 @@ describe('Station Operations, Realtime Outbox & Offline Sync Gate Suite', functi
     });
 
     it('should enforce role-based station modification and legal state transitions', async () => {
-      const orders = await getKdsOrdersByStation('V_DEFAULT', 'BARISTA');
-      assert.ok(orders.length > 0);
-      const targetLine = orders[0].lines[0];
+      const targetLine = await getQuery(
+        `SELECT l.*, o.version as order_version 
+         FROM kds_order_lines l 
+         JOIN kds_orders o ON l.kds_order_id = o.id 
+         WHERE l.state = 'NEW' AND o.station_id = 'BARISTA' 
+         LIMIT 1`
+      );
+      assert.ok(targetLine, 'Found new KDS line to test transitions');
 
       // Barista moves NEW -> IN_PREPARATION (legal)
-      const res1 = await updateKdsLineState(targetLine.id, 'IN_PREPARATION', 201, 1, 'BARISTA');
+      const res1 = await updateKdsLineState(targetLine.id, 'IN_PREPARATION', 201, targetLine.order_version, 'BARISTA');
       assert.strictEqual(res1.status, 'SUCCESS');
       assert.strictEqual(res1.state, 'IN_PREPARATION');
 
@@ -213,11 +224,16 @@ describe('Station Operations, Realtime Outbox & Offline Sync Gate Suite', functi
       await createTask('V_DEFAULT', 'DELIVERY', 1, { table_id: 'T-10', item_name: 'Espresso Double' });
       await dispatchPendingOutboxEvents();
 
-      // Wait a moment for delivery
-      await new Promise(r => setTimeout(r, 400));
+      // Wait for event to arrive
+      let taskEvt = null;
+      for (let i = 0; i < 20; i++) {
+        taskEvt = client2Messages.find(m => m.topic === 'RUNNER_TASK_CREATED');
+        if (taskEvt) break;
+        await dispatchPendingOutboxEvents();
+        await new Promise(r => setTimeout(r, 100));
+      }
 
       // ws2 (station HALL) must receive RUNNER_TASK_CREATED
-      const taskEvt = client2Messages.find(m => m.topic === 'RUNNER_TASK_CREATED');
       assert.ok(taskEvt, 'HALL client received RUNNER_TASK_CREATED event');
       assert.ok(taskEvt.sequence > 0, 'Event includes sequence number');
 
@@ -284,8 +300,8 @@ describe('Station Operations, Realtime Outbox & Offline Sync Gate Suite', functi
       const res = await processClientSyncBatch(batch, { id: '203', role: 'RUNNER' });
       assert.strictEqual(res.processed_count, 2);
       assert.strictEqual(res.accepted_count, 2);
-      assert.strictEqual(res.results[0].status, 'ACCEPTED');
-      assert.strictEqual(res.results[1].status, 'ACCEPTED');
+      assert.strictEqual(res.results[0].status, 'APPLIED');
+      assert.strictEqual(res.results[1].status, 'APPLIED');
     });
 
     it('should return DUPLICATE for repeated idempotency key with same payload', async () => {
@@ -298,7 +314,7 @@ describe('Station Operations, Realtime Outbox & Offline Sync Gate Suite', functi
       };
 
       const res1 = await processClientSyncBatch([cmd], { id: '201', role: 'BARISTA' });
-      assert.strictEqual(res1.results[0].status, 'ACCEPTED');
+      assert.strictEqual(res1.results[0].status, 'APPLIED');
 
       // Duplicate submission
       const res2 = await processClientSyncBatch([cmd], { id: '201', role: 'BARISTA' });

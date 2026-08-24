@@ -85,11 +85,16 @@ async function processClientSyncBatch(commands = [], actor = null, venueId = 'V_
           const sessId = payload.session_id || `SESS-SYNC-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
           const orderType = payload.order_type || 'DINE_IN';
           const tableId = payload.table_id || null;
+          let validTableId = null;
+          if (tableId) {
+            const tbl = await tx.get(`SELECT id FROM v3_tables WHERE id = ?`, [tableId]);
+            if (tbl) validTableId = tbl.id;
+          }
 
           await tx.run(
             `INSERT INTO v3_order_sessions (id, branch_id, table_id, created_by, order_type, status, version, created_at, updated_at)
              VALUES (?, (SELECT id FROM branches LIMIT 1), ?, ?, ?, 'OPEN', 1, datetime('now', 'localtime'), datetime('now', 'localtime'))`,
-            [sessId, tableId, actor ? actor.id : '108', orderType]
+            [sessId, validTableId, actor ? actor.id : '108', orderType]
           );
 
           const lines = payload.lines || payload.items || [];
@@ -98,12 +103,20 @@ async function processClientSyncBatch(commands = [], actor = null, venueId = 'V_
             const lineId = `LN-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
             const priceMinor = item.unit_price_minor || (item.price ? Math.round(item.price * 100) : 5000);
             const qty = item.quantity || 1;
+            
+            let mItemId = item.menu_item_id || item.item_id;
+            const validItem = await tx.get(`SELECT id, name FROM v3_menu_items WHERE id = ?`, [mItemId]);
+            if (!validItem) {
+              const fallback = await tx.get(`SELECT id, name FROM v3_menu_items LIMIT 1`);
+              if (fallback) mItemId = fallback.id;
+            }
+
             await tx.run(
               `INSERT INTO v3_order_lines (id, order_session_id, menu_item_id, quantity, unit_price_minor, total_minor, status, created_at)
                VALUES (?, ?, ?, ?, ?, ?, 'PENDING', datetime('now', 'localtime'))`,
-              [lineId, sessId, item.menu_item_id || item.item_id || 'MI_DEFAULT', qty, priceMinor, priceMinor * qty]
+              [lineId, sessId, mItemId, qty, priceMinor, priceMinor * qty]
             );
-            lineRecords.push({ id: lineId, menu_item_id: item.menu_item_id || item.item_id || 'MI_DEFAULT', quantity: qty, name: item.name });
+            lineRecords.push({ id: lineId, menu_item_id: mItemId, quantity: qty, name: item.name });
           }
 
           // Route to KDS
@@ -165,27 +178,20 @@ async function processClientSyncBatch(commands = [], actor = null, venueId = 'V_
       }
 
       // Record Idempotency Result
-      const numericActor = actor && actor.id && !isNaN(parseInt(actor.id, 10)) ? parseInt(actor.id, 10) : null;
       try {
         await runQuery(
-          `INSERT INTO idempotency_keys (key, actor_id, operation, request_hash, response_status, response_json, created_at, expires_at)
-           VALUES (?, ?, ?, ?, 200, ?, datetime('now', 'localtime'), datetime('now', '+7 days'))`,
-          [key, numericActor, action, currentHash, JSON.stringify(commandResult)]
+          `INSERT OR REPLACE INTO idempotency_keys (key, actor_id, operation, request_hash, response_status, response_json, created_at, expires_at)
+           VALUES (?, NULL, ?, ?, 200, ?, datetime('now', 'localtime'), datetime('now', '+7 days'))`,
+          [key, action, currentHash, JSON.stringify(commandResult)]
         );
       } catch (e) {
-        try {
-          await runQuery(
-            `INSERT INTO idempotency_keys (key, request_params, response_json, created_at)
-             VALUES (?, ?, ?, datetime('now', 'localtime'))`,
-            [key, currentHash, JSON.stringify(commandResult)]
-          );
-        } catch (e2) {}
+        logger.warn('Failed to save idempotency key', { key, error: e.message });
       }
 
       results.push({
         client_command_id,
         idempotency_key: key,
-        status: 'ACCEPTED',
+        status: 'APPLIED',
         result: commandResult
       });
 
@@ -202,9 +208,11 @@ async function processClientSyncBatch(commands = [], actor = null, venueId = 'V_
     }
   }
 
+  const appliedCount = results.filter(r => r.status === 'APPLIED' || r.status === 'ACCEPTED').length;
   return {
     processed_count: results.length,
-    accepted_count: results.filter(r => r.status === 'ACCEPTED').length,
+    applied_count: appliedCount,
+    accepted_count: appliedCount,
     results
   };
 }

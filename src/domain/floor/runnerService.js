@@ -35,7 +35,7 @@ async function createTask(venueId, taskType, priority = 0, contextJson = '{}', e
     };
 
     await tx.run(
-      `INSERT INTO outbox_events (id, topic, aggregate_type, aggregate_id, payload_json, sequence, aggregate_version, schema_version, venue_id, station_id, status) 
+      `INSERT INTO outbox_events (event_id, topic, aggregate_type, aggregate_id, payload_json, sequence, aggregate_version, schema_version, venue_id, station_id, status) 
        VALUES (?, 'RUNNER_TASK_CREATED', 'RUNNER_TASK', ?, ?, ?, 1, 'v1', ?, 'HALL', 'PENDING')`,
       [eventId, taskId, JSON.stringify(payload), nextSeq, venueId]
     );
@@ -56,7 +56,7 @@ async function claimTask(taskId, runnerId, expectedVersion = 1) {
   return runTransaction(async (tx) => {
     const task = await tx.get(`SELECT * FROM runner_tasks WHERE id = ?`, [taskId]);
     if (!task) {
-      const err = new Error(`NOT_FOUND: مهمة التوصيل غير موجودة [${taskId}]`);
+      const err = new Error(`NOT_FOUND: مهمة التوصيل غير موجودة [${taskId}] (Task not found)`);
       err.statusCode = 404;
       throw err;
     }
@@ -96,7 +96,7 @@ async function claimTask(taskId, runnerId, expectedVersion = 1) {
     };
 
     await tx.run(
-      `INSERT INTO outbox_events (id, topic, aggregate_type, aggregate_id, payload_json, sequence, aggregate_version, schema_version, venue_id, station_id, status) 
+      `INSERT INTO outbox_events (event_id, topic, aggregate_type, aggregate_id, payload_json, sequence, aggregate_version, schema_version, venue_id, station_id, status) 
        VALUES (?, 'RUNNER_TASK_CLAIMED', 'RUNNER_TASK', ?, ?, ?, ?, 'v1', ?, 'HALL', 'PENDING')`,
       [eventId, taskId, JSON.stringify(payload), nextSeq, newVersion, task.venue_id]
     );
@@ -118,7 +118,7 @@ async function completeTask(taskId, runnerId, expectedVersion = null) {
   return runTransaction(async (tx) => {
     const task = await tx.get(`SELECT * FROM runner_tasks WHERE id = ?`, [taskId]);
     if (!task) {
-      const err = new Error(`NOT_FOUND: مهمة التوصيل غير موجودة [${taskId}]`);
+      const err = new Error(`NOT_FOUND: مهمة التوصيل غير موجودة [${taskId}] (Task not found)`);
       err.statusCode = 404;
       throw err;
     }
@@ -167,7 +167,7 @@ async function completeTask(taskId, runnerId, expectedVersion = null) {
     };
 
     await tx.run(
-      `INSERT INTO outbox_events (id, topic, aggregate_type, aggregate_id, payload_json, sequence, aggregate_version, schema_version, venue_id, station_id, status) 
+      `INSERT INTO outbox_events (event_id, topic, aggregate_type, aggregate_id, payload_json, sequence, aggregate_version, schema_version, venue_id, station_id, status) 
        VALUES (?, 'RUNNER_TASK_COMPLETED', 'RUNNER_TASK', ?, ?, ?, ?, 'v1', ?, 'HALL', 'PENDING')`,
       [eventId, taskId, JSON.stringify(payload), nextSeq, newVersion, task.venue_id]
     );

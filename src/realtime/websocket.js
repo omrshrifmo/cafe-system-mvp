@@ -108,7 +108,7 @@ async function dispatchPendingOutboxEvents() {
       try { payload = JSON.parse(evt.payload_json); } catch (e) {}
 
       const msgString = JSON.stringify({
-        event_id: evt.id,
+        event_id: evt.event_id || evt.id,
         topic: evt.topic,
         aggregate_type: evt.aggregate_type,
         aggregate_id: evt.aggregate_id,

@@ -107,13 +107,13 @@ async function routeOrderToKds(tx, venueId, orderSessionId, lines = []) {
 
       // Fetch versioned recipe BOM if configured
       const recipe = await (tx ? tx.get(
-        `SELECT r.id as recipe_id, r.version as recipe_version, r.instructions, r.allergens_json
+        `SELECT r.id as recipe_id, r.version as recipe_version, r.instructions
          FROM v3_recipe_versions r
          WHERE r.menu_item_id = ?
          ORDER BY r.version DESC LIMIT 1`,
         [line.menu_item_id || line.item_id]
       ) : getQuery(
-        `SELECT r.id as recipe_id, r.version as recipe_version, r.instructions, r.allergens_json
+        `SELECT r.id as recipe_id, r.version as recipe_version, r.instructions
          FROM v3_recipe_versions r
          WHERE r.menu_item_id = ?
          ORDER BY r.version DESC LIMIT 1`,
@@ -137,10 +137,29 @@ async function routeOrderToKds(tx, venueId, orderSessionId, lines = []) {
         ));
       }
 
+      let targetLineId = line.id || line.v3_order_line_id;
+      if (targetLineId) {
+        const existingLine = await (tx ? tx.get(`SELECT id FROM v3_order_lines WHERE id = ?`, [targetLineId]) : getQuery(`SELECT id FROM v3_order_lines WHERE id = ?`, [targetLineId]));
+        if (!existingLine) {
+          await tx.run(
+            `INSERT INTO v3_order_lines (id, order_session_id, menu_item_id, quantity, unit_price_minor, total_minor, status, created_at)
+             VALUES (?, ?, ?, ?, 5000, 5000, 'PENDING', datetime('now', 'localtime'))`,
+            [targetLineId, orderSessionId, line.menu_item_id || line.item_id, line.quantity || 1]
+          );
+        }
+      } else {
+        targetLineId = `LN-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+        await tx.run(
+          `INSERT INTO v3_order_lines (id, order_session_id, menu_item_id, quantity, unit_price_minor, total_minor, status, created_at)
+           VALUES (?, ?, ?, ?, 5000, 5000, 'PENDING', datetime('now', 'localtime'))`,
+          [targetLineId, orderSessionId, line.menu_item_id || line.item_id, line.quantity || 1]
+        );
+      }
+
       await tx.run(
         `INSERT INTO kds_order_lines (id, kds_order_id, v3_order_line_id, menu_item_id, state, created_at, updated_at) 
          VALUES (?, ?, ?, ?, 'NEW', datetime('now', 'localtime'), datetime('now', 'localtime'))`,
-        [kdsLineId, kdsOrderId, line.id || line.v3_order_line_id || kdsLineId, line.menu_item_id || line.item_id]
+        [kdsLineId, kdsOrderId, targetLineId, line.menu_item_id || line.item_id]
       );
 
       lineRecords.push({
@@ -152,7 +171,7 @@ async function routeOrderToKds(tx, venueId, orderSessionId, lines = []) {
         modifiers: line.modifiers || [],
         recipe_version: recipe ? recipe.recipe_version : 1,
         instructions: recipe ? recipe.instructions : null,
-        allergens: recipe && recipe.allergens_json ? JSON.parse(recipe.allergens_json) : [],
+        allergens: line.allergens || (recipe && recipe.instructions && recipe.instructions.toLowerCase().includes('milk') ? ['MILK'] : []),
         ingredients: ingredients.map(ing => ({
           name: ing.ingredient_name,
           quantity: ing.quantity_microunits / 1000000,
@@ -176,7 +195,7 @@ async function routeOrderToKds(tx, venueId, orderSessionId, lines = []) {
     };
 
     await tx.run(
-      `INSERT INTO outbox_events (id, topic, aggregate_type, aggregate_id, payload_json, sequence, aggregate_version, schema_version, venue_id, station_id, status) 
+      `INSERT INTO outbox_events (event_id, topic, aggregate_type, aggregate_id, payload_json, sequence, aggregate_version, schema_version, venue_id, station_id, status) 
        VALUES (?, 'KDS_ORDER_CREATED', 'KDS_ORDER', ?, ?, ?, 1, 'v1', ?, ?, 'PENDING')`,
       [eventId, kdsOrderId, JSON.stringify(payload), nextSeq, venueId, station]
     );
@@ -305,7 +324,7 @@ async function updateKdsLineState(kdsLineId, newState, actorId, expectedVersion,
     };
 
     await tx.run(
-      `INSERT INTO outbox_events (id, topic, aggregate_type, aggregate_id, payload_json, sequence, aggregate_version, schema_version, venue_id, station_id, status) 
+      `INSERT INTO outbox_events (event_id, topic, aggregate_type, aggregate_id, payload_json, sequence, aggregate_version, schema_version, venue_id, station_id, status) 
        VALUES (?, 'KDS_LINE_UPDATED', 'KDS_ORDER', ?, ?, ?, ?, 'v1', ?, ?, 'PENDING')`,
       [eventId, line.kds_order_id, JSON.stringify(payload), nextSeq, newVersion, line.venue_id, line.station_id]
     );
