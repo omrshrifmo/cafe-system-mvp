@@ -33,6 +33,7 @@ const routeRegistry = [
   { method: 'ALL', pathRegex: /^\/api\/quotes?/, permission: 'authenticated' },
   { method: 'ALL', pathRegex: /^\/api\/checkout/, permission: 'authenticated' },
   { method: 'ALL', pathRegex: /^\/api\/receipts/, permission: 'authenticated' },
+  { method: 'ALL', pathRegex: /^\/api\/reversals/, permission: 'authenticated' },
   
   // Shifts
   { method: 'POST', pathRegex: /^\/api\/shifts\/clock-/, permission: 'authenticated' },

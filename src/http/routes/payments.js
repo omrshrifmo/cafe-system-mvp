@@ -180,6 +180,56 @@ router.post('/checkout', requireAuth, requirePermission('payments:take'), async 
   }
 });
 
+// Canonical Settle Endpoint
+router.post('/payments/settle', requireAuth, requirePermission('payments:take'), async (req, res, next) => {
+  try {
+    const { settleOrder } = require('../../domain/orders/settlementService');
+    const sessionId = req.body.session_id || req.body.order_id || req.body.table_number;
+    const result = await settleOrder(sessionId, req.body, req.body.expected_version);
+    res.json({ success: true, ...result });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Reversal & Refund Endpoint
+router.post('/reversals', requireAuth, async (req, res, next) => {
+  try {
+    const { processReversal } = require('../../domain/orders/reversalService');
+    const { venue_id, session_id, order_id } = req.body;
+    const targetSession = session_id || order_id;
+    const result = await processReversal(venue_id || 'V_DEFAULT', targetSession, {
+      ...req.body,
+      actor_id: req.user ? req.user.id : (req.body.actor_id || '102')
+    });
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Get Reversals List
+router.get('/reversals', requireAuth, async (req, res, next) => {
+  try {
+    const { allQuery } = require('../../db/connection');
+    const rows = await allQuery(`SELECT * FROM reversals ORDER BY created_at DESC LIMIT 50`);
+    res.json({ success: true, reversals: rows });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Receipt Reprint
+router.post('/receipts/:id/reprint', requireAuth, async (req, res, next) => {
+  try {
+    const { enqueueReprintJob } = require('../../domain/hardware/printerService');
+    const result = await enqueueReprintJob(req.params.id, req.user ? req.user.id : '102', req.body.reason);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
 // Void Order (Requires Manager/Owner PIN, and Ultimate Void rule for paid orders)
 router.post('/orders/:id/void', requireAuth, async (req, res, next) => {
   try {

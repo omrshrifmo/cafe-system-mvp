@@ -51,9 +51,13 @@ describe('Authentication & Session Boundary Tests', function () {
       const pinHash = await hashPin(u.pin);
       const isActive = u.is_active !== undefined ? u.is_active : 1;
       await runQuery(
-        `INSERT OR REPLACE INTO v3_users (id, venue_id, name, role_id, pin_hash, is_active, failed_attempts, locked_until)
+        `INSERT OR IGNORE INTO v3_users (id, venue_id, name, role_id, pin_hash, is_active, failed_attempts, locked_until)
          VALUES (?, 'V_DEFAULT', ?, ?, ?, ?, 0, NULL)`,
         [u.id, u.name, u.role_id, pinHash, isActive]
+      );
+      await runQuery(
+        `UPDATE v3_users SET name = ?, role_id = ?, pin_hash = ?, is_active = ?, failed_attempts = 0, locked_until = NULL WHERE id = ?`,
+        [u.name, u.role_id, pinHash, isActive, u.id]
       );
     }
   });

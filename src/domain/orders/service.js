@@ -413,6 +413,73 @@ async function getPastOrdersByDepartment(department = null) {
   });
 }
 
+const VALID_ORDER_SESSION_TRANSITIONS = {
+  OPEN: ['SUBMITTED', 'IN_PREPARATION', 'CANCELLED', 'VOIDED'],
+  SUBMITTED: ['IN_PREPARATION', 'PARTIALLY_READY', 'READY', 'CANCELLED', 'VOIDED'],
+  IN_PREPARATION: ['PARTIALLY_READY', 'READY', 'SERVED', 'CANCELLED', 'VOIDED'],
+  PARTIALLY_READY: ['READY', 'SERVED', 'PAYMENT_PENDING', 'CANCELLED', 'VOIDED'],
+  READY: ['SERVED', 'PAYMENT_PENDING', 'PAID', 'CANCELLED', 'VOIDED'],
+  SERVED: ['PAYMENT_PENDING', 'PAID', 'CANCELLED', 'VOIDED'],
+  PAYMENT_PENDING: ['PAID', 'CANCELLED', 'VOIDED', 'REFUNDED'],
+  PAID: ['REFUNDED', 'PARTIALLY_REFUNDED', 'VOIDED'],
+  CANCELLED: [],
+  VOIDED: [],
+  REFUNDED: [],
+  PARTIALLY_REFUNDED: ['REFUNDED']
+};
+
+async function updateOrderSessionStatus(sessionId, targetStatus, actorId = null, expectedVersion = null) {
+  const normTarget = String(targetStatus).toUpperCase();
+  return runTransaction(async (tx) => {
+    let order = await tx.get(`SELECT * FROM v3_order_sessions WHERE id = ?`, [sessionId]);
+    let isV3 = true;
+    if (!order) {
+      order = await tx.get(`SELECT * FROM order_sessions WHERE id = ? OR public_ref = ?`, [sessionId, sessionId]);
+      isV3 = false;
+    }
+    if (!order) {
+      throw new Error(`NOT_FOUND: جلسة الطلب غير موجودة [${sessionId}]`);
+    }
+
+    const currentStatus = order.status;
+    if (expectedVersion !== null && expectedVersion !== undefined) {
+      const curVer = order.version || 1;
+      if (curVer !== expectedVersion) {
+        const err = new Error(`تعارض التحديث المتزامن: إصدار الطلب هو ${curVer} بينما المطلوب هو ${expectedVersion}`);
+        err.statusCode = 409;
+        throw err;
+      }
+    }
+
+    if (currentStatus !== normTarget) {
+      const allowed = VALID_ORDER_SESSION_TRANSITIONS[currentStatus] || [];
+      if (!allowed.includes(normTarget)) {
+        throw new Error(`INVALID_STATE_TRANSITION: لا يمكن تغيير حالة جلسة الطلب من ${currentStatus} إلى ${normTarget}`);
+      }
+    }
+
+    if (isV3) {
+      await tx.run(
+        `UPDATE v3_order_sessions SET status = ?, version = version + 1, updated_at = datetime('now', 'localtime') WHERE id = ?`,
+        [normTarget, order.id]
+      );
+    } else {
+      await tx.run(
+        `UPDATE order_sessions SET status = ?, version = version + 1 WHERE id = ?`,
+        [normTarget, order.id]
+      );
+    }
+
+    return {
+      success: true,
+      order_id: order.id,
+      previous_status: currentStatus,
+      status: normTarget,
+      version: (order.version || 1) + 1
+    };
+  });
+}
+
 module.exports = {
   createOrderSession,
   getOrCreateActiveSessionForTable,
@@ -422,5 +489,7 @@ module.exports = {
   requestOrderCancellation,
   resolveOrderCancellation,
   getPendingOrdersByDepartment,
-  getPastOrdersByDepartment
+  getPastOrdersByDepartment,
+  updateOrderSessionStatus,
+  VALID_ORDER_SESSION_TRANSITIONS
 };

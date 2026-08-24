@@ -19,15 +19,23 @@ describe('Hospitality Workflow, Table Concurrency, Waiter Assist & CRM Suite', f
     // Seed test users
     const ownerPinHash = await hashPin('8802');
     await runQuery(
-      `INSERT OR REPLACE INTO v3_users (id, venue_id, name, role_id, pin_hash, is_active, failed_attempts, locked_until)
+      `INSERT OR IGNORE INTO v3_users (id, venue_id, name, role_id, pin_hash, is_active, failed_attempts, locked_until)
        VALUES ('102', 'V_DEFAULT', 'المالك التجريبي', 'R_OWNER', ?, 1, 0, NULL)`,
+      [ownerPinHash]
+    );
+    await runQuery(
+      `UPDATE v3_users SET pin_hash = ?, is_active = 1, failed_attempts = 0, locked_until = NULL, role_id = 'R_OWNER' WHERE id = '102'`,
       [ownerPinHash]
     );
 
     const waiterPinHash = await hashPin('8808');
     await runQuery(
-      `INSERT OR REPLACE INTO v3_users (id, venue_id, name, role_id, pin_hash, is_active, failed_attempts, locked_until)
+      `INSERT OR IGNORE INTO v3_users (id, venue_id, name, role_id, pin_hash, is_active, failed_attempts, locked_until)
        VALUES ('108', 'V_DEFAULT', 'ويتر الصالة', 'R_WAITER', ?, 1, 0, NULL)`,
+      [waiterPinHash]
+    );
+    await runQuery(
+      `UPDATE v3_users SET pin_hash = ?, is_active = 1, failed_attempts = 0, locked_until = NULL, role_id = 'R_WAITER' WHERE id = '108'`,
       [waiterPinHash]
     );
 
