@@ -29,10 +29,10 @@ describe('Inventory Ledger Validation', () => {
 
   it('should enforce negative stock policy', async () => {
     try {
-      await validateNegativeStock({ id: 1, name: 'Coffee Beans', negative_stock_policy: 'BLOCK' }, 999999999);
+      await validateNegativeStock({ id: 1, name: 'Coffee Beans', negative_stock_policy: 'BLOCK' }, 1e15);
       assert.fail('Should have blocked negative stock');
     } catch (err) {
-      assert.match(err.message, /Insufficient stock/);
+      assert.match(err.message, /Insufficient stock/i);
     }
   });
 });

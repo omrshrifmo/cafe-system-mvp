@@ -46,9 +46,10 @@ const routeRegistry = [
   { method: 'ALL', pathRegex: /^\/api\/expenses/, permission: 'reports:financial' },
   { method: 'ALL', pathRegex: /^\/api\/advances/, permission: 'reports:financial' },
   
-  // Inventory & Purchasing & Suppliers
+  // Inventory & Purchasing & Suppliers & Stocktakes
   { method: 'ALL', pathRegex: /^\/api\/inventory/, permission: 'inventory:read' },
   { method: 'ALL', pathRegex: /^\/api\/purchases?/, permission: 'inventory:purchase' },
+  { method: 'ALL', pathRegex: /^\/api\/stocktakes/, permission: 'inventory:manage' },
   { method: 'ALL', pathRegex: /^\/api\/suppliers/, permission: 'inventory:read' },
   
   // HR / Payroll / Users

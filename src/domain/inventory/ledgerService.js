@@ -64,6 +64,15 @@ async function appendLedgerEvent(tx, event) {
       event.actor_id || null
     ]
   );
+
+  // Maintain strict balance parity
+  await tx.run(
+    `UPDATE inventory_items 
+     SET current_stock_microunits = current_stock_microunits + ?,
+         updated_at = datetime('now', 'localtime')
+     WHERE id = ?`,
+    [change, event.inventory_item_id]
+  );
 }
 
 module.exports = {

@@ -240,11 +240,16 @@ router.get('/reports/bom-reconciliation', requireAuth, requirePermission('report
   }
 });
 
-// Daily expenses management
+// Structured Expenses & Indirect Cost Allocations
+const { getExpenses, recordExpense, allocateIndirectCosts } = require('../../domain/accounting/expenseService');
+
 router.get('/expenses', requireAuth, async (req, res, next) => {
   try {
-    const expenses = await allQuery(`SELECT * FROM daily_expenses ORDER BY created_at DESC LIMIT 50`);
-    res.json(expenses);
+    const expenses = await getExpenses(req.query);
+    res.json({
+      success: true,
+      expenses
+    });
   } catch (err) {
     next(err);
   }
@@ -252,13 +257,18 @@ router.get('/expenses', requireAuth, async (req, res, next) => {
 
 router.post('/expenses', requireAuth, async (req, res, next) => {
   try {
-    const { description, amount, payment_source = 'DRAWER' } = req.body;
-    const result = await runQuery(
-      `INSERT INTO daily_expenses (description, amount, payment_source, created_by, expense_date)
-       VALUES (?, ?, ?, ?, date('now', 'localtime'))`,
-      [description, amount, payment_source, req.user.id]
-    );
-    res.json({ success: true, expense_id: result.lastID });
+    const result = await recordExpense(req.body, req.user ? req.user.id : null);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/expenses/:id/allocate', requireAuth, requirePermission('reports:financial'), async (req, res, next) => {
+  try {
+    const { basis, ratios } = req.body;
+    const result = await allocateIndirectCosts(req.params.id, basis, ratios, req.user ? req.user.id : null);
+    res.json(result);
   } catch (err) {
     next(err);
   }
