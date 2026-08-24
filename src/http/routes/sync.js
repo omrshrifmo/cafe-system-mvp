@@ -19,4 +19,9 @@ router.post('/sync/commands', requireAuth, async (req, res, next) => {
   }
 });
 
+router.post('/sync/batch', requireAuth, async (req, res, next) => {
+  req.url = '/sync/commands';
+  return router.handle(req, res, next);
+});
+
 module.exports = router;

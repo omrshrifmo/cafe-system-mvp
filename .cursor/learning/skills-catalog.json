@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-08-23T14:22:18.814Z",
+  "generatedAt": "2026-08-24T14:21:49.470Z",
   "workspacePath": "/home/omrshrifmo/cafe-system-mvp",
   "branch": "main",
   "skills": [
@@ -530,7 +530,7 @@
       ],
       "isRelevant": false,
       "matchedGlobs": [],
-      "installedInWorkspace": true,
+      "installedInWorkspace": false,
       "availableInGlobal": false,
       "inLibrary": true,
       "requiredForProfileInit": true

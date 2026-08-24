@@ -51,6 +51,23 @@ router.post('/shifts/declare-cash-extended', requireAuth, async (req, res, next)
   }
 });
 
+router.get('/shifts', requireAuth, requirePermission('shifts:read'), async (req, res, next) => {
+  try {
+    const shifts = await allQuery(
+      `SELECT s.id, s.user_id, s.role, s.clock_in, s.clock_out, s.status, s.shift_type, u.name as user_name
+       FROM shifts s
+       LEFT JOIN users u ON s.user_id = u.id
+       ORDER BY s.clock_in DESC LIMIT 50`
+    );
+    res.json({
+      success: true,
+      shifts
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.get('/shifts/history', requireAuth, requirePermission('shifts:read'), async (req, res, next) => {
   try {
     const shifts = await allQuery(`SELECT * FROM shifts ORDER BY clock_in DESC LIMIT 50`);

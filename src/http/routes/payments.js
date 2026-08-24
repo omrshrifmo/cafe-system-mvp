@@ -89,7 +89,88 @@ router.post('/quote', async (req, res, next) => {
   }
 });
 
-// Checkout / Settle Bill
+// Quotes Aliases
+router.get('/quotes', async (req, res, next) => {
+  req.url = '/quote' + (req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '');
+  return router.handle(req, res, next);
+});
+
+router.post('/quotes', async (req, res, next) => {
+  req.url = '/quote';
+  return router.handle(req, res, next);
+});
+
+// Payments Roster / List
+router.get('/payments', requireAuth, requirePermission('payments:take'), async (req, res, next) => {
+  try {
+    const { allQuery } = require('../../db/connection');
+    const payments = await allQuery(
+      `SELECT p.id, p.session_id, p.method, p.amount_minor, p.tip_minor, p.currency, p.created_at, u.name as cashier_name
+       FROM payments p
+       LEFT JOIN users u ON p.created_by = u.id
+       ORDER BY p.created_at DESC LIMIT 50`
+    );
+    res.json({
+      success: true,
+      payments: payments.map(p => ({
+        ...p,
+        amount: p.amount_minor / 100,
+        tip: p.tip_minor / 100
+      }))
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Receipts retrieval
+router.get('/receipts', requireAuth, async (req, res, next) => {
+  try {
+    const { allQuery } = require('../../db/connection');
+    const recentReceipts = await allQuery(
+      `SELECT p.id as receipt_id, p.session_id, p.amount_minor, p.method, p.created_at, os.table_id
+       FROM payments p
+       JOIN order_sessions os ON p.session_id = os.id
+       ORDER BY p.created_at DESC LIMIT 20`
+    );
+    return res.json({
+      success: true,
+      receipts: recentReceipts.map(r => ({ ...r, amount: r.amount_minor / 100 }))
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/receipts/:sessionId', requireAuth, async (req, res, next) => {
+  try {
+    const sessionId = req.params.sessionId;
+    const { allQuery, getQuery } = require('../../db/connection');
+    const session = await getQuery(`SELECT * FROM order_sessions WHERE id = ?`, [sessionId]);
+    if (!session) {
+      return res.status(404).json({ success: false, error: 'جلسة الطلب غير موجودة' });
+    }
+
+    const items = await allQuery(`SELECT id, item_name_snapshot as item_name, unit_price_minor, quantity FROM order_items WHERE session_id = ?`, [sessionId]);
+    const payments = await allQuery(`SELECT id, method, amount_minor, created_at FROM payments WHERE session_id = ?`, [sessionId]);
+
+    res.json({
+      success: true,
+      receipt: {
+        session_id: session.id,
+        table_id: session.table_id,
+        opened_at: session.opened_at,
+        closed_at: session.closed_at,
+        items: items.map(i => ({ ...i, price: i.unit_price_minor / 100 })),
+        payments: payments.map(p => ({ ...p, amount: p.amount_minor / 100 }))
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Settle Checkout
 router.post('/checkout', requireAuth, requirePermission('payments:take'), async (req, res, next) => {
   try {
     const result = await settleSession(req.body, req.user);

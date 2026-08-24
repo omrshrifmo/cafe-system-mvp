@@ -38,13 +38,16 @@ router.post('/inventory/purchase', requireAuth, requirePermission('inventory:pur
 router.get('/purchases', requireAuth, async (req, res, next) => {
   try {
     const purchases = await allQuery(
-      `SELECT p.id, p.total_amount_minor / 100.0 as total_cost, p.invoice_number, p.notes, p.created_at,
-              s.name as supplier_name,
-              i.name as item_name, pi.unit, (pi.quantity_microunits / 1000000.0) as qty_added
+      `SELECT p.id,
+              COALESCE(p.total_cost_minor / 100.0, 0) as total_cost,
+              COALESCE(p.invoice_number, '') as invoice_number,
+              COALESCE(p.invoice_number, '') as invoice_ref,
+              p.status,
+              p.notes,
+              p.created_at,
+              s.name as supplier_name
        FROM purchases p
        LEFT JOIN suppliers s ON p.supplier_id = s.id
-       LEFT JOIN purchase_items pi ON p.id = pi.purchase_id
-       LEFT JOIN inventory_items i ON pi.inventory_item_id = i.id
        ORDER BY p.created_at DESC LIMIT 50`
     );
     res.json({

@@ -62,6 +62,7 @@ const routeRegistry = [
   { method: 'ALL', pathRegex: /^\/api\/audit/, permission: 'system:settings' },
   
   // Realtime & Sync
+  { method: 'GET', pathRegex: /^\/api\/realtime\/health$/, permission: 'public' },
   { method: 'ALL', pathRegex: /^\/api\/realtime/, permission: 'authenticated' },
   { method: 'ALL', pathRegex: /^\/api\/sync/, permission: 'authenticated' },
   
@@ -75,21 +76,20 @@ function enforceRegistry(req, res, next) {
   // Only apply to /api/ routes
   if (!req.path.startsWith('/api/')) return next();
   
-  console.log('enforceRegistry req.path:', req.path, 'req.originalUrl:', req.originalUrl);
-  
   const match = routeRegistry.find(r => 
     (r.method === 'ALL' || r.method === req.method) && r.pathRegex.test(req.path)
   );
 
   if (!match) {
-    logger.warn('Default Deny: Route not registered in API permission matrix', {
+    logger.warn('Route not registered in API route registry', {
       method: req.method,
       path: req.path
     });
-    return res.status(403).json({
+    return res.status(404).json({
       success: false,
-      error: 'FORBIDDEN: هذا المسار غير مسجل في مصفوفة الصلاحيات (Default Deny)',
-      code: 'DEFAULT_DENY',
+      data: null,
+      error: `NOT_FOUND: هذا المسار غير موجود [${req.method} ${req.originalUrl}]`,
+      code: 'NOT_FOUND',
       requestId: req.id
     });
   }

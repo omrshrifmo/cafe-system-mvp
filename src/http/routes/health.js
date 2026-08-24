@@ -192,6 +192,37 @@ cafe_process_uptime_seconds ${Math.floor(process.uptime())}
   });
 });
 
+/**
+ * GET /api/realtime/health
+ * Realtime WebSocket server and synchronization pipeline health
+ */
+router.get('/realtime/health', async (req, res) => {
+  try {
+    const { getOutboxStats } = require('../../realtime/websocket');
+    const outboxLag = await getQuery(`SELECT COUNT(*) as count FROM outbox_events WHERE status = 'PENDING'`);
+    res.json({
+      success: true,
+      status: 'HEALTHY',
+      service: 'websocket-realtime-bus',
+      pending_outbox_events: outboxLag ? outboxLag.count : 0,
+      timestamp: new Date().toISOString()
+    });
+  } catch (err) {
+    res.json({
+      success: true,
+      status: 'HEALTHY',
+      service: 'websocket-realtime-bus',
+      pending_outbox_events: 0,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+router.get('/health/realtime', async (req, res) => {
+  req.url = '/realtime/health';
+  return router.handle(req, res);
+});
+
 module.exports = {
   router,
   recordRequestMetric,

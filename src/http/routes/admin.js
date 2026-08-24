@@ -135,4 +135,31 @@ router.post('/hardware/drawer-kick', requireAuth, requirePermission('payments:se
   }
 });
 
+// ==========================================
+// System Audit Trail Logs
+// ==========================================
+
+router.get('/audit', requireAuth, requirePermission('system:settings'), async (req, res, next) => {
+  try {
+    const { allQuery } = require('../../db/connection');
+    const logs = await allQuery(
+      `SELECT a.id, a.user_id, a.action, a.target_table, a.record_id, a.previous_value, a.new_value, a.created_at, u.name as user_name
+       FROM audit_logs a
+       LEFT JOIN users u ON a.user_id = u.id
+       ORDER BY a.created_at DESC LIMIT 100`
+    );
+    res.json({
+      success: true,
+      logs
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/audit/logs', requireAuth, requirePermission('system:settings'), async (req, res, next) => {
+  req.url = '/audit';
+  return router.handle(req, res, next);
+});
+
 module.exports = router;

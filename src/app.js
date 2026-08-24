@@ -97,6 +97,7 @@ function createApp() {
   app.use('/api', printRoutes);
   app.use('/api/setup', setupRoutes);
   app.use('/api/admin', adminRoutes);
+  app.use('/api', adminRoutes);
   app.use('/api', healthRoutes);
 
   // Health check endpoint
@@ -201,6 +202,17 @@ function createApp() {
         uptimeSeconds: Math.floor(process.uptime())
       },
       timestamp: new Date().toISOString()
+    });
+  });
+
+  // 404 Fallback for Unmatched API / Page Routes (Distinguishable from 403 Forbidden & 401 Auth)
+  app.use((req, res) => {
+    res.status(404).json({
+      success: false,
+      data: null,
+      error: `NOT_FOUND: المسار المطلوب غير موجود [${req.method} ${req.originalUrl}]`,
+      code: 'NOT_FOUND',
+      requestId: req.id
     });
   });
 
