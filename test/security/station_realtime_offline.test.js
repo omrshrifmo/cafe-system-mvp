@@ -200,8 +200,8 @@ describe('Station Operations, Realtime Outbox & Offline Sync Gate Suite', functi
       const client1Messages = [];
       const client2Messages = [];
 
-      const ws1 = new WebSocket(`ws://localhost:${port}/ws?token=${baristaToken}&stationId=BARISTA&venueId=V_DEFAULT`);
-      const ws2 = new WebSocket(`ws://localhost:${port}/ws?token=${runnerToken}&stationId=HALL&venueId=V_DEFAULT`);
+      const ws1 = new WebSocket(`ws://127.0.0.1:${port}/ws?token=${baristaToken}&stationId=BARISTA&venueId=V_DEFAULT`);
+      const ws2 = new WebSocket(`ws://127.0.0.1:${port}/ws?token=${runnerToken}&stationId=HALL&venueId=V_DEFAULT`);
 
       await new Promise((resolve) => {
         let connectedCount = 0;
@@ -253,7 +253,7 @@ describe('Station Operations, Realtime Outbox & Offline Sync Gate Suite', functi
 
       // Reconnect with cursor = currentMax (simulating client that was offline)
       const replayedMessages = [];
-      const wsReplay = new WebSocket(`ws://localhost:${port}/ws?token=${runnerToken}&stationId=HALL&venueId=V_DEFAULT&cursor=${currentMax}`);
+      const wsReplay = new WebSocket(`ws://127.0.0.1:${port}/ws?token=${runnerToken}&stationId=HALL&venueId=V_DEFAULT&cursor=${currentMax}`);
 
       await new Promise((resolve) => {
         wsReplay.on('open', resolve);

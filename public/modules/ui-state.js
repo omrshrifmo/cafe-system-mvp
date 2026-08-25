@@ -257,7 +257,7 @@
     } finally {
       button.disabled = false;
       button.innerHTML = originalContent;
-      delete button.dataset.actionExecuting;
+      button.dataset.actionExecuting = 'false';
     }
   }
 
@@ -280,41 +280,7 @@
     const focusable = modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
     if (focusable.length > 0) {
       setTimeout(() => focusable[0].focus(), 50);
-    }
-
-    // Modal keydown listener for focus trap & Escape
-    modal.onkeydown = function (e) {
-      if (e.key === 'Escape' || e.keyCode === 27) {
-        e.preventDefault();
-        closeModal(modalId);
-        return;
-      }
-
-      if (e.key === 'Tab' || e.keyCode === 9) {
-        const firstEl = focusable[0];
-        const lastEl = focusable[focusable.length - 1];
-
-        if (e.shiftKey) {
-          if (document.activeElement === firstEl) {
-            lastEl.focus();
-            e.preventDefault();
-          }
-        } else {
-          if (document.activeElement === lastEl) {
-            firstEl.focus();
-            e.preventDefault();
-          }
-        }
-      }
-    };
-
-    // Close on backdrop click if configured
-    if (options.closeOnBackdrop !== false) {
-      modal.onclick = function (e) {
-        if (e.target === modal) {
-          closeModal(modalId);
-        }
-      };
+      focusable[0].focus();
     }
   }
 
@@ -323,28 +289,32 @@
     if (!modal) return;
 
     modal.classList.add('hidden');
-    modal.setAttribute('aria-hidden', 'true');
-    modal.onkeydown = null;
+    modal.removeAttribute('aria-modal');
 
-    if (activeModal === modal) {
-      activeModal = null;
+    if (modal._escapeHandler) {
+      document.removeEventListener('keydown', modal._escapeHandler);
+      delete modal._escapeHandler;
     }
 
     if (previouslyFocusedElement && typeof previouslyFocusedElement.focus === 'function') {
       previouslyFocusedElement.focus();
     }
+
+    activeModal = null;
   }
 
   /**
-   * Accessible Toast Notification Manager
+   * Accessible Transient Toast Notification
    */
-  function showToast(message, type = 'info', duration = 3500, options = {}) {
-    let container = document.getElementById('mazaj-global-toast-container');
+  function showToast(message, type = 'info', options = {}) {
+    if (typeof document === 'undefined') return;
+    const duration = options.duration || 3500;
+    let container = document.getElementById('mazaj-toast-container');
     if (!container) {
       container = document.createElement('div');
-      container.id = 'mazaj-global-toast-container';
-      container.className = 'fixed top-12 left-1/2 -translate-x-1/2 z-[999999] flex flex-col items-center gap-2 pointer-events-none';
-      container.setAttribute('aria-live', 'assertive');
+      container.id = 'mazaj-toast-container';
+      container.className = 'fixed bottom-5 right-5 z-[999999] flex flex-col gap-2 pointer-events-none max-w-sm w-full';
+      container.setAttribute('aria-live', 'polite');
       document.body.appendChild(container);
     }
 
@@ -378,6 +348,7 @@
 
   return {
     STATES,
+    I18N,
     setLanguage,
     getLanguage,
     generateRequestId,
