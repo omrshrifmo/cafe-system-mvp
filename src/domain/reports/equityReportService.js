@@ -1,42 +1,41 @@
-const { getQuery } = require('../../db/connection');
-const { generateProfitAndLoss } = require('./pnlReportService');
+const { 
+  buildReportScope, 
+  calculateSalesSummary,
+  calculateCogsAndWaste,
+  calculateOperatingExpenses,
+  calculateShareholderEquity 
+} = require('./reportDefinitionService');
 
-async function generateShareholderReport(scope) {
-    const pnl = await generateProfitAndLoss(scope);
-    const netIncome = pnl.net_income;
+async function generateShareholderReport(scopeParams) {
+    const scope = scopeParams.date_range ? scopeParams : await buildReportScope({
+        venueId: scopeParams.venueId,
+        startDate: scopeParams.startDate,
+        endDate: scopeParams.endDate,
+        shiftId: scopeParams.shiftId,
+        timezone: scopeParams.timezone,
+        requestId: scopeParams.requestId
+    });
 
-    let dateFilter = `date(effective_date) >= ? AND date(effective_date) <= ?`;
-    let params = [scope.venueId, scope.startDate, scope.endDate];
+    const sales = await calculateSalesSummary(scope);
+    const cogs = await calculateCogsAndWaste(scope);
+    const opex = await calculateOperatingExpenses(scope);
 
-    if (scope.shiftId) {
-        dateFilter = `effective_date >= ? AND (effective_date <= ? OR ? IS NULL)`;
-        params = [scope.venueId, scope.shift.opened_at, scope.shift.closed_at, scope.shift.closed_at];
-    }
+    const grossProfitMinor = sales.net_sales_minor - cogs.total_cogs_minor;
+    const netIncomeMinor = grossProfitMinor - opex.total_expenses_minor;
 
-    const equityEvents = await getQuery(`
-        SELECT 
-            COALESCE(SUM(CASE WHEN event_type = 'CAPITAL_CONTRIBUTION' THEN amount_minor ELSE 0 END), 0) as capital_contributions,
-            COALESCE(SUM(CASE WHEN event_type = 'OWNER_WITHDRAWAL' THEN amount_minor ELSE 0 END), 0) as withdrawals,
-            COALESCE(SUM(CASE WHEN event_type = 'DISTRIBUTION' THEN amount_minor ELSE 0 END), 0) as distributions,
-            COALESCE(SUM(CASE WHEN event_type = 'RETAINED_EARNINGS_ADJUSTMENT' THEN amount_minor ELSE 0 END), 0) as retained_earnings_adjustments
-        FROM equity_ledger
-        WHERE venue_id = ? AND ${dateFilter}
-    `, params);
-
-    const periodEquityChange = netIncome 
-                             + equityEvents.capital_contributions 
-                             + equityEvents.withdrawals // withdrawals are stored as negative amounts
-                             + equityEvents.distributions
-                             + equityEvents.retained_earnings_adjustments;
+    const equity = await calculateShareholderEquity(scope, netIncomeMinor);
 
     return {
-        operational_net_income: netIncome,
+        operational_net_income: netIncomeMinor,
+        operational_net_income_minor: netIncomeMinor,
         equity_events: {
-            capital_contributions: equityEvents.capital_contributions,
-            withdrawals_and_distributions: equityEvents.withdrawals + equityEvents.distributions,
-            retained_earnings_adjustments: equityEvents.retained_earnings_adjustments
+            capital_contributions: equity.capital_contributions_minor,
+            withdrawals_and_distributions: -(equity.withdrawals_minor + equity.distributions_minor),
+            retained_earnings_adjustments: equity.retained_earnings_adjustments_minor
         },
-        period_equity_change: periodEquityChange,
+        ownership_allocations: equity.ownership_allocations,
+        period_equity_change: equity.period_equity_change_minor,
+        period_equity_change_minor: equity.period_equity_change_minor,
         reconciliation_status: "RECONCILED"
     };
 }

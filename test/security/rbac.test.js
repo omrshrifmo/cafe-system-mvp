@@ -10,13 +10,26 @@ describe('Security & RBAC Protection Tests', function () {
   let managerToken;
   let ownerToken;
 
-  before(async () => {
+  before(async function () {
+    this.timeout(20000);
     await runMigrations();
     app = createApp();
 
-    // Clean test table 8
+    const { hashPin } = require('../../src/domain/auth/service');
     const { runQuery } = require('../../src/db/connection');
+
+    // Clean test table 8
     await runQuery(`UPDATE order_sessions SET status = 'SETTLED' WHERE table_id IN (SELECT id FROM tables WHERE table_number = 8)`);
+
+    const p1007 = await hashPin('1007');
+    const p1008 = await hashPin('1008');
+    const p1009 = await hashPin('1009');
+    await runQuery(`UPDATE users SET pin_hash = ?, role = 'OP_ASSISTANT_CASHIER' WHERE id = 4`, [p1007]);
+    await runQuery(`UPDATE users SET pin_hash = ?, role = 'OP_MANAGER' WHERE id = 3`, [p1008]);
+    await runQuery(`UPDATE users SET pin_hash = ?, role = 'OWNER' WHERE id = 2`, [p1009]);
+    await runQuery(`UPDATE v3_users SET pin_hash = ?, role_id = 'R_OP_ASSISTANT_CASHIER' WHERE id = '4'`, [p1007]);
+    await runQuery(`UPDATE v3_users SET pin_hash = ?, role_id = 'R_OP_MANAGER' WHERE id = '3'`, [p1008]);
+    await runQuery(`UPDATE v3_users SET pin_hash = ?, role_id = 'R_OWNER' WHERE id = '2'`, [p1009]);
 
     // Login Cashier (1007)
     const cRes = await request(app).post('/api/auth/login').send({ pin: '1007' });

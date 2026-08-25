@@ -159,21 +159,20 @@ router.get(['/payroll', '/users/payroll'], requireAuth, async (req, res, next) =
 });
 
 // Shareholder Ledger
+const { REPORT_TYPES, generateReport: generateReportUnified } = require('../../domain/reports/reportDefinitionService');
+
 router.get('/shareholders', requireAuth, requirePermission('shareholders:read'), async (req, res, next) => {
   try {
-    const transactions = await allQuery(`SELECT * FROM shareholder_ledger ORDER BY created_at DESC LIMIT 100`);
-    const summary = await getQuery(
-      `SELECT 
-         COALESCE(SUM(CASE WHEN transaction_type = 'CAPITAL_INJECTION' THEN amount ELSE 0 END), 0) as total_capital,
-         COALESCE(SUM(CASE WHEN transaction_type = 'WITHDRAWAL' THEN amount ELSE 0 END), 0) as total_withdrawals,
-         COALESCE(SUM(CASE WHEN transaction_type = 'EXPENSE' THEN amount ELSE 0 END), 0) as total_external_expenses
-       FROM shareholder_ledger`
-    );
-    res.json({
-      success: true,
-      summary: summary || { total_capital: 0, total_withdrawals: 0, total_external_expenses: 0 },
-      transactions
+    const report = await generateReportUnified(REPORT_TYPES.SHAREHOLDER_EQUITY, {
+      ...req.query,
+      venueId: req.query.venue_id || 'V_DEFAULT'
     });
+
+    if (!report.success) {
+      return res.status(report.code === 'VALIDATION_ERROR' ? 400 : 500).json(report);
+    }
+
+    res.json(report);
   } catch (err) {
     next(err);
   }
@@ -190,7 +189,25 @@ router.post('/shareholders/transactions', requireAuth, requirePermission('shareh
        VALUES (?, ?, ?, ?)`,
       [partner_name, transaction_type, Number(amount) || 0, description || null]
     );
-    res.json({ success: true, transaction_id: result.lastID, message: 'تم تسجيل المعاملة بنجاح' });
+
+    // Also insert into canonical equity_ledger for unified ledger tracking
+    const venueId = 'V_DEFAULT';
+    let eventType = 'CAPITAL_CONTRIBUTION';
+    if (transaction_type === 'WITHDRAWAL') eventType = 'OWNER_WITHDRAWAL';
+    if (transaction_type === 'DISTRIBUTION') eventType = 'DISTRIBUTION';
+
+    const amtMinor = Math.round(Number(amount) * 100);
+    const equityId = `EQ_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    const actorId = req.user ? String(req.user.id) : '102';
+    const effectiveDate = new Date().toISOString().split('T')[0];
+
+    await runQuery(
+      `INSERT INTO equity_ledger (id, venue_id, event_type, amount_minor, effective_date, actor_id, reason)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [equityId, venueId, eventType, amtMinor, effectiveDate, actorId, description || `${transaction_type} by ${partner_name}`]
+    );
+
+    res.json({ success: true, transaction_id: result.lastID, equity_id: equityId, message: 'تم تسجيل المعاملة بنجاح' });
   } catch (err) {
     next(err);
   }

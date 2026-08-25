@@ -1,163 +1,182 @@
 /**
- * Business Intelligence, End-of-Day (EOD), Cash Reconciliation & BOM Variance Reports
- * Strictly enforces authentication and financial blindness
+ * Business Intelligence, End-of-Day (EOD), Cash Reconciliation, Shareholder, Payroll & BOM Variance Reports
+ * Powered by the Authoritative Master Report-Definition Service
  */
 const express = require('express');
 const router = express.Router();
 const { requireAuth } = require('../middleware/auth');
 const { requirePermission } = require('../middleware/permissions');
 const { allQuery, getQuery, runQuery } = require('../../db/connection');
+const { 
+  REPORT_TYPES, 
+  generateReport 
+} = require('../../domain/reports/reportDefinitionService');
 
-// EOD & Financial Performance Report - strictly requires 'reports:financial'
+// 1. EOD & Financial Performance Report - strictly requires 'reports:financial'
 router.get('/reports/eod', requireAuth, requirePermission('reports:financial'), async (req, res, next) => {
   try {
-    const shift = req.query.shift || 'ALL';
-    const today = new Date().toISOString().split('T')[0];
-
-    // Total gross sales & net sales
-    const salesSummary = await getQuery(
-      `SELECT 
-         COALESCE(SUM(amount_minor), 0) / 100.0 as total_revenue,
-         COALESCE(SUM(CASE WHEN method = 'CASH' THEN amount_minor ELSE 0 END), 0) / 100.0 as cash_revenue,
-         COALESCE(SUM(CASE WHEN method != 'CASH' THEN amount_minor ELSE 0 END), 0) / 100.0 as digital_revenue,
-         COALESCE(SUM(CASE WHEN method = 'VISA' THEN amount_minor ELSE 0 END), 0) / 100.0 as visa_revenue,
-         COALESCE(SUM(CASE WHEN method = 'INSTAPAY' THEN amount_minor ELSE 0 END), 0) / 100.0 as instapay_revenue,
-         COALESCE(SUM(CASE WHEN method = 'WALLET' THEN amount_minor ELSE 0 END), 0) / 100.0 as wallet_revenue,
-         COALESCE(SUM(tip_minor), 0) / 100.0 as total_tips,
-         COUNT(DISTINCT session_id) as total_orders
-       FROM payments 
-       WHERE date(created_at) = date('now', 'localtime')`
-    );
-
-    // Total expenses today
-    const expSummary = await getQuery(
-      `SELECT COALESCE(SUM(amount), 0) as total_expenses 
-       FROM daily_expenses 
-       WHERE date(expense_date) = date('now', 'localtime') OR date(created_at) = date('now', 'localtime')`
-    );
-
-    // Total staff advances today
-    const advSummary = await getQuery(
-      `SELECT COALESCE(SUM(amount), 0) as total_advances 
-       FROM employee_advances 
-       WHERE date(issued_at) = date('now', 'localtime')`
-    );
-
-    // Departmental breakdown
-    const deptBreakdown = await allQuery(
-      `SELECT oi.department, 
-              COUNT(oi.id) as item_count, 
-              COALESCE(SUM((oi.unit_price_minor * oi.quantity) / 100.0), 0) as department_revenue
-       FROM order_items oi
-       JOIN order_sessions os ON oi.session_id = os.id
-       WHERE oi.status = 'ACTIVE' AND date(oi.created_at) = date('now', 'localtime')
-       GROUP BY oi.department`
-    );
-
-    const totalRev = salesSummary ? salesSummary.total_revenue : 0;
-    const totalExp = expSummary ? expSummary.total_expenses : 0;
-    const totalAdv = advSummary ? advSummary.total_advances : 0;
-    const cashRev = salesSummary ? salesSummary.cash_revenue : 0;
-    const expectedCashInDrawer = cashRev - totalExp - totalAdv + 200; // 200 default float
-
-    res.json({
-      success: true,
-      report_date: today,
-      shift_filter: shift,
-      report: {
-        total_revenue: totalRev,
-        total_orders: salesSummary ? salesSummary.total_orders : 0,
-        drawer_expenses: totalExp,
-        total_advances: totalAdv,
-        expected_cash_in_drawer: Math.max(0, expectedCashInDrawer),
-        payment_methods: {
-          CASH: cashRev,
-          VISA: salesSummary ? salesSummary.visa_revenue : 0,
-          INSTAPAY: salesSummary ? salesSummary.instapay_revenue : 0,
-          WALLET: salesSummary ? salesSummary.wallet_revenue : 0
-        }
-      },
-      summary: {
-        total_revenue: totalRev,
-        cash_revenue: cashRev,
-        digital_revenue: salesSummary ? salesSummary.digital_revenue : 0,
-        total_tips: salesSummary ? salesSummary.total_tips : 0,
-        total_orders: salesSummary ? salesSummary.total_orders : 0,
-        total_expenses: totalExp,
-        total_advances: totalAdv,
-        expected_cash_drawer: Math.max(0, expectedCashInDrawer)
-      },
-      departmental_breakdown: deptBreakdown
+    const report = await generateReport(REPORT_TYPES.EOD_FINANCIAL, {
+      ...req.query,
+      shiftId: req.query.shift !== 'ALL' ? req.query.shift : undefined,
+      venueId: req.query.venue_id || 'V_DEFAULT'
     });
+
+    if (!report.success) {
+      return res.status(report.code === 'VALIDATION_ERROR' ? 400 : 500).json(report);
+    }
+    res.json(report);
   } catch (err) {
     next(err);
   }
 });
 
-// Business Intelligence (BI) Analytics Report - strictly requires 'reports:financial'
+// 2. Business Intelligence (BI) Analytics Report - strictly requires 'reports:financial'
 router.get('/reports/bi', requireAuth, requirePermission('reports:financial'), async (req, res, next) => {
   try {
-    const range = req.query.range || 'today';
-    let dateFilter = `date(p.created_at) = date('now', 'localtime')`;
-    if (range === 'week') {
-      dateFilter = `p.created_at >= datetime('now', '-7 days')`;
-    } else if (range === 'month') {
-      dateFilter = `p.created_at >= datetime('now', 'start of month')`;
-    }
-
-    const summary = await getQuery(
-      `SELECT 
-         COALESCE(SUM(p.amount_minor), 0) / 100.0 as total_revenue,
-         COUNT(DISTINCT p.session_id) as total_orders,
-         COALESCE(AVG(p.amount_minor), 0) / 100.0 as aov
-       FROM payments p 
-       WHERE ${dateFilter}`
-    );
-
-    const wasteCost = await getQuery(
-      `SELECT COALESCE(SUM(w.quantity * COALESCE(i.unit_cost, 0)), 0) as total_waste_cost 
-       FROM waste_log w 
-       LEFT JOIN inventory i ON w.inventory_id = i.id`
-    );
-
-    const topItems = await allQuery(
-      `SELECT oi.item_name_snapshot as name, 
-              SUM(oi.quantity) as quantity, 
-              COALESCE(SUM((oi.unit_price_minor * oi.quantity) / 100.0), 0) as revenue
-       FROM order_items oi
-       JOIN order_sessions os ON oi.session_id = os.id
-       WHERE oi.status = 'ACTIVE'
-       GROUP BY oi.item_name_snapshot
-       ORDER BY quantity DESC
-       LIMIT 10`
-    );
-
-    const departmentSales = await allQuery(
-      `SELECT oi.department, 
-              COALESCE(SUM((oi.unit_price_minor * oi.quantity) / 100.0), 0) as revenue
-       FROM order_items oi
-       WHERE oi.status = 'ACTIVE'
-       GROUP BY oi.department`
-    );
-
-    res.json({
-      success: true,
-      range,
-      kpis: {
-        total_revenue: summary ? summary.total_revenue : 0,
-        total_orders: summary ? summary.total_orders : 0,
-        aov: summary ? Math.round(summary.aov * 10) / 10 : 0,
-        waste_cost: wasteCost ? wasteCost.total_waste_items : 0
-      },
-      top_items: topItems,
-      department_sales: departmentSales
+    const report = await generateReport(REPORT_TYPES.BI_ANALYTICS, {
+      ...req.query,
+      range: req.query.range || 'today',
+      venueId: req.query.venue_id || 'V_DEFAULT'
     });
+
+    if (!report.success) {
+      return res.status(report.code === 'VALIDATION_ERROR' ? 400 : 500).json(report);
+    }
+    res.json(report);
   } catch (err) {
     next(err);
   }
 });
 
-// Cash Reconciliation for Shift Declaration
+// 3. Portal Overview Live Report
+router.get('/reports/portal', requireAuth, requirePermission('reports:operational'), async (req, res, next) => {
+  try {
+    const report = await generateReport(REPORT_TYPES.PORTAL_OVERVIEW, {
+      ...req.query,
+      venueId: req.query.venue_id || 'V_DEFAULT'
+    });
+
+    if (!report.success) {
+      return res.status(report.code === 'VALIDATION_ERROR' ? 400 : 500).json(report);
+    }
+    res.json(report);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// 4. Shareholder Equity & Statement Report (both /reports/shareholders and /shareholders)
+router.get(['/reports/shareholders', '/shareholders'], requireAuth, requirePermission('reports:financial'), async (req, res, next) => {
+  try {
+    const report = await generateReport(REPORT_TYPES.SHAREHOLDER_EQUITY, {
+      ...req.query,
+      venueId: req.query.venue_id || 'V_DEFAULT'
+    });
+
+    if (!report.success) {
+      return res.status(report.code === 'VALIDATION_ERROR' ? 400 : 500).json(report);
+    }
+    res.json(report);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/shareholders/transactions', requireAuth, requirePermission('reports:financial'), async (req, res, next) => {
+  try {
+    const { partner_name, transaction_type, amount, description } = req.body;
+    if (!partner_name || !transaction_type || !amount) {
+      return res.status(400).json({ success: false, error: 'جميع الحقول مطلوبة' });
+    }
+    const result = await runQuery(
+      `INSERT INTO shareholder_ledger (partner_name, type, amount, description)
+       VALUES (?, ?, ?, ?)`,
+      [partner_name, transaction_type, Number(amount) || 0, description || null]
+    );
+
+    const venueId = 'V_DEFAULT';
+    let eventType = 'CAPITAL_CONTRIBUTION';
+    if (transaction_type === 'WITHDRAWAL') eventType = 'OWNER_WITHDRAWAL';
+    if (transaction_type === 'DISTRIBUTION') eventType = 'DISTRIBUTION';
+
+    const amtMinor = Math.round(Number(amount) * 100);
+    const equityId = `EQ_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    const actorId = req.user ? String(req.user.id) : '102';
+    const effectiveDate = new Date().toISOString().split('T')[0];
+
+    await runQuery(
+      `INSERT INTO equity_ledger (id, venue_id, event_type, amount_minor, effective_date, actor_id, reason)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [equityId, venueId, eventType, amtMinor, effectiveDate, actorId, description || `${transaction_type} by ${partner_name}`]
+    );
+
+    res.json({ success: true, transaction_id: result.lastID, equity_id: equityId, message: 'تم تسجيل المعاملة بنجاح' });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// 5. Payroll Labor & Effort-to-Value Report
+router.get('/reports/payroll', requireAuth, requirePermission('reports:financial'), async (req, res, next) => {
+  try {
+    const report = await generateReport(REPORT_TYPES.PAYROLL_LABOR, {
+      ...req.query,
+      venueId: req.query.venue_id || 'V_DEFAULT'
+    });
+
+    if (!report.success) {
+      return res.status(report.code === 'VALIDATION_ERROR' ? 400 : 500).json(report);
+    }
+    res.json(report);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// 6. Profitability & Multi-Dimensional Margins Report
+router.get('/reports/profitability', requireAuth, requirePermission('reports:financial'), async (req, res, next) => {
+  try {
+    const report = await generateReport(REPORT_TYPES.PROFITABILITY_LOSSABILITY, {
+      ...req.query,
+      venueId: req.query.venue_id || 'V_DEFAULT'
+    });
+
+    if (!report.success) {
+      return res.status(report.code === 'VALIDATION_ERROR' ? 400 : 500).json(report);
+    }
+    res.json(report);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// 7. Structured Exports Data (JSON / CSV with Formula Injection Sanitization)
+router.get('/reports/export', requireAuth, requirePermission('reports:export'), async (req, res, next) => {
+  try {
+    const format = (req.query.format || 'json').toLowerCase();
+    const report = await generateReport(REPORT_TYPES.EXPORTS_DATA, {
+      ...req.query,
+      format,
+      venueId: req.query.venue_id || 'V_DEFAULT'
+    });
+
+    if (!report.success) {
+      return res.status(report.code === 'VALIDATION_ERROR' ? 400 : 500).json(report);
+    }
+
+    if (format === 'csv') {
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename="${report.filename}"`);
+      return res.send(report.csv_content);
+    }
+
+    res.json(report);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// 8. Cash Reconciliation for Shift Declaration
 router.get('/reports/cash-reconciliation', requireAuth, requirePermission('reports:financial'), async (req, res, next) => {
   try {
     const shift = req.query.shift || 'MORNING';
@@ -191,52 +210,18 @@ router.get('/reports/cash-reconciliation', requireAuth, requirePermission('repor
   }
 });
 
-// BOM Variance & Consumption Report
+// 9. BOM Variance & Consumption Report
 router.get('/reports/bom-reconciliation', requireAuth, requirePermission('reports:inventory'), async (req, res, next) => {
   try {
-    const reconciliation = await allQuery(
-      `SELECT i.id, i.name, i.unit, i.category as department, i.cost_per_unit_minor,
-              (i.current_stock_microunits / 1000000.0) as current_stock,
-              COALESCE(SUM(CASE WHEN l.event_type = 'CONSUMPTION' THEN ABS(l.quantity_delta_microunits) ELSE 0 END), 0) / 1000000.0 as bom_consumption,
-              COALESCE(SUM(CASE WHEN l.event_type = 'WASTE' THEN ABS(l.quantity_delta_microunits) ELSE 0 END), 0) / 1000000.0 as manual_waste
-       FROM inventory_items i
-       LEFT JOIN inventory_ledger l ON i.id = l.inventory_item_id
-       GROUP BY i.id
-       ORDER BY i.name ASC`
-    );
-
-    res.json({
-      success: true,
-      reconciliation: reconciliation.map(r => {
-        const currentStock = Math.round(r.current_stock * 100) / 100;
-        const bomConsumption = Math.round(r.bom_consumption * 100) / 100;
-        const manualWaste = Math.round(r.manual_waste * 100) / 100;
-        const autoWasteAllowance = Math.round(bomConsumption * 0.05 * 100) / 100;
-
-        let status = 'مطابق ✅';
-        if (!r.unit || r.unit === '') {
-          status = 'ERROR: وحدة القياس مفقودة ❌';
-        } else if (r.cost_per_unit_minor === 0 && bomConsumption === 0 && currentStock === 0) {
-          status = 'UNRECONCILED: غير مسجل تكلفة أو استهلاك ⚠️';
-        } else if (manualWaste > autoWasteAllowance * 2) {
-          status = 'تحذير: تجاوز نسبة الهالك المسموح بها ⚠️';
-        }
-
-        return {
-          id: r.id,
-          name: r.name,
-          unit: r.unit,
-          department: r.department,
-          cost_basis: 'WEIGHTED_AVERAGE',
-          unit_cost: (r.cost_per_unit_minor || 0) / 100,
-          current_stock: currentStock,
-          bom_consumption: bomConsumption,
-          manual_waste: manualWaste,
-          auto_waste_allowance: autoWasteAllowance,
-          status
-        };
-      })
+    const report = await generateReport(REPORT_TYPES.INVENTORY_BOM_VARIANCE, {
+      ...req.query,
+      venueId: req.query.venue_id || 'V_DEFAULT'
     });
+
+    if (!report.success) {
+      return res.status(report.code === 'VALIDATION_ERROR' ? 400 : 500).json(report);
+    }
+    res.json(report);
   } catch (err) {
     next(err);
   }

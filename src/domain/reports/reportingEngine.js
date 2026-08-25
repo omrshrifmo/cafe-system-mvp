@@ -1,5 +1,6 @@
-const { getQuery, allQuery } = require('../../db/connection');
+const { buildReportScope } = require('./reportDefinitionService');
 const crypto = require('crypto');
+const { getQuery } = require('../../db/connection');
 
 /**
  * Validates and normalizes reporting scope parameters.
@@ -8,14 +9,22 @@ const crypto = require('crypto');
 async function buildScopeCriteria(params) {
     const { venueId, startDate, endDate, timezone, shiftId } = params;
 
-    if (!venueId) throw new Error('Scope requires venueId');
-    if (!startDate || !endDate) throw new Error('Scope requires startDate and endDate');
+    if (!venueId) {
+        const err = new Error('Scope requires venueId');
+        err.code = 'VALIDATION_ERROR';
+        throw err;
+    }
+    if (!startDate || !endDate) {
+        const err = new Error('Scope requires startDate and endDate');
+        err.code = 'VALIDATION_ERROR';
+        throw err;
+    }
     
     const scope = {
         venueId,
         startDate,
         endDate,
-        timezone: timezone || 'UTC',
+        timezone: timezone || 'Africa/Cairo',
         requestId: crypto.randomUUID(),
         timestamp: new Date().toISOString()
     };
@@ -24,6 +33,7 @@ async function buildScopeCriteria(params) {
         const shift = await getQuery(`SELECT * FROM v3_shifts WHERE id = ? AND venue_id = ?`, [shiftId, venueId]);
         if (!shift) {
             const err = new Error(`Shift ${shiftId} not found for venue ${venueId}`);
+            err.code = 'VALIDATION_ERROR';
             err.requestId = scope.requestId;
             throw err;
         }
@@ -31,6 +41,7 @@ async function buildScopeCriteria(params) {
         // Assert date matches shift
         if (shift.business_date < startDate || shift.business_date > endDate) {
             const err = new Error(`Scope mismatch: Shift ${shiftId} business date ${shift.business_date} is outside requested range ${startDate} to ${endDate}`);
+            err.code = 'VALIDATION_ERROR';
             err.requestId = scope.requestId;
             throw err;
         }
@@ -42,4 +53,4 @@ async function buildScopeCriteria(params) {
     return scope;
 }
 
-module.exports = { buildScopeCriteria };
+module.exports = { buildScopeCriteria, buildReportScope };

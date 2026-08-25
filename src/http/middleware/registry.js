@@ -44,6 +44,7 @@ const routeRegistry = [
   // Reports & Financial
   { method: 'GET', pathRegex: /^\/api\/reports\/bom-reconciliation$/, permission: 'reports:inventory' },
   { method: 'ALL', pathRegex: /^\/api\/reports/, permission: 'reports:financial' },
+  { method: 'ALL', pathRegex: /^\/api\/shareholders/, permission: 'reports:financial' },
   { method: 'ALL', pathRegex: /^\/api\/expenses/, permission: 'reports:financial' },
   { method: 'ALL', pathRegex: /^\/api\/advances/, permission: 'reports:financial' },
   
