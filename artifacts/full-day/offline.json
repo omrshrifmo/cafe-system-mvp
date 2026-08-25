@@ -1,0 +1,14 @@
+[
+  {
+    "action": "OFFLINE_ORDER_QUEUED",
+    "idempotency_key": "OFFLINE_CMD_001",
+    "status": "QUEUED",
+    "safe_for_batch": true
+  },
+  {
+    "action": "OFFLINE_SETTLEMENT_REJECTED",
+    "reason": "STRICT_POLICY: Unverified financial settlements rejected in offline sync",
+    "status": "REJECTED",
+    "safe_for_batch": false
+  }
+]

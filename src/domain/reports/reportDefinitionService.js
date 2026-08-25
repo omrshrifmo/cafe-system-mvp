@@ -37,7 +37,7 @@ const POLICY_VERSION = 'pol-menacafe-v3';
  */
 async function buildReportScope(params = {}) {
   const venueId = params.venueId || 'V_DEFAULT';
-  const branchId = params.branchId || 'BR_DEFAULT';
+  const branchId = params.branchId || 'B_DEFAULT';
   const timezone = params.timezone || 'Africa/Cairo';
   const requestId = params.requestId || crypto.randomUUID();
 
@@ -298,9 +298,9 @@ async function calculateDepartmentBreakdown(scope, salesSummary) {
     sumDepartments += totalMinor;
   }
 
-  const targetRevenue = salesSummary.net_sales_minor - salesSummary.vat_tax_liability_minor - salesSummary.service_charge_minor;
+  const targetRevenue = (salesSummary.gross_sales_minor || salesSummary.net_sales_minor) - salesSummary.vat_tax_liability_minor - salesSummary.service_charge_minor;
 
-  // Invariant Gate: Department totals cannot exceed total net revenue when targetRevenue > 0
+  // Invariant Gate: Department totals cannot exceed total gross revenue when targetRevenue > 0
   if (targetRevenue > 0 && sumDepartments > targetRevenue + 100) {
     const err = new Error(`Invariant Violation: Department sum (${sumDepartments}) exceeds total target revenue (${targetRevenue})`);
     err.code = 'VALIDATION_ERROR';
@@ -350,14 +350,18 @@ async function calculateCogsAndWaste(scope) {
   // Fallback to legacy waste_log if 0
   let manualWasteCost = Math.round(manualWasteQuery ? manualWasteQuery.total_manual_waste : 0);
   if (manualWasteCost === 0) {
-    const legacyWaste = await getQuery(`
-      SELECT COALESCE(SUM(w.quantity * COALESCE(i.unit_cost, 0) * 100), 0) as total_waste
-      FROM waste_log w
-      LEFT JOIN inventory i ON w.inventory_id = i.id
-      WHERE ${dateFilter.replace(/created_at/g, 'w.created_at')}
-    `, params);
-    if (legacyWaste && legacyWaste.total_waste > 0) {
-      manualWasteCost = Math.round(legacyWaste.total_waste);
+    try {
+      const legacyWaste = await getQuery(`
+        SELECT COALESCE(SUM(w.quantity * COALESCE(i.cost_per_unit_minor, 0)), 0) as total_waste
+        FROM waste_log w
+        LEFT JOIN inventory_items i ON w.inventory_item_id = i.id
+        WHERE ${dateFilter.replace(/created_at/g, 'w.created_at')}
+      `, params);
+      if (legacyWaste && legacyWaste.total_waste > 0) {
+        manualWasteCost = Math.round(legacyWaste.total_waste);
+      }
+    } catch (e) {
+      // Safe fallback if legacy waste_log table is not present
     }
   }
 

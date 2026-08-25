@@ -46,20 +46,23 @@ SET is_active = 0,
 WHERE name IN ('BARISTA', 'SHISHA', 'KITCHEN') OR id IN (8, 9, 10);
 
 -- 4. Ensure Canonical Customer Categories
-INSERT OR IGNORE INTO menu_categories (id, name, name_en, icon, color, sort_order, is_active)
-VALUES 
-  (3, 'مشروبات باردة', 'Cold Drinks', '🧊', '#0284c7', 2, 1),
-  (1, 'مشروبات ساخنة', 'Hot Drinks', '☕', '#d97706', 1, 1),
-  (2, 'حلويات', 'Desserts', '🍰', '#db2777', 3, 1),
-  (6, 'مأكولات', 'Food', '🥪', '#16a34a', 4, 1),
-  (7, 'شيشة', 'Shisha', '💨', '#7c3aed', 5, 1);
+UPDATE menu_categories SET name = 'temp_' || id;
 
--- Ensure categories are active and properly named
-UPDATE menu_categories SET name = 'مشروبات ساخنة', name_en = 'Hot Drinks', is_active = 1, is_quarantined = 0 WHERE id = 1;
-UPDATE menu_categories SET name = 'حلويات', name_en = 'Desserts', is_active = 1, is_quarantined = 0 WHERE id = 2;
-UPDATE menu_categories SET name = 'مشروبات باردة', name_en = 'Cold Drinks', is_active = 1, is_quarantined = 0 WHERE id = 3;
-UPDATE menu_categories SET name = 'مأكولات', name_en = 'Food', is_active = 1, is_quarantined = 0 WHERE id = 6;
-UPDATE menu_categories SET name = 'شيشة', name_en = 'Shisha', is_active = 1, is_quarantined = 0 WHERE id = 7;
+INSERT INTO menu_categories (id, name, name_en, icon, color, sort_order, is_active, is_quarantined)
+VALUES 
+  (1, 'مشروبات ساخنة', 'Hot Drinks', '☕', '#d97706', 1, 1, 0),
+  (2, 'حلويات', 'Desserts', '🍰', '#db2777', 3, 1, 0),
+  (3, 'مشروبات باردة', 'Cold Drinks', '🧊', '#0284c7', 2, 1, 0),
+  (6, 'مأكولات', 'Food', '🥪', '#16a34a', 4, 1, 0),
+  (7, 'شيشة', 'Shisha', '💨', '#7c3aed', 5, 1, 0)
+ON CONFLICT(id) DO UPDATE SET
+  name = excluded.name,
+  name_en = excluded.name_en,
+  icon = excluded.icon,
+  color = excluded.color,
+  sort_order = excluded.sort_order,
+  is_active = 1,
+  is_quarantined = 0;
 
 -- 5. Correct Categories & Assign Deterministic SKUs
 -- Hot Drinks

@@ -1,0 +1,6 @@
+{
+  "server_status": "HEALTHY",
+  "connected_clients": 2,
+  "sequenced_outbox_events": 70,
+  "missed_gap_recovery_verified": true
+}

@@ -1,0 +1,58 @@
+[
+  {
+    "test": "CONCURRENT_TABLE_OPEN",
+    "description": "Two waiters open table T-1 simultaneously",
+    "expected": "Exactly 1 succeeds, 1 rejected",
+    "observed": "Success: 1, Rejected: 1",
+    "passed": true
+  },
+  {
+    "test": "DUPLICATE_ORDER_SUBMIT",
+    "description": "Duplicate order submission under same key",
+    "expected": "Second insert returns changes = 0 (Ignored)",
+    "observed": "First: changes=1, Second: changes=0",
+    "passed": true
+  },
+  {
+    "test": "DUPLICATE_SETTLEMENT",
+    "description": "Duplicate payment print request",
+    "expected": "Second request suppressed by deduplication filter",
+    "observed": "Job2 Suppressed: true",
+    "passed": true
+  },
+  {
+    "test": "RACING_PAYMENTS",
+    "description": "Two payments racing on single session",
+    "expected": "Both payments recorded with separate IDs and audit trace",
+    "observed": "Payments Count: 2",
+    "passed": true
+  },
+  {
+    "test": "NEGATIVE_STOCK_POLICY",
+    "description": "Verify system bounds stock at zero or blocks over-consumption",
+    "expected": "Over-consumption blocked",
+    "observed": "Blocked: true",
+    "passed": true
+  },
+  {
+    "test": "CONCURRENT_KDS_TRANSITION",
+    "description": "Two KDS stations acknowledging same line",
+    "expected": "Exactly 1 update succeeds",
+    "observed": "Wins: 1",
+    "passed": true
+  },
+  {
+    "test": "DISASTER_RECOVERY_REHEARSAL",
+    "description": "Hot backup, encryption, isolated restore, and RTO/RPO calculation",
+    "expected": "RTO < 60s, RPO <= 15m, Integrity OK",
+    "observed": "RTO: 0.29s, RPO: 15m, Status: SUCCESS",
+    "passed": true
+  },
+  {
+    "test": "OFFLINE_SYNC_FINANCIAL_SAFETY",
+    "description": "Reject financial mutations in offline batch",
+    "expected": "Financial settlements rejected offline",
+    "observed": "Rejected",
+    "passed": true
+  }
+]

@@ -1,0 +1,28 @@
+{
+  "simulation_fixture": "/home/omrshrifmo/cafe-system-mvp/artifacts/full-day/full_day_sim.sqlite",
+  "total_tables_executed": 30,
+  "shifts_closed": 2,
+  "financial_reconciliation": {
+    "total_gross_sales_egp": 11988.9,
+    "total_discounts_egp": 40,
+    "total_net_sales_egp": 11948.9,
+    "total_collected_egp": 11956.9,
+    "total_tips_egp": 190,
+    "total_change_owed_egp": 70,
+    "eod_revenue_reconciled": true,
+    "bi_revenue_reconciled": true,
+    "shareholders_reconciled": true
+  },
+  "inventory_bom_reconciliation": {
+    "bom_report_status": true,
+    "consumption_items_verified": 11,
+    "all_items_matched": true
+  },
+  "concurrency_reconciliation": {
+    "total_tests": 8,
+    "passed_tests": 8,
+    "all_passed": true
+  },
+  "verified_at": "2026-08-25T05:28:41.061Z",
+  "overall_status": "PASS"
+}
