@@ -1,15 +1,11 @@
 {
-  "source_database": "/home/omrshrifmo/cafe-system-mvp/cafe.db",
-  "source_size_bytes": 929792,
-  "backup_file": "/home/omrshrifmo/cafe-system-mvp/backups/cafe_baseline_backup.db",
-  "backup_sha256": "0eebe26e34be3efb1d2b1ff756a8f34cd235c0c4d50eed15870cae5856e4cf05",
-  "backup_md5": "d2d1523da7fbde3717011abd1444505e",
-  "backup_size_bytes": 921600,
-  "restore_test_file": "/home/omrshrifmo/cafe-system-mvp/backups/cafe_baseline_restore_test.db",
-  "restore_sha256": "0eebe26e34be3efb1d2b1ff756a8f34cd235c0c4d50eed15870cae5856e4cf05",
-  "restore_md5": "d2d1523da7fbde3717011abd1444505e",
-  "restore_size_bytes": 921600,
-  "checksum_verified": true,
-  "created_at": "2026-08-22T18:32:22.737Z",
-  "integrity_status": "ok"
+  "backup_created_at": "2026-08-25T15:55:57.565Z",
+  "live_database_path": "/home/omrshrifmo/cafe-system-mvp/cafe.db",
+  "backup_file_path": "/home/omrshrifmo/cafe-system-mvp/backups/cafe-backup-2026-08-25T15-55-57-466Z.sqlite",
+  "backup_sha256": "bd050b7b3553352bd6e5da112a29f3a999a15010b44b6c9322d95b769e6e0133",
+  "restored_verification_file": "/home/omrshrifmo/cafe-system-mvp/backups/cafe_restore_verification.sqlite",
+  "restored_sha256": "bd050b7b3553352bd6e5da112a29f3a999a15010b44b6c9322d95b769e6e0133",
+  "checksums_match": true,
+  "duration_ms": 97,
+  "status": "VERIFIED"
 }

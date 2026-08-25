@@ -24,9 +24,9 @@ function isApprovedTestDatabase(dbPath) {
     return false;
   }
 
-  // Approved if located in test/fixtures/, artifacts/full-day/, backups/, or named with test_/fixture_/demo_/full_day_ prefix
-  const isFixtureDir = normalized.includes(path.join('test', 'fixtures')) || normalized.includes('backups') || normalized.includes(path.join('artifacts', 'full-day'));
-  const hasTestPrefix = base.startsWith('test') || base.startsWith('fixture') || base.startsWith('demo') || base.startsWith('full_day') || base.includes('_test_') || base.includes('_fixture_');
+  // Approved if located in fixtures/, test/fixtures/, artifacts/full-day/, backups/, or named with test_/fixture_/demo_/clean_/concurrency_/offline_ prefix
+  const isFixtureDir = normalized.includes('fixtures') || normalized.includes('backups') || normalized.includes(path.join('artifacts', 'full-day'));
+  const hasTestPrefix = base.startsWith('test') || base.startsWith('fixture') || base.startsWith('demo') || base.startsWith('clean') || base.startsWith('concurrency') || base.startsWith('offline') || base.startsWith('full_day') || base.includes('_test_') || base.includes('_fixture_');
 
   return isFixtureDir || hasTestPrefix;
 }

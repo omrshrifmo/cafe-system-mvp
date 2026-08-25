@@ -262,5 +262,6 @@ module.exports = {
   restoreEncryptedBackup,
   verifyBackup,
   getBackupStatus,
+  calculateFileSha256,
   testFullDisasterRecoveryRehearsal
 };

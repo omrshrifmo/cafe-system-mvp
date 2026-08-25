@@ -1,33 +1,43 @@
 {
-  "generatedAt": "2026-08-23T17:39:02.827Z",
+  "generatedAt": "2026-08-25T15:50:14.298Z",
   "generatorVersion": "2.0.0-enterprise",
   "isolationEnforced": true,
   "productionDatabaseProtected": "cafe.db",
   "fixtures": [
     {
-      "name": "clean_fixture.db",
-      "path": "/home/omrshrifmo/cafe-system-mvp/test/fixtures/clean_fixture.db",
-      "checksum": "ba6757a94c07fa68263e387888412246a79b10bba97c16ba0998d268bf645efc"
+      "name": "clean.sqlite",
+      "path": "/home/omrshrifmo/cafe-system-mvp/fixtures/clean.sqlite",
+      "checksum": "a2528b77a698f79b9c5ca11b4a1488ac94ce39b736be4a8eeb5922c05d08d06e"
+    },
+    {
+      "name": "demo-normal.sqlite",
+      "path": "/home/omrshrifmo/cafe-system-mvp/fixtures/demo-normal.sqlite",
+      "checksum": "6500f9bee99e12a3baa33c002025f9b07b2dad124a65ffc336c5e78ecc7e67e6"
+    },
+    {
+      "name": "demo-low-stock.sqlite",
+      "path": "/home/omrshrifmo/cafe-system-mvp/fixtures/demo-low-stock.sqlite",
+      "checksum": "0dce53e68f67c79503c0e2b94bdf3418ab2e4d89a1e91a3007aeda5e05dce042"
+    },
+    {
+      "name": "concurrency.sqlite",
+      "path": "/home/omrshrifmo/cafe-system-mvp/fixtures/concurrency.sqlite",
+      "checksum": "cd61e0968a8147fab939d3d1c9c1aed9d3bcc8bd67a4ff1ba2c939f86c2c74ba"
+    },
+    {
+      "name": "offline.sqlite",
+      "path": "/home/omrshrifmo/cafe-system-mvp/fixtures/offline.sqlite",
+      "checksum": "bc6691af022c75645dfe83c42d5505134d687d7dcd2ba41cb574b13cb386833c"
     },
     {
       "name": "legacy_cafe.db",
       "path": "/home/omrshrifmo/cafe-system-mvp/test/fixtures/legacy_cafe.db",
-      "checksum": "06def826d5d8b8a5498d3eb86828ecb4fe76c34a906cd4f5e61068907f8f2bf0"
-    },
-    {
-      "name": "concurrency_fixture.db",
-      "path": "/home/omrshrifmo/cafe-system-mvp/test/fixtures/concurrency_fixture.db",
-      "checksum": "1addc038e6e785ceee87fdffc69fa78cf4a30331951beea1604507ba61d4a812"
-    },
-    {
-      "name": "offline_fixture.db",
-      "path": "/home/omrshrifmo/cafe-system-mvp/test/fixtures/offline_fixture.db",
-      "checksum": "3962655275c7c987c9489621ca05ee88acdfb0ab6421e2d1d58389eadb742b5d"
+      "checksum": "3126269e449f914ac41b0d026a6cc50db95ad0009b094a615bfbc5e3aad8fa60"
     },
     {
       "name": "full_day_fixture.db",
       "path": "/home/omrshrifmo/cafe-system-mvp/test/fixtures/full_day_fixture.db",
-      "checksum": "3d704dbd55b1a67eb3e0638cdd42f84c4b739594dba626d03ca89a0b7f78251c"
+      "checksum": "1d35ecc6438666457502a82817de7928caa26f114d8ac3caed5b285a63a45e83"
     }
   ]
 }

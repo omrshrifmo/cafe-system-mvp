@@ -29,6 +29,7 @@ async function initMigrationTable(db = null) {
 
 async function runMigrations(customDb = null) {
   const db = customDb || getDb();
+  await runQuery('PRAGMA busy_timeout = 10000;', [], db);
   await initMigrationTable(db);
 
   const appliedRows = await allQuery(`SELECT version, checksum FROM schema_migrations WHERE status = 'SUCCESS'`, [], db);

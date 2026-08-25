@@ -7,7 +7,7 @@ ALTER TABLE tables ADD COLUMN shift_id INTEGER NULL;
 ALTER TABLE tables ADD COLUMN device_id TEXT NULL;
 ALTER TABLE tables ADD COLUMN opened_by_user_id INTEGER NULL;
 ALTER TABLE tables ADD COLUMN turnover_count INTEGER NOT NULL DEFAULT 0;
-ALTER TABLE tables ADD COLUMN created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'));
+ALTER TABLE tables ADD COLUMN created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP;
 
 -- 2. Create Table Events Table (Immutable append-only lifecycle events)
 CREATE TABLE IF NOT EXISTS table_events (

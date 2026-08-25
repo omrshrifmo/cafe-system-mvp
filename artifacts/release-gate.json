@@ -1,31 +1,60 @@
 {
-  "evaluated_at": "2026-08-22T18:32:23.064Z",
-  "status": "PASS",
+  "releaseStatus": "PASS",
+  "stage": "STAGE_0_BASELINE_AND_FAST_TRACK",
+  "timestamp": "2026-08-25T18:57:00.000Z",
   "provenance": {
-    "commit_sha": "5602882e7274af7c263f260b4f9760db45746586",
-    "branch": "main",
-    "build_id": "build-v2-remediated",
-    "schema_version": "005_canonical_prices.sql",
-    "service_worker_version": "cafe-os-v3",
-    "database_path": "cafe.db",
-    "database_sha256": "0eebe26e34be3efb1d2b1ff756a8f34cd235c0c4d50eed15870cae5856e4cf05"
+    "repositoryPath": "/home/omrshrifmo/cafe-system-mvp",
+    "gitCommit": "6ef42d711e8609737df0c32a751a571b6435872e",
+    "gitBranch": "main",
+    "buildId": "build-6ef42d71-v2",
+    "serviceWorkerVersion": "cafe-os-v3.1",
+    "schemaVersion": "026_reporting_bi_indexes.sql",
+    "migrationVersion": "026",
+    "environmentMode": "development",
+    "appMode": "LIVE",
+    "port": 3000,
+    "processId": 3835176,
+    "liveDatabasePath": "/home/omrshrifmo/cafe-system-mvp/cafe.db"
   },
   "gates": {
-    "isolated_install_start": "PASS",
-    "backup_checksum_verified": "PASS",
-    "fixtures_created_and_identifiable": "PASS",
-    "runtime_identity_equals_checkout": "PASS",
-    "defect_ledger_tracked": "PASS"
+    "provenanceIdentical": "PASS",
+    "liveDatabaseIsolated": "PASS",
+    "fixturesGenerated": "PASS",
+    "backupRestoreVerified": "PASS",
+    "defectLedgerMaintained": "PASS"
   },
   "fixtures": {
-    "clean": "fixtures/clean.sqlite",
-    "legacy": "fixtures/legacy.sqlite",
-    "concurrency": "fixtures/concurrency.sqlite",
-    "offline": "fixtures/offline.sqlite"
+    "clean": {
+      "path": "fixtures/clean.sqlite",
+      "sha256": "a2528b77a698f79b9c5ca11b4a1488ac94ce39b736be4a8eeb5922c05d08d06e",
+      "status": "PASS"
+    },
+    "demoNormal": {
+      "path": "fixtures/demo-normal.sqlite",
+      "sha256": "6500f9bee99e12a3baa33c002025f9b07b2dad124a65ffc336c5e78ecc7e67e6",
+      "status": "PASS"
+    },
+    "demoLowStock": {
+      "path": "fixtures/demo-low-stock.sqlite",
+      "sha256": "0dce53e68f67c79503c0e2b94bdf3418ab2e4d89a1e91a3007aeda5e05dce042",
+      "status": "PASS"
+    },
+    "concurrency": {
+      "path": "fixtures/concurrency.sqlite",
+      "sha256": "cd61e0968a8147fab939d3d1c9c1aed9d3bcc8bd67a4ff1ba2c939f86c2c74ba",
+      "status": "PASS"
+    },
+    "offline": {
+      "path": "fixtures/offline.sqlite",
+      "sha256": "bc6691af022c75645dfe83c42d5505134d687d7dcd2ba41cb574b13cb386833c",
+      "status": "PASS"
+    }
   },
-  "backup": {
-    "backup_file": "backups/cafe_baseline_backup.db",
-    "restore_file": "backups/cafe_baseline_restore_test.db",
-    "verified": true
+  "backupParity": {
+    "tablesMatch": true,
+    "monetaryMatch": true,
+    "stockMatch": true,
+    "migrationsMatch": true,
+    "rowCountsMatch": true
   }
 }

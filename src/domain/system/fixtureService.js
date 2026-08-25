@@ -18,6 +18,7 @@ const { assertSafeMutationTarget } = require('./mutationGuard');
 const { hashPin } = require('../auth/service');
 const logger = require('../../observability/logger');
 
+const ROOT_FIXTURES_DIR = path.join(__dirname, '../../../fixtures');
 const FIXTURES_DIR = path.join(__dirname, '../../../test/fixtures');
 const MANIFEST_PATH = path.join(__dirname, '../../../artifacts/fixtures/fixture_manifest.json');
 
@@ -92,22 +93,27 @@ function closeFixtureDb(db) {
 }
 
 /**
- * 1. Clean Fixture
+ * 1. Clean Fixture (fixtures/clean.sqlite)
  */
-async function generateCleanFixture() {
-  const dbPath = path.join(FIXTURES_DIR, 'clean_fixture.db');
+async function generateCleanFixture(targetDir = ROOT_FIXTURES_DIR) {
+  const dbPath = path.join(targetDir, 'clean.sqlite');
   logger.info('Generating Clean Fixture...', { dbPath });
   const db = await openFixtureDb(dbPath);
   await runMigrations(db);
   await closeFixtureDb(db);
-  return { name: 'clean_fixture.db', path: dbPath, checksum: getFileSha256(dbPath) };
+  
+  // Also create clean_fixture.db for legacy test compatibility
+  if (targetDir === ROOT_FIXTURES_DIR) {
+    fs.copyFileSync(dbPath, path.join(FIXTURES_DIR, 'clean_fixture.db'));
+  }
+  return { name: 'clean.sqlite', path: dbPath, checksum: getFileSha256(dbPath) };
 }
 
 /**
  * 2. Legacy Fixture
  */
-async function generateLegacyFixture() {
-  const dbPath = path.join(FIXTURES_DIR, 'legacy_cafe.db');
+async function generateLegacyFixture(targetDir = FIXTURES_DIR) {
+  const dbPath = path.join(targetDir, 'legacy_cafe.db');
   logger.info('Generating Legacy Fixture...', { dbPath });
   const db = await openFixtureDb(dbPath);
   await runMigrations(db);
@@ -126,10 +132,10 @@ async function generateLegacyFixture() {
 }
 
 /**
- * 3. Concurrency Fixture
+ * 3. Concurrency Fixture (fixtures/concurrency.sqlite)
  */
-async function generateConcurrencyFixture() {
-  const dbPath = path.join(FIXTURES_DIR, 'concurrency_fixture.db');
+async function generateConcurrencyFixture(targetDir = ROOT_FIXTURES_DIR) {
+  const dbPath = path.join(targetDir, 'concurrency.sqlite');
   logger.info('Generating Concurrency Fixture...', { dbPath });
   const db = await openFixtureDb(dbPath);
   await runMigrations(db);
@@ -155,26 +161,32 @@ async function generateConcurrencyFixture() {
   `);
 
   await closeFixtureDb(db);
-  return { name: 'concurrency_fixture.db', path: dbPath, checksum: getFileSha256(dbPath) };
+  if (targetDir === ROOT_FIXTURES_DIR) {
+    fs.copyFileSync(dbPath, path.join(FIXTURES_DIR, 'concurrency_fixture.db'));
+  }
+  return { name: 'concurrency.sqlite', path: dbPath, checksum: getFileSha256(dbPath) };
 }
 
 /**
- * 4. Offline Fixture
+ * 4. Offline Fixture (fixtures/offline.sqlite)
  */
-async function generateOfflineFixture() {
-  const dbPath = path.join(FIXTURES_DIR, 'offline_fixture.db');
+async function generateOfflineFixture(targetDir = ROOT_FIXTURES_DIR) {
+  const dbPath = path.join(targetDir, 'offline.sqlite');
   logger.info('Generating Offline Fixture...', { dbPath });
   const db = await openFixtureDb(dbPath);
   await runMigrations(db);
   await closeFixtureDb(db);
-  return { name: 'offline_fixture.db', path: dbPath, checksum: getFileSha256(dbPath) };
+  if (targetDir === ROOT_FIXTURES_DIR) {
+    fs.copyFileSync(dbPath, path.join(FIXTURES_DIR, 'offline_fixture.db'));
+  }
+  return { name: 'offline.sqlite', path: dbPath, checksum: getFileSha256(dbPath) };
 }
 
 /**
  * 5. Full Day Fixture (Comprehensive 2-Shift Golden Dataset)
  */
-async function generateFullDayFixture() {
-  const dbPath = path.join(FIXTURES_DIR, 'full_day_fixture.db');
+async function generateFullDayFixture(targetDir = FIXTURES_DIR, filename = 'full_day_fixture.db') {
+  const dbPath = path.join(targetDir, filename);
   logger.info('Generating Full Day Fixture...', { dbPath });
   const db = await openFixtureDb(dbPath);
   await runMigrations(db);
@@ -478,13 +490,56 @@ async function generateFullDayFixture() {
   `);
 
   await closeFixtureDb(db);
-  return { name: 'full_day_fixture.db', path: dbPath, checksum: getFileSha256(dbPath) };
+  if (targetDir === ROOT_FIXTURES_DIR) {
+    fs.copyFileSync(dbPath, path.join(FIXTURES_DIR, 'full_day_fixture.db'));
+  }
+  return { name: path.basename(dbPath), path: dbPath, checksum: getFileSha256(dbPath) };
+}
+
+/**
+ * 6. Demo Normal Fixture (fixtures/demo-normal.sqlite)
+ */
+async function generateDemoNormalFixture(targetDir = ROOT_FIXTURES_DIR) {
+  const dbPath = path.join(targetDir, 'demo-normal.sqlite');
+  logger.info('Generating Demo Normal Fixture...', { dbPath });
+  const res = await generateFullDayFixture(targetDir, 'demo-normal.sqlite');
+  return { name: 'demo-normal.sqlite', path: dbPath, checksum: getFileSha256(dbPath) };
+}
+
+/**
+ * 7. Demo Low Stock Fixture (fixtures/demo-low-stock.sqlite)
+ */
+async function generateDemoLowStockFixture(targetDir = ROOT_FIXTURES_DIR) {
+  const dbPath = path.join(targetDir, 'demo-low-stock.sqlite');
+  logger.info('Generating Demo Low Stock Fixture...', { dbPath });
+  
+  // Base off full day fixture
+  await generateFullDayFixture(targetDir, 'demo-low-stock.sqlite');
+
+  // Open and reduce stock for key raw materials below reorder thresholds
+  const db = new sqlite3.Database(dbPath);
+  await execSql(db, `
+    -- Lower Milk (reorder: 5000ml) to 1200ml (1200000000 micro)
+    UPDATE inventory_items SET current_stock_microunits = 1200000000 WHERE id = 2;
+
+    -- Lower Espresso Beans (reorder: 2000g) to 300g (300000000 micro)
+    UPDATE inventory_items SET current_stock_microunits = 300000000 WHERE id = 1;
+
+    -- Lower Shisha Tobacco (reorder: 1000g) to 200g (200000000 micro)
+    UPDATE inventory_items SET current_stock_microunits = 200000000 WHERE id = 5;
+  `);
+  await closeFixtureDb(db);
+
+  return { name: 'demo-low-stock.sqlite', path: dbPath, checksum: getFileSha256(dbPath) };
 }
 
 /**
  * Generate All Fixtures and write Manifest
  */
 async function generateAllFixtures() {
+  if (!fs.existsSync(ROOT_FIXTURES_DIR)) {
+    fs.mkdirSync(ROOT_FIXTURES_DIR, { recursive: true });
+  }
   if (!fs.existsSync(FIXTURES_DIR)) {
     fs.mkdirSync(FIXTURES_DIR, { recursive: true });
   }
@@ -494,18 +549,28 @@ async function generateAllFixtures() {
   }
 
   logger.info('=== Starting Deterministic Fixture Generation ===');
-  const clean = await generateCleanFixture();
-  const legacy = await generateLegacyFixture();
-  const concurrency = await generateConcurrencyFixture();
-  const offline = await generateOfflineFixture();
-  const fullDay = await generateFullDayFixture();
+  const clean = await generateCleanFixture(ROOT_FIXTURES_DIR);
+  const demoNormal = await generateDemoNormalFixture(ROOT_FIXTURES_DIR);
+  const demoLowStock = await generateDemoLowStockFixture(ROOT_FIXTURES_DIR);
+  const concurrency = await generateConcurrencyFixture(ROOT_FIXTURES_DIR);
+  const offline = await generateOfflineFixture(ROOT_FIXTURES_DIR);
+  const legacy = await generateLegacyFixture(FIXTURES_DIR);
+  const fullDay = await generateFullDayFixture(FIXTURES_DIR);
 
   const manifest = {
     generatedAt: new Date().toISOString(),
     generatorVersion: '2.0.0-enterprise',
     isolationEnforced: true,
     productionDatabaseProtected: 'cafe.db',
-    fixtures: [clean, legacy, concurrency, offline, fullDay]
+    fixtures: [
+      clean,
+      demoNormal,
+      demoLowStock,
+      concurrency,
+      offline,
+      legacy,
+      fullDay
+    ]
   };
 
   fs.writeFileSync(MANIFEST_PATH, JSON.stringify(manifest, null, 2), 'utf8');
@@ -529,10 +594,13 @@ if (require.main === module) {
 module.exports = {
   generateAllFixtures,
   generateCleanFixture,
+  generateDemoNormalFixture,
+  generateDemoLowStockFixture,
   generateLegacyFixture,
   generateConcurrencyFixture,
   generateOfflineFixture,
   generateFullDayFixture,
+  ROOT_FIXTURES_DIR,
   FIXTURES_DIR,
   MANIFEST_PATH
 };

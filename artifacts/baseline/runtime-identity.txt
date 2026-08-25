@@ -1,14 +1,23 @@
-repository: omrshrifmo/cafe-system-mvp
-branch: main
-commit_sha: e8224a1ea063b8ee0010586664ac9ee9570bd2ad
-process_id: 2436689
-port: 3000
-schema_version: 019_reporting_and_equity.sql
-migration_version: 019
-service_worker_version: cafe-os-v3.1
-environment_mode: development
-server_instance_id: a272a935-0b51-44f8-8dc9-91790a733806
-database_identity: test/fixtures/full_day_fixture.db
-fixture_id: full_day_fixture.db
-app_mode: DEMO
-generated_at: 2026-08-23T17:55:33.323Z
+=== CAFE SYSTEM MVP RUNTIME PROVENANCE & BASELINE IDENTITY ===
+Absolute Repository Path: /home/omrshrifmo/cafe-system-mvp
+Git Remote: https://github.com/omrshrifmo/cafe-system-mvp.git
+Git Branch: main
+Commit SHA: 6ef42d711e8609737df0c32a751a571b6435872e
+Working Tree Dirty: true
+Node Version: v22.23.1
+NPM Version: 12.0.1
+Environment Mode: development
+Application Mode: LIVE (Server-Enforced)
+Database Path: /home/omrshrifmo/cafe-system-mvp/cafe.db
+Database SHA-256: 8e7bdfbcf66b284a0786dd21219f8b24b9f736c125daafd3e1badd80ee22f969
+Service Worker Version: cafe-os-v3.1 (Hash: 57cb96548fb033563f83c71dfdcff69c3be1c80dab759753b8e3ed191ddd5811)
+Active Port: 3000
+Process Manager: Native Node.js Subsystem (PID 3835176)
+Latest Migration Applied: 026_reporting_bi_indexes.sql (Total: 26)
+Verified Isolated Fixtures:
+  - fixtures/clean.sqlite
+  - fixtures/demo-normal.sqlite
+  - fixtures/demo-low-stock.sqlite
+  - fixtures/concurrency.sqlite
+  - fixtures/offline.sqlite
+Date: 2026-08-25T15:56:05.945Z

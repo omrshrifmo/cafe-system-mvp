@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "generatedAt": "2026-08-24T14:22:40.572Z",
-  "proposalsGeneratedAt": "2026-08-24T14:22:40.439Z",
-  "source": "session-apply",
+  "generatedAt": "2026-08-25T14:22:43.140Z",
+  "proposalsGeneratedAt": "2026-08-25T14:22:43.131Z",
+  "source": "task-skill-proposals",
   "activeSkills": [
     "self-learning",
     "file-style-conventions",
