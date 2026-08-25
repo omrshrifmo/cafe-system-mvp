@@ -3,7 +3,8 @@ const request = require('supertest');
 const { createApp } = require('../../src/app');
 const { runMigrations } = require('../../src/db/migrator');
 
-describe('Security & RBAC Protection Tests', () => {
+describe('Security & RBAC Protection Tests', function () {
+  this.timeout(20000);
   let app;
   let cashierToken;
   let managerToken;

@@ -18,10 +18,11 @@ const PURCHASE_STATUSES = {
 
 async function getPurchases(filter = {}) {
   let query = `
-    SELECT p.id, p.venue_id, p.supplier_id, p.invoice_number, p.grn_number, p.document_ref,
-           p.currency, p.status, p.subtotal_minor, p.tax_minor, p.total_cost_minor,
-           (p.total_cost_minor / 100.0) as total_cost,
-           p.receipt_date, p.attachment_ref, p.notes, p.created_by, p.approved_by, p.created_at,
+    SELECT p.id, p.venue_id, p.supplier_id, p.invoice_ref as invoice_number, p.grn_number, p.document_ref,
+           p.currency, p.status, p.subtotal_minor, p.tax_minor,
+           COALESCE(p.subtotal_minor + p.tax_minor, CAST(p.total_cost * 100 as INTEGER)) as total_cost_minor,
+           p.total_cost,
+           p.receipt_date, p.attachment_ref, p.notes, p.approved_by, p.created_at,
            s.name as supplier_name, s.tax_identity as supplier_tax_id, s.phone as supplier_phone
     FROM purchases p
     LEFT JOIN suppliers s ON p.supplier_id = s.id
@@ -136,10 +137,10 @@ async function createPurchaseDraft(data, actorId = null) {
     // 2. Insert Purchase Draft (Drafts DO NOT affect inventory stock or ledger)
     const pRes = await tx.run(
       `INSERT INTO purchases (
-         supplier_id, venue_id, invoice_number, grn_number, document_ref, currency,
-         subtotal_minor, tax_minor, total_cost_minor, status, notes, attachment_ref,
-         idempotency_key, request_id, receipt_date, created_by
-       ) VALUES (?, 'V_DEFAULT', ?, ?, ?, ?, ?, ?, ?, 'DRAFT', ?, ?, ?, ?, ?, ?)`,
+         supplier_id, venue_id, invoice_ref, grn_number, document_ref, currency,
+         subtotal_minor, tax_minor, total_cost, status, notes, attachment_ref,
+         idempotency_key, request_id, receipt_date
+       ) VALUES (?, 'V_DEFAULT', ?, ?, ?, ?, ?, ?, ?, 'DRAFT', ?, ?, ?, ?, ?)`,
       [
         supplier_id,
         invoice_number || null,
@@ -148,13 +149,12 @@ async function createPurchaseDraft(data, actorId = null) {
         currency,
         subtotalMinor,
         tax_minor,
-        totalCostMinor,
+        totalCostMinor / 100.0,
         notes || null,
         attachment_ref || null,
         idempotency_key || null,
         request_id || null,
-        receipt_date,
-        validActorId
+        receipt_date
       ]
     );
 
@@ -174,7 +174,9 @@ async function createPurchaseDraft(data, actorId = null) {
       supplier_id,
       status: PURCHASE_STATUSES.DRAFT,
       subtotal: subtotalMinor / 100,
+      subtotal_minor: subtotalMinor,
       total_cost: totalCostMinor / 100,
+      total_cost_minor: totalCostMinor,
       lines_count: verifiedLines.length,
       message: 'تم إنشاء مسودة أمر الشراء بنجاح 📝 (لم يتم تغيير رصيد المخزون بعد)'
     };
@@ -247,7 +249,7 @@ async function receivePurchase(purchaseId, receivePayload = {}, actorId = null, 
       throw new Error('VALIDATION_ERROR: أمر الشراء لا يحتوي على بنود أصناف للاستلام');
     }
 
-    const receiptBatchId = `GRN_${purchaseId}_${Date.now()}`;
+    const receiptBatchId = `GRN-${purchaseId}-${Date.now()}`;
     const receiptDate = receivePayload.receipt_date || purchase.receipt_date || new Date().toISOString().split('T')[0];
 
     // Atomically update inventory stock, calculate Weighted Average Cost (WAC), and append ledger receipts
@@ -409,7 +411,7 @@ async function getSupplierMaster(supplierId) {
   if (!supplier) throw new Error('NOT_FOUND: المورد غير موجود');
 
   const history = await allQuery(
-    `SELECT p.id as purchase_id, p.invoice_number, p.status, p.total_cost_minor / 100.0 as total_cost,
+    `SELECT p.id as purchase_id, p.invoice_ref as invoice_number, p.status, p.total_cost,
             p.created_at, pi.inventory_item_id, pi.quantity_microunits / 1000000.0 as quantity,
             pi.unit, pi.unit_cost_minor / 100.0 as unit_cost, i.name as item_name
      FROM purchases p

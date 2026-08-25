@@ -21,6 +21,14 @@ const {
 } = require('../../domain/hospitality/reservationService');
 const { allQuery, runQuery } = require('../../db/connection');
 
+const {
+  createComplaint,
+  updateComplaint,
+  resolveComplaint,
+  getComplaints,
+  getComplaintDetails
+} = require('../../domain/qa/qualityService');
+
 // CRM Aliases
 router.get('/crm', requireAuth, async (req, res, next) => {
   req.url = '/customers' + (req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '');
@@ -33,10 +41,11 @@ router.post('/crm', requireAuth, async (req, res, next) => {
 });
 
 // Quality Assurance / Incident Management
-router.get('/quality', requireAuth, async (req, res, next) => {
+router.get(['/quality', '/qa'], requireAuth, async (req, res, next) => {
   try {
+    const allowFullView = (req.user && (req.user.role === 'OWNER' || req.user.role === 'SUPER_ADMIN'));
     const feedback = await allQuery(`SELECT * FROM customer_feedback ORDER BY created_at DESC LIMIT 20`);
-    const complaints = await allQuery(`SELECT * FROM complaints ORDER BY created_at DESC LIMIT 20`);
+    const complaints = await getComplaints({}, allowFullView);
     res.json({
       success: true,
       data: {
@@ -280,9 +289,16 @@ router.post('/feedback', async (req, res, next) => {
 });
 
 // Complaints / QA Records
-router.get('/complaints', requireAuth, async (req, res, next) => {
+router.get(['/complaints', '/qa/complaints', '/quality/complaints'], requireAuth, async (req, res, next) => {
   try {
-    const complaints = await allQuery(`SELECT * FROM complaints ORDER BY created_at DESC LIMIT 50`);
+    const allowFullView = (req.user && (req.user.role === 'OWNER' || req.user.role === 'SUPER_ADMIN'));
+    const { status, severity, against_user_id, venue_id } = req.query;
+    const complaints = await getComplaints({
+      status,
+      severity,
+      againstUserId: against_user_id,
+      venueId: venue_id
+    }, allowFullView);
     res.json({
       success: true,
       data: { complaints },
@@ -294,17 +310,100 @@ router.get('/complaints', requireAuth, async (req, res, next) => {
   }
 });
 
-router.post('/complaints', requireAuth, async (req, res, next) => {
+router.get(['/complaints/:id', '/qa/complaints/:id'], requireAuth, async (req, res, next) => {
   try {
-    const { customer_name, order_id, description, severity, status } = req.body;
-    const result = await runQuery(
-      `INSERT INTO complaints (customer_name, order_id, description, severity, status) VALUES (?, ?, ?, ?, ?)`,
-      [customer_name || 'عميل', order_id || null, description, severity || 'MEDIUM', status || 'OPEN']
-    );
+    const complaint = await getComplaintDetails(req.params.id);
+    if (!complaint) {
+      return res.status(404).json({ success: false, error: 'سجل الشكوى غير موجود', code: 'NOT_FOUND', requestId: req.id });
+    }
     res.json({
       success: true,
-      data: { complaint_id: result.lastID },
-      complaint_id: result.lastID,
+      data: { complaint },
+      complaint,
+      requestId: req.id
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post(['/complaints', '/qa/complaints', '/quality/complaints'], requireAuth, async (req, res, next) => {
+  try {
+    const loggedByUserId = req.body.logged_by_user_id || (req.user ? req.user.id : '1');
+    const {
+      venue_id,
+      order_id,
+      order_session_id,
+      against_user_id,
+      customer_name,
+      customer_phone,
+      severity,
+      description,
+      evidence,
+      owner_user_id,
+      due_date
+    } = req.body;
+
+    const result = await createComplaint({
+      venueId: venue_id || 'V_DEFAULT',
+      orderSessionId: order_session_id || (order_id ? String(order_id) : null),
+      loggedByUserId,
+      againstUserId: against_user_id,
+      customerName: customer_name,
+      customerPhone: customer_phone,
+      severity: severity || 'LOW',
+      description,
+      evidence: evidence || [],
+      ownerUserId: owner_user_id,
+      dueDate: due_date
+    });
+
+    res.json({
+      success: true,
+      data: result,
+      ...result,
+      complaint_id: result.complaint_id,
+      requestId: req.id
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.put(['/complaints/:id', '/qa/complaints/:id'], requireAuth, async (req, res, next) => {
+  try {
+    const actorId = req.user ? req.user.id : 'SYSTEM';
+    const { status, owner_user_id, root_cause, corrective_action, due_date, resolution_notes } = req.body;
+    const result = await updateComplaint(req.params.id, {
+      actorId,
+      status,
+      ownerUserId: owner_user_id,
+      rootCause: root_cause,
+      correctiveAction: corrective_action,
+      dueDate: due_date,
+      resolutionNotes: resolution_notes
+    });
+    res.json({
+      success: true,
+      data: result,
+      ...result,
+      requestId: req.id
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post(['/complaints/:id/resolve', '/qa/complaints/:id/resolve', '/qa/complaints/resolve'], requireAuth, async (req, res, next) => {
+  try {
+    const complaintId = req.params.id || req.body.complaint_id;
+    const actorId = req.user ? req.user.id : (req.body.user_id || 'SYSTEM');
+    const { resolution_notes } = req.body;
+    const result = await resolveComplaint(complaintId, actorId, resolution_notes);
+    res.json({
+      success: true,
+      data: result,
+      ...result,
       requestId: req.id
     });
   } catch (err) {

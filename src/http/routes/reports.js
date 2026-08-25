@@ -115,7 +115,9 @@ router.get('/reports/bi', requireAuth, requirePermission('reports:financial'), a
     );
 
     const wasteCost = await getQuery(
-      `SELECT COALESCE(SUM(cost_minor), 0) / 100.0 as total_waste_cost FROM waste_log`
+      `SELECT COALESCE(SUM(w.quantity * COALESCE(i.unit_cost, 0)), 0) as total_waste_cost 
+       FROM waste_log w 
+       LEFT JOIN inventory i ON w.inventory_id = i.id`
     );
 
     const topItems = await allQuery(

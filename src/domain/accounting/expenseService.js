@@ -135,9 +135,9 @@ async function recordExpense(expenseData, actorId = null) {
 
     // Also mirror to legacy daily_expenses for backwards compatibility
     await tx.run(
-      `INSERT INTO daily_expenses (description, amount, payment_source, created_by, expense_date)
-       VALUES (?, ?, 'DRAWER', ?, date('now', 'localtime'))`,
-      [notes || `مصروف [${category_id}]`, amountMinor / 100, validActorId]
+      `INSERT INTO daily_expenses (description, amount, payment_source, expense_date)
+       VALUES (?, ?, 'DRAWER', date('now', 'localtime'))`,
+      [notes || `مصروف [${category_id}]`, amountMinor / 100]
     );
 
     // If allocation policy is specified, compute and record indirect allocations

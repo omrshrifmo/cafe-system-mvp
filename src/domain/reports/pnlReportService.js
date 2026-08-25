@@ -16,10 +16,10 @@ async function generateProfitAndLoss(scope) {
     // 1. COGS (Inventory consumed via sales or waste)
     // Note: Cost must be retrieved at time of ledger entry in a full system. Assuming cost_per_unit here is static for MVP simplicity.
     const cogsQuery = await getQuery(`
-        SELECT COALESCE(SUM(ABS(il.change_microunits) * (ii.cost_per_unit_minor * 1.0 / 1000000)), 0) as total_cogs
+        SELECT COALESCE(SUM(ABS(COALESCE(il.quantity_delta_microunits, 0)) * (COALESCE(il.unit_cost_minor, ii.cost_per_unit_minor, 0) * 1.0 / 1000000)), 0) as total_cogs
         FROM inventory_ledger il
         JOIN v3_inventory_items ii ON il.inventory_item_id = ii.id
-        WHERE ii.venue_id = ? AND il.reference_type IN ('SALE', 'WASTE')
+        WHERE ii.venue_id = ? AND il.event_type IN ('SALE', 'WASTE', 'OUT', 'CONSUMPTION')
         AND ${dateFilter.replace(/created_at/g, 'il.created_at')}
     `, params);
 
@@ -37,10 +37,10 @@ async function generateProfitAndLoss(scope) {
     }
 
     const payrollQuery = await getQuery(`
-        SELECT COALESCE(SUM(pl.net_pay_minor + pl.tax_liability_minor_placeholder), 0) as total_payroll -- assuming net pay for now
+        SELECT COALESCE(SUM(pl.net_pay_minor), 0) as total_payroll
         FROM payroll_lines pl
         JOIN payroll_periods pp ON pl.payroll_period_id = pp.id
-        WHERE pp.venue_id = ? AND pp.status IN ('LOCKED', 'PAID')
+        WHERE pp.venue_id = ? AND pp.status IN ('APPROVED', 'LOCKED', 'PAID')
         AND ${payrollDateFilter}
     `, payrollParams);
 
@@ -67,7 +67,9 @@ async function generateProfitAndLoss(scope) {
         gross_profit: grossProfit,
         expenses: {
             payroll: payroll,
+            payroll_minor: payroll,
             opex: opex,
+            opex_minor: opex,
             total_expenses: totalExpenses
         },
         net_income: netIncome

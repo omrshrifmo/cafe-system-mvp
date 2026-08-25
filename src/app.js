@@ -25,6 +25,7 @@ const configRoutes = require('./http/routes/config');
 const crmRoutes = require('./http/routes/crm');
 const syncRoutes = require('./http/routes/sync');
 const printRoutes = require('./http/routes/print');
+const hrRoutes = require('./http/routes/hr');
 const usersRoutes = require('./http/routes/users');
 const setupRoutes = require('./http/routes/setup');
 const adminRoutes = require('./http/routes/admin');
@@ -83,6 +84,7 @@ function createApp() {
 
   // API Routes Mount
   app.use('/api/auth', authRoutes);
+  app.use('/api', hrRoutes);
   app.use('/api', usersRoutes);
   app.use('/api', catalogRoutes);
   app.use('/api', ordersRoutes);

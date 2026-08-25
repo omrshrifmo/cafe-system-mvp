@@ -661,7 +661,14 @@
         });
         const data = await res.json();
         if (!data.success || !data.payroll) {
-          tbody.innerHTML = `<tr><td colspan="8" class="p-6 text-center text-rose-500">فشل تحميل مسير الرواتب</td></tr>`;
+          tbody.innerHTML = `<tr><td colspan="8" class="p-6 text-center text-rose-400">
+            <div class="flex flex-col items-center gap-2">
+              <span>⚠️ فشل تحميل مسير الرواتب</span>
+              <button onclick="fetchPayroll()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl border border-slate-700 cursor-pointer">
+                إعادة المحاولة 🔄
+              </button>
+            </div>
+          </td></tr>`;
           return;
         }
 
@@ -688,7 +695,14 @@
         const select = document.getElementById('penalty-user-select');
         select.innerHTML = `<option value="">اختر الموظف...</option>` + data.payroll.map(u => `<option value="${u.user_id}">${u.name} (${u.role})</option>`).join('');
       } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="8" class="p-6 text-center text-rose-500">خطأ في الاتصال بالخادم</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" class="p-6 text-center text-rose-400">
+          <div class="flex flex-col items-center gap-2">
+            <span>⚠️ خطأ في الاتصال بالخادم</span>
+            <button onclick="fetchPayroll()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl border border-slate-700 cursor-pointer">
+              إعادة المحاولة 🔄
+            </button>
+          </div>
+        </td></tr>`;
       }
     }
 

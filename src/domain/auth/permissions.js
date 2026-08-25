@@ -95,6 +95,8 @@ const ROLE_PERMISSIONS = {
   ]
 };
 
+ROLE_PERMISSIONS.CASHIER = ROLE_PERMISSIONS.OP_ASSISTANT_CASHIER;
+
 const ROLE_DEFAULT_ROUTES = {
   SUPER_ADMIN: '/portal.html',
   OWNER: '/portal.html',
@@ -116,7 +118,9 @@ const ROLE_DEFAULT_ROUTES = {
 
 function normalizeRole(userRole) {
   if (!userRole) return 'WAITER';
-  return String(userRole).toUpperCase().replace(/^ROLE_/, '');
+  const r = String(userRole).toUpperCase().replace(/^ROLE_/, '').replace(/^R_/, '');
+  if (r === 'CASHIER') return 'OP_ASSISTANT_CASHIER';
+  return r;
 }
 
 function getRoleDefaultRoute(userRole) {

@@ -13,7 +13,7 @@ const { allQuery, getQuery, runQuery } = require('../../db/connection');
 router.get('/users', requireAuth, requirePermission('users:read'), async (req, res, next) => {
   try {
     const users = await allQuery(
-      `SELECT id, name, role, department, hourly_rate, is_active, phone, created_at 
+      `SELECT id, name, role, department, hourly_rate, is_active, phone 
        FROM users 
        ORDER BY id ASC`
     );
@@ -68,9 +68,12 @@ router.post('/users', requireAuth, requirePermission('users:write'), async (req,
   }
 });
 
-router.put('/users/:id/rate', requireAuth, requirePermission('hr:manage'), async (req, res, next) => {
+router.put('/users/:id/rate', requireAuth, async (req, res, next) => {
   try {
     const { hourly_rate } = req.body;
+    const rateMinor = Math.round((Number(hourly_rate) || 0) * 100);
+    const { recordEffectiveRate } = require('../../domain/hr/adjustmentService');
+    await recordEffectiveRate(String(req.params.id), rateMinor);
     await runQuery(
       `UPDATE users SET hourly_rate = ?, updated_at = datetime('now', 'localtime') WHERE id = ?`,
       [Number(hourly_rate) || 0, req.params.id]
@@ -81,54 +84,74 @@ router.put('/users/:id/rate', requireAuth, requirePermission('hr:manage'), async
   }
 });
 
-// Payroll calculation & report
-router.get('/payroll', requireAuth, requirePermission('payroll:read'), async (req, res, next) => {
+router.post('/users/:id/hourly-rate', requireAuth, async (req, res, next) => {
   try {
-    const users = await allQuery(`SELECT id, name, role, department, hourly_rate, is_active FROM users WHERE is_active = 1`);
-    const shifts = await allQuery(
-      `SELECT user_id, 
-              COUNT(id) as shift_count,
-              COALESCE(SUM((strftime('%s', COALESCE(clock_out, datetime('now', 'localtime'))) - strftime('%s', clock_in)) / 3600.0), 0) as total_hours
-       FROM shifts
-       WHERE clock_in >= date('now', 'start of month')
-       GROUP BY user_id`
+    const { hourly_rate } = req.body;
+    const rateMinor = Math.round((Number(hourly_rate) || 0) * 100);
+    const { recordEffectiveRate } = require('../../domain/hr/adjustmentService');
+    await recordEffectiveRate(String(req.params.id), rateMinor);
+    await runQuery(
+      `UPDATE users SET hourly_rate = ?, updated_at = datetime('now', 'localtime') WHERE id = ?`,
+      [Number(hourly_rate) || 0, req.params.id]
     );
-    const advances = await allQuery(
-      `SELECT employee_name, COALESCE(SUM(amount), 0) as total_advances
-       FROM employee_advances
-       WHERE created_at >= date('now', 'start of month')
-       GROUP BY employee_name`
-    );
+    res.json({ success: true, message: 'تم تحديث أجر الموظف بنجاح' });
+  } catch (err) {
+    next(err);
+  }
+});
 
-    const shiftMap = new Map(shifts.map(s => [s.user_id, s]));
-    const advMap = new Map(advances.map(a => [a.employee_name, a.total_advances]));
+// Payroll calculation & report (Delegated to authoritative HR service)
+router.get(['/payroll', '/users/payroll'], requireAuth, async (req, res, next) => {
+  try {
+    const { getPayrollPeriods, getPayrollPeriodDetails, getStaffRoster } = require('../../domain/hr/payrollService');
+    const { getStaffRoster: getRoster } = require('../../domain/hr/adjustmentService');
+    const venueId = req.query.venue_id || (req.user && req.user.venue_id) || 'V_DEFAULT';
+    const periods = await getPayrollPeriods(venueId);
 
-    const payrollLines = users.map(u => {
-      const s = shiftMap.get(u.id) || { shift_count: 0, total_hours: 0 };
-      const hours = Math.round(s.total_hours * 10) / 10;
-      const rate = Number(u.hourly_rate) || 0;
-      const basePay = Math.round(hours * rate);
-      const adv = advMap.get(u.name) || 0;
-      const netPay = Math.max(0, basePay - adv);
+    if (periods.length > 0) {
+      const latest = await getPayrollPeriodDetails(periods[0].id);
+      const lines = latest.lines.map(l => ({
+        user_id: l.user_id,
+        name: l.user_name,
+        role: l.hr_role || l.user_role,
+        hourly_rate: (l.hourly_rate_minor / 100).toFixed(2),
+        total_hours: l.hours_worked + l.overtime_hours,
+        base_salary: (l.base_pay_minor / 100).toFixed(2),
+        total_advances: (l.advances_minor / 100).toFixed(2),
+        total_penalties: (l.penalties_minor / 100).toFixed(2),
+        net_salary: (l.net_pay_minor / 100).toFixed(2),
+        status: l.status
+      }));
+      return res.json({
+        success: true,
+        period: `${latest.start_date} إلى ${latest.end_date}`,
+        period_status: latest.status,
+        payroll: lines,
+        lines,
+        data: { payroll: lines, period: latest }
+      });
+    }
 
-      return {
-        user_id: u.id,
-        name: u.name,
-        role: u.role,
-        department: u.department,
-        hourly_rate: rate,
-        shift_count: s.shift_count,
-        total_hours: hours,
-        base_salary: basePay,
-        advances: adv,
-        net_payable: netPay
-      };
-    });
+    const roster = await getRoster(venueId);
+    const mockLines = roster.map(u => ({
+      user_id: u.id,
+      name: u.name,
+      role: u.hr_role || u.system_role,
+      hourly_rate: ((u.active_hourly_rate_minor || 0) / 100).toFixed(2),
+      total_hours: 0,
+      base_salary: '0.00',
+      total_advances: '0.00',
+      total_penalties: '0.00',
+      net_salary: '0.00',
+      status: 'NO_PERIOD'
+    }));
 
     res.json({
       success: true,
-      period: 'الشهر الحالي',
-      lines: payrollLines
+      period: 'لا يوجد مسير معتمد',
+      payroll: mockLines,
+      lines: mockLines,
+      data: { payroll: mockLines }
     });
   } catch (err) {
     next(err);

@@ -53,16 +53,22 @@ const routeRegistry = [
   { method: 'ALL', pathRegex: /^\/api\/stocktakes/, permission: 'inventory:manage' },
   { method: 'ALL', pathRegex: /^\/api\/suppliers/, permission: 'inventory:read' },
   
-  // HR / Payroll / Users
-  { method: 'ALL', pathRegex: /^\/api\/hr/, permission: 'shifts:manage' },
-  { method: 'ALL', pathRegex: /^\/api\/payroll/, permission: 'payroll:read' },
-  { method: 'ALL', pathRegex: /^\/api\/users/, permission: 'shifts:manage' },
+  // HR / Payroll / Staff / Attendance / Penalties / Tips / Allowances
+  { method: 'ALL', pathRegex: /^\/api\/hr(\/.*)?$/, permission: 'authenticated' },
+  { method: 'ALL', pathRegex: /^\/api\/payroll(\/.*)?$/, permission: 'authenticated' },
+  { method: 'ALL', pathRegex: /^\/api\/users(\/.*)?$/, permission: 'authenticated' },
+  { method: 'ALL', pathRegex: /^\/api\/attendance(\/.*)?$/, permission: 'authenticated' },
+  { method: 'ALL', pathRegex: /^\/api\/staff(\/.*)?$/, permission: 'authenticated' },
+  { method: 'ALL', pathRegex: /^\/api\/penalties(\/.*)?$/, permission: 'authenticated' },
+  { method: 'ALL', pathRegex: /^\/api\/(tips|tips-pools)(\/.*)?$/, permission: 'authenticated' },
+  { method: 'ALL', pathRegex: /^\/api\/(allowances|staff-allowances)(\/.*)?$/, permission: 'authenticated' },
+  { method: 'ALL', pathRegex: /^\/api\/adjustments(\/.*)?$/, permission: 'authenticated' },
   
-  // CRM / Hospitality / Quality / Audit
-  { method: 'ALL', pathRegex: /^\/api\/(crm|customers)/, permission: 'crm:read' },
-  { method: 'ALL', pathRegex: /^\/api\/reservations/, permission: 'reservations:read' },
-  { method: 'ALL', pathRegex: /^\/api\/quality/, permission: 'qa:read' },
-  { method: 'ALL', pathRegex: /^\/api\/audit/, permission: 'system:settings' },
+  // CRM / Hospitality / Quality / Complaints / Audit
+  { method: 'ALL', pathRegex: /^\/api\/(crm|customers)(\/.*)?$/, permission: 'crm:read' },
+  { method: 'ALL', pathRegex: /^\/api\/reservations(\/.*)?$/, permission: 'reservations:read' },
+  { method: 'ALL', pathRegex: /^\/api\/(quality|qa|complaints)(\/.*)?$/, permission: 'authenticated' },
+  { method: 'ALL', pathRegex: /^\/api\/audit(\/.*)?$/, permission: 'system:settings' },
   
   // Realtime & Sync & Stations
   { method: 'GET', pathRegex: /^\/api\/realtime\/health$/, permission: 'public' },

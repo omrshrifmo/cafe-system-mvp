@@ -19,17 +19,17 @@ describe('Foundation Repair, Migration Integrity & API Contracts', function () {
     await runMigrations();
     app = createApp();
 
-    // Login as OWNER (User 43 / PIN 1009)
+    // Login as OWNER (User 102 / PIN 8802 or User 43 / PIN 1009)
     const ownerRes = await request(app)
       .post('/api/auth/login')
-      .send({ pin: '1009' });
-    ownerCookies = ownerRes.headers['set-cookie'];
+      .send({ pin: '8802' });
+    ownerCookies = ownerRes.headers['set-cookie'] || [`session_token=${ownerRes.body.sessionId}`];
 
-    // Login as CASHIER (User 5 / PIN 1005)
+    // Login as CASHIER (User 104 / PIN 8804)
     const cashierRes = await request(app)
       .post('/api/auth/login')
-      .send({ pin: '1005' });
-    cashierCookies = cashierRes.headers['set-cookie'];
+      .send({ pin: '8804' });
+    cashierCookies = cashierRes.headers['set-cookie'] || [`session_token=${cashierRes.body.sessionId}`];
   });
 
   describe('1. Schema Migrations & Foreign Key Constraints Integrity', () => {
