@@ -1,454 +1,575 @@
 {
-  "evaluated_at": "2026-08-25T15:55:57.648Z",
-  "live_database": "/home/omrshrifmo/cafe-system-mvp/cafe.db",
-  "restored_database": "/home/omrshrifmo/cafe-system-mvp/backups/cafe_restore_verification.sqlite",
-  "metrics_parity": {
-    "tables_match": true,
-    "monetary_match": true,
-    "stock_match": true,
-    "migrations_match": true,
-    "row_counts_match": true
+  "label": "PRE-BACKUP-LIVE-cafe.db",
+  "capturedAt": "2026-08-26T11:11:24.876Z",
+  "databasePath": "/home/omrshrifmo/cafe-system-mvp/cafe.db",
+  "fileSha256": "a611368bade1076e480b4fb725c3cbf9c62cc0ddf18d8f1fe0b4a90bd32d4e9e",
+  "tableCount": 103,
+  "totalRowsAllTables": 6439,
+  "rowCounts": {
+    "accounting_periods": 1,
+    "audit_logs": 459,
+    "branches": 1,
+    "cash_operations": 3,
+    "catalog_offers": 0,
+    "complaints": 15,
+    "customer_feedback": 1,
+    "customer_visits": 0,
+    "customers": 17,
+    "daily_expenses": 29,
+    "devices": 5,
+    "drawer_declarations": 30,
+    "employee_advances": 18,
+    "equity_ledger": 5,
+    "expense_categories": 1,
+    "expenses": 28,
+    "hr_adjustments": 4,
+    "hr_attendance": 10,
+    "hr_leave": 0,
+    "hr_rate_history": 3,
+    "hr_staff_profiles": 3,
+    "idempotency_keys": 151,
+    "indirect_cost_allocations": 84,
+    "inventory": 7,
+    "inventory_items": 6,
+    "inventory_ledger": 701,
+    "inventory_locations": 0,
+    "inventory_lots": 0,
+    "inventory_unit_conversions": 0,
+    "item_addons": 0,
+    "item_variants": 0,
+    "kds_order_lines": 83,
+    "kds_orders": 83,
+    "loyalty_ledger": 14,
+    "material_transfers": 5,
+    "menu_categories": 8,
+    "menu_items": 14,
+    "menu_prices": 13,
+    "onboarding_progress": 1,
+    "order_items": 253,
+    "order_payments": 47,
+    "order_sessions": 53,
+    "orders": 86,
+    "outbox_events": 727,
+    "payment_reversals": 0,
+    "payments": 57,
+    "payroll_corrections": 0,
+    "payroll_lines": 90,
+    "payroll_periods": 2,
+    "penalties": 18,
+    "permissions": 0,
+    "print_jobs": 571,
+    "printer_jobs": 24,
+    "purchase_items": 15,
+    "purchase_order_lines": 10,
+    "purchase_orders": 10,
+    "purchases": 27,
+    "quality_complaints": 2,
+    "recipe_ingredients": 19,
+    "recipe_versions": 15,
+    "recipes": 8,
+    "reservations": 5,
+    "reversals": 70,
+    "roles": 20,
+    "runner_tasks": 108,
+    "schema_migrations": 28,
+    "service_requests": 10,
+    "shareholder_ledger": 7,
+    "shift_handovers": 1,
+    "shifts": 7,
+    "staff_allowances": 10,
+    "stations": 0,
+    "stocktake_lines": 156,
+    "stocktake_sessions": 26,
+    "suppliers": 2,
+    "system_config": 12,
+    "system_kpi_snapshots": 0,
+    "system_updates": 0,
+    "table_events": 32,
+    "table_sessions": 7,
+    "tables": 14,
+    "tip_pools": 1,
+    "user_sessions": 174,
+    "users": 22,
+    "v3_audit_logs": 634,
+    "v3_customers": 13,
+    "v3_inventory_items": 0,
+    "v3_menu_categories": 3,
+    "v3_menu_items": 35,
+    "v3_menu_prices": 0,
+    "v3_order_lines": 83,
+    "v3_order_sessions": 375,
+    "v3_payments": 106,
+    "v3_policies": 5,
+    "v3_recipe_ingredients": 0,
+    "v3_recipe_versions": 17,
+    "v3_shifts": 3,
+    "v3_tables": 5,
+    "v3_user_sessions": 518,
+    "v3_users": 45,
+    "vendors": 1,
+    "venues": 2,
+    "waste_log": 45
   },
-  "before_backup": {
-    "tableCount": 101,
-    "rowCounts": {
-      "accounting_periods": 1,
-      "audit_logs": 459,
-      "branches": 1,
-      "cash_operations": 3,
-      "catalog_offers": 0,
-      "complaints": 15,
-      "customer_feedback": 1,
-      "customer_visits": 0,
-      "customers": 16,
-      "daily_expenses": 14,
-      "devices": 5,
-      "drawer_declarations": 30,
-      "employee_advances": 18,
-      "equity_ledger": 3,
-      "expense_categories": 1,
-      "expenses": 13,
-      "hr_adjustments": 4,
-      "hr_attendance": 10,
-      "hr_leave": 0,
-      "hr_rate_history": 3,
-      "hr_staff_profiles": 3,
-      "idempotency_keys": 133,
-      "indirect_cost_allocations": 39,
-      "inventory": 7,
-      "inventory_items": 6,
-      "inventory_ledger": 674,
-      "inventory_locations": 0,
-      "inventory_lots": 0,
-      "inventory_unit_conversions": 0,
-      "item_addons": 0,
-      "item_variants": 0,
-      "kds_order_lines": 68,
-      "kds_orders": 68,
-      "loyalty_ledger": 13,
-      "material_transfers": 5,
-      "menu_categories": 8,
-      "menu_items": 14,
-      "menu_prices": 13,
-      "onboarding_progress": 1,
-      "order_items": 252,
-      "order_payments": 47,
-      "order_sessions": 50,
-      "orders": 86,
-      "outbox_events": 668,
-      "payment_reversals": 0,
-      "payments": 54,
-      "payroll_corrections": 0,
-      "payroll_lines": 90,
-      "payroll_periods": 2,
-      "penalties": 18,
-      "permissions": 0,
-      "print_jobs": 460,
-      "printer_jobs": 22,
-      "purchase_items": 9,
-      "purchase_order_lines": 10,
-      "purchase_orders": 10,
-      "purchases": 21,
-      "quality_complaints": 2,
-      "recipe_ingredients": 17,
-      "recipe_versions": 13,
-      "recipes": 8,
-      "reservations": 5,
-      "reversals": 65,
-      "roles": 20,
-      "runner_tasks": 90,
-      "schema_migrations": 26,
-      "service_requests": 9,
-      "shareholder_ledger": 5,
-      "shift_handovers": 1,
-      "shifts": 7,
-      "staff_allowances": 10,
-      "stations": 0,
-      "stocktake_lines": 78,
-      "stocktake_sessions": 13,
-      "suppliers": 2,
-      "system_config": 10,
-      "table_events": 29,
-      "table_sessions": 7,
-      "tables": 14,
-      "tip_pools": 1,
-      "user_sessions": 174,
-      "users": 22,
-      "v3_audit_logs": 501,
-      "v3_customers": 12,
-      "v3_inventory_items": 0,
-      "v3_menu_categories": 3,
-      "v3_menu_items": 29,
-      "v3_menu_prices": 0,
-      "v3_order_lines": 68,
-      "v3_order_sessions": 316,
-      "v3_payments": 98,
-      "v3_policies": 5,
-      "v3_recipe_ingredients": 0,
-      "v3_recipe_versions": 14,
-      "v3_shifts": 3,
-      "v3_tables": 5,
-      "v3_user_sessions": 424,
-      "v3_users": 45,
-      "vendors": 1,
-      "venues": 2,
-      "waste_log": 45
+  "monetaryTotals": {
+    "audit_logs.previous_value": {
+      "sum": 0,
+      "nonNullRows": 375
     },
-    "monetary": {
-      "total_payments_minor": 901673,
-      "total_orders_minor": 1252049,
-      "total_expenses_minor": 6500000
+    "audit_logs.new_value": {
+      "sum": 0,
+      "nonNullRows": 459
     },
-    "stock": {
-      "total_stock_microunits": 22257056000,
-      "total_items_count": 6
+    "cash_operations.amount_minor": {
+      "sum": 17000,
+      "nonNullRows": 3
     },
-    "migrations": [
-      {
-        "version": "001_core_schema.sql",
-        "checksum": "a8c24165f9f04ba7ff96ee4fd2e19545"
-      },
-      {
-        "version": "002_canonical_catalog.sql",
-        "checksum": "77bd4338ee852d76890e9b3767dcea65"
-      },
-      {
-        "version": "003_orders_and_accounting.sql",
-        "checksum": "17e08042c36ef27259bf9bfdece9104e"
-      },
-      {
-        "version": "004_outbox_and_idempotency.sql",
-        "checksum": "cdd4c5455e68c8debdc48ef697253aed"
-      },
-      {
-        "version": "005_canonical_prices.sql",
-        "checksum": "6fe8cb4904019b5f623cfd81515e402b"
-      },
-      {
-        "version": "006_v3_authoritative_schema.sql",
-        "checksum": "a377a3f48fc6551f02e98d5e9d54c5d3"
-      },
-      {
-        "version": "007_legacy_reconciliation.sql",
-        "checksum": "450d952720aed2a1ad5d09d8ed9063be"
-      },
-      {
-        "version": "008_v3_session_schema.sql",
-        "checksum": "c55cef645f3a123e8f358c27d099169f"
-      },
-      {
-        "version": "009_auth_enhancements.sql",
-        "checksum": "581b33a4711b75a379b0e63b8989ea41"
-      },
-      {
-        "version": "010_migrate_legacy_users.sql",
-        "checksum": "d84d4728ddf8e496984106cb5da23ec8"
-      },
-      {
-        "version": "011_cafe_config.sql",
-        "checksum": "17d871e435ba523d742f6231a3796b1e"
-      },
-      {
-        "version": "012_canonical_catalog_v2.sql",
-        "checksum": "1346333e49f1fad6c0ecc0f632f88c20"
-      },
-      {
-        "version": "013_inventory_and_purchasing.sql",
-        "checksum": "e857ae2947952a8e7d6d317224ce0b02"
-      },
-      {
-        "version": "014_hospitality_layer.sql",
-        "checksum": "f79619b94ff58bd0cff5a24959fd6afd"
-      },
-      {
-        "version": "015_sales_lifecycle.sql",
-        "checksum": "76be37c9466319c53c185ca34441ab31"
-      },
-      {
-        "version": "016_operational_floor.sql",
-        "checksum": "6fa90385a4f21ed26703ab93a7e182c0"
-      },
-      {
-        "version": "017_shifts_and_eod.sql",
-        "checksum": "67963b2f96fd41f777ce5a7ef097497c"
-      },
-      {
-        "version": "018_hr_and_payroll.sql",
-        "checksum": "d3566fe1c341b9e65785ca1fd3b24f13"
-      },
-      {
-        "version": "019_reporting_and_equity.sql",
-        "checksum": "62c8d9c552540d0f5b31a9c2d223e043"
-      },
-      {
-        "version": "020_foundation_repair.sql",
-        "checksum": "5e195bf7932829b79b5c380bd4096d95"
-      },
-      {
-        "version": "021_catalog_master_data_repair.sql",
-        "checksum": "42813d02ecaa811aac1fbaef172a6fab"
-      },
-      {
-        "version": "022_purchasing_inventory_cost_control.sql",
-        "checksum": "2cb31fd450115a373a4069d8d0e1bc44"
-      },
-      {
-        "version": "023_hospitality_canonical_workflow.sql",
-        "checksum": "f97fceccf5e4e0609c6cd71ef0988758"
-      },
-      {
-        "version": "024_hr_payroll_quality_repair.sql",
-        "checksum": "4738c6bdfd11b9f421dd7fa214f9f8a1"
-      },
-      {
-        "version": "025_add_hr_payroll_columns.sql",
-        "checksum": "282ca34e7ae18117601b119fa6d4fce0"
-      },
-      {
-        "version": "026_reporting_bi_indexes.sql",
-        "checksum": "4faa50a121ead41553bf0e3cf6d182da"
-      }
-    ]
+    "customers.total_spent": {
+      "sum": 4756.639999999999,
+      "nonNullRows": 17
+    },
+    "daily_expenses.amount": {
+      "sum": 140050,
+      "nonNullRows": 29
+    },
+    "drawer_declarations.declared_amount": {
+      "sum": 26465.99,
+      "nonNullRows": 30
+    },
+    "drawer_declarations.expected_amount": {
+      "sum": 26869.91,
+      "nonNullRows": 30
+    },
+    "employee_advances.amount": {
+      "sum": 440,
+      "nonNullRows": 18
+    },
+    "equity_ledger.amount_minor": {
+      "sum": 7500000,
+      "nonNullRows": 5
+    },
+    "expenses.amount_minor": {
+      "sum": 14000000,
+      "nonNullRows": 28
+    },
+    "hr_adjustments.amount_minor": {
+      "sum": 983000,
+      "nonNullRows": 4
+    },
+    "indirect_cost_allocations.allocated_amount_minor": {
+      "sum": 14000000,
+      "nonNullRows": 84
+    },
+    "inventory.unit_cost": {
+      "sum": 21,
+      "nonNullRows": 7
+    },
+    "inventory_items.cost_per_unit_minor": {
+      "sum": 504,
+      "nonNullRows": 6
+    },
+    "inventory_items.cost_basis": {
+      "sum": 0,
+      "nonNullRows": 6
+    },
+    "inventory_ledger.unit_cost_minor": {
+      "sum": 7708,
+      "nonNullRows": 701
+    },
+    "inventory_ledger.cost_basis": {
+      "sum": 0,
+      "nonNullRows": 701
+    },
+    "menu_items.base_price": {
+      "sum": 65,
+      "nonNullRows": 14
+    },
+    "menu_prices.amount_minor": {
+      "sum": 88000,
+      "nonNullRows": 13
+    },
+    "order_items.unit_price_minor": {
+      "sum": 981500,
+      "nonNullRows": 253
+    },
+    "order_items.price_minor": {
+      "sum": 83000,
+      "nonNullRows": 22
+    },
+    "order_payments.amount": {
+      "sum": 4896.08,
+      "nonNullRows": 47
+    },
+    "order_payments.tip_amount": {
+      "sum": 385,
+      "nonNullRows": 47
+    },
+    "order_payments.subtotal": {
+      "sum": 1240,
+      "nonNullRows": 47
+    },
+    "order_payments.service_amount": {
+      "sum": 148.8,
+      "nonNullRows": 47
+    },
+    "order_payments.vat_amount": {
+      "sum": 194.42,
+      "nonNullRows": 47
+    },
+    "order_payments.discount_amount": {
+      "sum": 0,
+      "nonNullRows": 47
+    },
+    "order_payments.total_amount": {
+      "sum": 1633.22,
+      "nonNullRows": 47
+    },
+    "order_sessions.discount_amount": {
+      "sum": 0,
+      "nonNullRows": 53
+    },
+    "order_sessions.subtotal_minor": {
+      "sum": 1181500,
+      "nonNullRows": 53
+    },
+    "order_sessions.total_minor": {
+      "sum": 1242676,
+      "nonNullRows": 53
+    },
+    "orders.price": {
+      "sum": 1270,
+      "nonNullRows": 86
+    },
+    "payments.amount_minor": {
+      "sum": 291176,
+      "nonNullRows": 57
+    },
+    "payroll_periods.total_net_pay_minor": {
+      "sum": 398000,
+      "nonNullRows": 2
+    },
+    "penalties.amount": {
+      "sum": 540,
+      "nonNullRows": 18
+    },
+    "purchase_items.unit_cost_minor": {
+      "sum": 60,
+      "nonNullRows": 15
+    },
+    "purchase_items.total_line_minor": {
+      "sum": 600,
+      "nonNullRows": 15
+    },
+    "purchase_order_lines.unit_cost_minor": {
+      "sum": 50000,
+      "nonNullRows": 10
+    },
+    "purchase_order_lines.line_total_minor": {
+      "sum": 45000005,
+      "nonNullRows": 10
+    },
+    "purchases.total_cost": {
+      "sum": 4216,
+      "nonNullRows": 27
+    },
+    "purchases.subtotal_minor": {
+      "sum": 600,
+      "nonNullRows": 27
+    },
+    "recipe_ingredients.cost_basis": {
+      "sum": 0,
+      "nonNullRows": 19
+    },
+    "recipes.price": {
+      "sum": 560,
+      "nonNullRows": 8
+    },
+    "reversals.amount_minor": {
+      "sum": 404000,
+      "nonNullRows": 70
+    },
+    "shareholder_ledger.amount": {
+      "sum": 150000,
+      "nonNullRows": 7
+    },
+    "system_config.value": {
+      "sum": 9318.168,
+      "nonNullRows": 12
+    },
+    "table_events.order_total_minor": {
+      "sum": 0,
+      "nonNullRows": 32
+    },
+    "tip_pools.total_amount_minor": {
+      "sum": 25000,
+      "nonNullRows": 1
+    },
+    "v3_order_lines.unit_price_minor": {
+      "sum": 415000,
+      "nonNullRows": 83
+    },
+    "v3_order_lines.modifier_total_minor": {
+      "sum": 0,
+      "nonNullRows": 83
+    },
+    "v3_order_lines.total_minor": {
+      "sum": 435000,
+      "nonNullRows": 83
+    },
+    "v3_order_sessions.subtotal_minor": {
+      "sum": 521000,
+      "nonNullRows": 375
+    },
+    "v3_order_sessions.total_minor": {
+      "sum": 1370822,
+      "nonNullRows": 375
+    },
+    "v3_payments.amount_minor": {
+      "sum": 983062,
+      "nonNullRows": 106
+    }
   },
-  "after_restore": {
-    "tableCount": 101,
-    "rowCounts": {
-      "accounting_periods": 1,
-      "audit_logs": 459,
-      "branches": 1,
-      "cash_operations": 3,
-      "catalog_offers": 0,
-      "complaints": 15,
-      "customer_feedback": 1,
-      "customer_visits": 0,
-      "customers": 16,
-      "daily_expenses": 14,
-      "devices": 5,
-      "drawer_declarations": 30,
-      "employee_advances": 18,
-      "equity_ledger": 3,
-      "expense_categories": 1,
-      "expenses": 13,
-      "hr_adjustments": 4,
-      "hr_attendance": 10,
-      "hr_leave": 0,
-      "hr_rate_history": 3,
-      "hr_staff_profiles": 3,
-      "idempotency_keys": 133,
-      "indirect_cost_allocations": 39,
-      "inventory": 7,
-      "inventory_items": 6,
-      "inventory_ledger": 674,
-      "inventory_locations": 0,
-      "inventory_lots": 0,
-      "inventory_unit_conversions": 0,
-      "item_addons": 0,
-      "item_variants": 0,
-      "kds_order_lines": 68,
-      "kds_orders": 68,
-      "loyalty_ledger": 13,
-      "material_transfers": 5,
-      "menu_categories": 8,
-      "menu_items": 14,
-      "menu_prices": 13,
-      "onboarding_progress": 1,
-      "order_items": 252,
-      "order_payments": 47,
-      "order_sessions": 50,
-      "orders": 86,
-      "outbox_events": 668,
-      "payment_reversals": 0,
-      "payments": 54,
-      "payroll_corrections": 0,
-      "payroll_lines": 90,
-      "payroll_periods": 2,
-      "penalties": 18,
-      "permissions": 0,
-      "print_jobs": 460,
-      "printer_jobs": 22,
-      "purchase_items": 9,
-      "purchase_order_lines": 10,
-      "purchase_orders": 10,
-      "purchases": 21,
-      "quality_complaints": 2,
-      "recipe_ingredients": 17,
-      "recipe_versions": 13,
-      "recipes": 8,
-      "reservations": 5,
-      "reversals": 65,
-      "roles": 20,
-      "runner_tasks": 90,
-      "schema_migrations": 26,
-      "service_requests": 9,
-      "shareholder_ledger": 5,
-      "shift_handovers": 1,
-      "shifts": 7,
-      "staff_allowances": 10,
-      "stations": 0,
-      "stocktake_lines": 78,
-      "stocktake_sessions": 13,
-      "suppliers": 2,
-      "system_config": 10,
-      "table_events": 29,
-      "table_sessions": 7,
-      "tables": 14,
-      "tip_pools": 1,
-      "user_sessions": 174,
-      "users": 22,
-      "v3_audit_logs": 501,
-      "v3_customers": 12,
-      "v3_inventory_items": 0,
-      "v3_menu_categories": 3,
-      "v3_menu_items": 29,
-      "v3_menu_prices": 0,
-      "v3_order_lines": 68,
-      "v3_order_sessions": 316,
-      "v3_payments": 98,
-      "v3_policies": 5,
-      "v3_recipe_ingredients": 0,
-      "v3_recipe_versions": 14,
-      "v3_shifts": 3,
-      "v3_tables": 5,
-      "v3_user_sessions": 424,
-      "v3_users": 45,
-      "vendors": 1,
-      "venues": 2,
-      "waste_log": 45
+  "stockTotals": {
+    "customers.credit_balance": {
+      "sum": 0,
+      "nonNullRows": 17
     },
-    "monetary": {
-      "total_payments_minor": 901673,
-      "total_orders_minor": 1252049,
-      "total_expenses_minor": 6500000
+    "inventory.current_stock": {
+      "sum": 24920.550000000007,
+      "nonNullRows": 7
     },
-    "stock": {
-      "total_stock_microunits": 22257056000,
-      "total_items_count": 6
+    "inventory_items.current_stock_microunits": {
+      "sum": 22250556000,
+      "nonNullRows": 6
     },
-    "migrations": [
-      {
-        "version": "001_core_schema.sql",
-        "checksum": "a8c24165f9f04ba7ff96ee4fd2e19545"
-      },
-      {
-        "version": "002_canonical_catalog.sql",
-        "checksum": "77bd4338ee852d76890e9b3767dcea65"
-      },
-      {
-        "version": "003_orders_and_accounting.sql",
-        "checksum": "17e08042c36ef27259bf9bfdece9104e"
-      },
-      {
-        "version": "004_outbox_and_idempotency.sql",
-        "checksum": "cdd4c5455e68c8debdc48ef697253aed"
-      },
-      {
-        "version": "005_canonical_prices.sql",
-        "checksum": "6fe8cb4904019b5f623cfd81515e402b"
-      },
-      {
-        "version": "006_v3_authoritative_schema.sql",
-        "checksum": "a377a3f48fc6551f02e98d5e9d54c5d3"
-      },
-      {
-        "version": "007_legacy_reconciliation.sql",
-        "checksum": "450d952720aed2a1ad5d09d8ed9063be"
-      },
-      {
-        "version": "008_v3_session_schema.sql",
-        "checksum": "c55cef645f3a123e8f358c27d099169f"
-      },
-      {
-        "version": "009_auth_enhancements.sql",
-        "checksum": "581b33a4711b75a379b0e63b8989ea41"
-      },
-      {
-        "version": "010_migrate_legacy_users.sql",
-        "checksum": "d84d4728ddf8e496984106cb5da23ec8"
-      },
-      {
-        "version": "011_cafe_config.sql",
-        "checksum": "17d871e435ba523d742f6231a3796b1e"
-      },
-      {
-        "version": "012_canonical_catalog_v2.sql",
-        "checksum": "1346333e49f1fad6c0ecc0f632f88c20"
-      },
-      {
-        "version": "013_inventory_and_purchasing.sql",
-        "checksum": "e857ae2947952a8e7d6d317224ce0b02"
-      },
-      {
-        "version": "014_hospitality_layer.sql",
-        "checksum": "f79619b94ff58bd0cff5a24959fd6afd"
-      },
-      {
-        "version": "015_sales_lifecycle.sql",
-        "checksum": "76be37c9466319c53c185ca34441ab31"
-      },
-      {
-        "version": "016_operational_floor.sql",
-        "checksum": "6fa90385a4f21ed26703ab93a7e182c0"
-      },
-      {
-        "version": "017_shifts_and_eod.sql",
-        "checksum": "67963b2f96fd41f777ce5a7ef097497c"
-      },
-      {
-        "version": "018_hr_and_payroll.sql",
-        "checksum": "d3566fe1c341b9e65785ca1fd3b24f13"
-      },
-      {
-        "version": "019_reporting_and_equity.sql",
-        "checksum": "62c8d9c552540d0f5b31a9c2d223e043"
-      },
-      {
-        "version": "020_foundation_repair.sql",
-        "checksum": "5e195bf7932829b79b5c380bd4096d95"
-      },
-      {
-        "version": "021_catalog_master_data_repair.sql",
-        "checksum": "42813d02ecaa811aac1fbaef172a6fab"
-      },
-      {
-        "version": "022_purchasing_inventory_cost_control.sql",
-        "checksum": "2cb31fd450115a373a4069d8d0e1bc44"
-      },
-      {
-        "version": "023_hospitality_canonical_workflow.sql",
-        "checksum": "f97fceccf5e4e0609c6cd71ef0988758"
-      },
-      {
-        "version": "024_hr_payroll_quality_repair.sql",
-        "checksum": "4738c6bdfd11b9f421dd7fa214f9f8a1"
-      },
-      {
-        "version": "025_add_hr_payroll_columns.sql",
-        "checksum": "282ca34e7ae18117601b119fa6d4fce0"
-      },
-      {
-        "version": "026_reporting_bi_indexes.sql",
-        "checksum": "4faa50a121ead41553bf0e3cf6d182da"
-      }
-    ]
-  }
+    "inventory_ledger.quantity_delta_microunits": {
+      "sum": 22250556000,
+      "nonNullRows": 701
+    },
+    "loyalty_ledger.balance_points": {
+      "sum": 750,
+      "nonNullRows": 14
+    },
+    "material_transfers.quantity": {
+      "sum": 250,
+      "nonNullRows": 5
+    },
+    "order_items.quantity": {
+      "sum": 286,
+      "nonNullRows": 253
+    },
+    "orders.quantity": {
+      "sum": 137,
+      "nonNullRows": 86
+    },
+    "purchase_items.quantity_microunits": {
+      "sum": 150000000,
+      "nonNullRows": 15
+    },
+    "purchase_order_lines.expected_quantity_microunits": {
+      "sum": 10000,
+      "nonNullRows": 10
+    },
+    "purchase_order_lines.received_quantity_microunits": {
+      "sum": 7000,
+      "nonNullRows": 10
+    },
+    "purchases.qty_added": {
+      "sum": 11500,
+      "nonNullRows": 27
+    },
+    "recipe_ingredients.quantity_microunits": {
+      "sum": 635000000,
+      "nonNullRows": 19
+    },
+    "recipes.quantity_required": {
+      "sum": 415,
+      "nonNullRows": 8
+    },
+    "v3_customers.loyalty_balance": {
+      "sum": 700,
+      "nonNullRows": 13
+    },
+    "v3_customers.credit_balance_minor": {
+      "sum": 0,
+      "nonNullRows": 13
+    },
+    "v3_order_lines.quantity": {
+      "sum": 102,
+      "nonNullRows": 83
+    },
+    "waste_log.quantity": {
+      "sum": 289.95,
+      "nonNullRows": 45
+    }
+  },
+  "appliedMigrations": [
+    {
+      "version": "001_core_schema.sql",
+      "checksum": "a8c24165f9f04ba7ff96ee4fd2e19545",
+      "status": "SUCCESS",
+      "applied_at": "2026-08-21 18:25:05"
+    },
+    {
+      "version": "002_canonical_catalog.sql",
+      "checksum": "77bd4338ee852d76890e9b3767dcea65",
+      "status": "SUCCESS",
+      "applied_at": "2026-08-21 18:25:05"
+    },
+    {
+      "version": "003_orders_and_accounting.sql",
+      "checksum": "17e08042c36ef27259bf9bfdece9104e",
+      "status": "SUCCESS",
+      "applied_at": "2026-08-21 18:25:32"
+    },
+    {
+      "version": "004_outbox_and_idempotency.sql",
+      "checksum": "cdd4c5455e68c8debdc48ef697253aed",
+      "status": "SUCCESS",
+      "applied_at": "2026-08-21 18:25:32"
+    },
+    {
+      "version": "005_canonical_prices.sql",
+      "checksum": "6fe8cb4904019b5f623cfd81515e402b",
+      "status": "SUCCESS",
+      "applied_at": "2026-08-22 03:48:00"
+    },
+    {
+      "version": "006_v3_authoritative_schema.sql",
+      "checksum": "a377a3f48fc6551f02e98d5e9d54c5d3",
+      "status": "SUCCESS",
+      "applied_at": "2026-08-22 23:05:33"
+    },
+    {
+      "version": "007_legacy_reconciliation.sql",
+      "checksum": "450d952720aed2a1ad5d09d8ed9063be",
+      "status": "SUCCESS",
+      "applied_at": "2026-08-22 23:05:33"
+    },
+    {
+      "version": "008_v3_session_schema.sql",
+      "checksum": "c55cef645f3a123e8f358c27d099169f",
+      "status": "SUCCESS",
+      "applied_at": "2026-08-22 23:05:33"
+    },
+    {
+      "version": "009_auth_enhancements.sql",
+      "checksum": "581b33a4711b75a379b0e63b8989ea41",
+      "status": "SUCCESS",
+      "applied_at": "2026-08-22 23:05:33"
+    },
+    {
+      "version": "010_migrate_legacy_users.sql",
+      "checksum": "d84d4728ddf8e496984106cb5da23ec8",
+      "status": "SUCCESS",
+      "applied_at": "2026-08-22 23:05:33"
+    },
+    {
+      "version": "011_cafe_config.sql",
+      "checksum": "17d871e435ba523d742f6231a3796b1e",
+      "status": "SUCCESS",
+      "applied_at": "2026-08-22 23:05:33"
+    },
+    {
+      "version": "012_canonical_catalog_v2.sql",
+      "checksum": "1346333e49f1fad6c0ecc0f632f88c20",
+      "status": "SUCCESS",
+      "applied_at": "2026-08-23 00:58:22"
+    },
+    {
+      "version": "013_inventory_and_purchasing.sql",
+      "checksum": "e857ae2947952a8e7d6d317224ce0b02",
+      "status": "SUCCESS",
+      "applied_at": "2026-08-23 01:54:39"
+    },
+    {
+      "version": "014_hospitality_layer.sql",
+      "checksum": "f79619b94ff58bd0cff5a24959fd6afd",
+      "status": "SUCCESS",
+      "applied_at": "2026-08-23 01:54:39"
+    },
+    {
+      "version": "015_sales_lifecycle.sql",
+      "checksum": "76be37c9466319c53c185ca34441ab31",
+      "status": "SUCCESS",
+      "applied_at": "2026-08-23 01:54:39"
+    },
+    {
+      "version": "016_operational_floor.sql",
+      "checksum": "6fa90385a4f21ed26703ab93a7e182c0",
+      "status": "SUCCESS",
+      "applied_at": "2026-08-23 01:54:39"
+    },
+    {
+      "version": "017_shifts_and_eod.sql",
+      "checksum": "67963b2f96fd41f777ce5a7ef097497c",
+      "status": "SUCCESS",
+      "applied_at": "2026-08-23 01:54:39"
+    },
+    {
+      "version": "018_hr_and_payroll.sql",
+      "checksum": "d3566fe1c341b9e65785ca1fd3b24f13",
+      "status": "SUCCESS",
+      "applied_at": "2026-08-23 01:54:39"
+    },
+    {
+      "version": "019_reporting_and_equity.sql",
+      "checksum": "62c8d9c552540d0f5b31a9c2d223e043",
+      "status": "SUCCESS",
+      "applied_at": "2026-08-23 01:56:05"
+    },
+    {
+      "version": "020_foundation_repair.sql",
+      "checksum": "5e195bf7932829b79b5c380bd4096d95",
+      "status": "SUCCESS",
+      "applied_at": "2026-08-24 18:21:44"
+    },
+    {
+      "version": "021_catalog_master_data_repair.sql",
+      "checksum": "42813d02ecaa811aac1fbaef172a6fab",
+      "status": "SUCCESS",
+      "applied_at": "2026-08-24 18:21:44"
+    },
+    {
+      "version": "022_purchasing_inventory_cost_control.sql",
+      "checksum": "2cb31fd450115a373a4069d8d0e1bc44",
+      "status": "SUCCESS",
+      "applied_at": "2026-08-24 18:23:15"
+    },
+    {
+      "version": "023_hospitality_canonical_workflow.sql",
+      "checksum": "f97fceccf5e4e0609c6cd71ef0988758",
+      "status": "SUCCESS",
+      "applied_at": "2026-08-24 18:40:54"
+    },
+    {
+      "version": "024_hr_payroll_quality_repair.sql",
+      "checksum": "4738c6bdfd11b9f421dd7fa214f9f8a1",
+      "status": "SUCCESS",
+      "applied_at": "2026-08-24 23:18:57"
+    },
+    {
+      "version": "025_add_hr_payroll_columns.sql",
+      "checksum": "282ca34e7ae18117601b119fa6d4fce0",
+      "status": "SUCCESS",
+      "applied_at": "2026-08-24 23:25:17"
+    },
+    {
+      "version": "026_reporting_bi_indexes.sql",
+      "checksum": "4faa50a121ead41553bf0e3cf6d182da",
+      "status": "SUCCESS",
+      "applied_at": "2026-08-25 07:28:44"
+    },
+    {
+      "version": "027_system_update_packages.sql",
+      "checksum": "9aee0e9b2569e8a79e4cde3f83c457b5",
+      "status": "SUCCESS",
+      "applied_at": "2026-08-25 20:18:19"
+    },
+    {
+      "version": "028_analytics_feature.sql",
+      "checksum": "2693aed22ae26742accb4e97e4b7eead",
+      "status": "SUCCESS",
+      "applied_at": "2026-08-25 20:37:33"
+    }
+  ]
 }

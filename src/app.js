@@ -118,7 +118,7 @@ function createApp() {
   const crypto = require('crypto');
   const SERVER_INSTANCE_ID = crypto.randomUUID();
   const PROCESS_START_TIME = new Date().toISOString();
-  
+
   function getLatestMigration() {
     try {
       const migDir = path.join(__dirname, 'db/migrations');
@@ -131,8 +131,58 @@ function createApp() {
           migrationVersion: match ? match[1] : '019'
         };
       }
-    } catch (e) {}
+    } catch (e) { }
     return { schemaVersion: '019_reporting_and_equity.sql', migrationVersion: '019' };
+  }
+
+  // Truth source for provenance: the migrations ACTUALLY APPLIED in the active
+  // database (schema_migrations table), not the migrations directory listing.
+  // Falls back to the directory-derived value only when the table is unreadable.
+  let _appliedMigrationCache = { at: 0, dbPath: null, value: null };
+
+  function queryAppliedMigration(dbPath) {
+    return new Promise((resolve) => {
+      try {
+        const sqlite3 = require('sqlite3');
+        const resolved = path.isAbsolute(dbPath || '') ? dbPath : path.join(__dirname, '..', dbPath || 'cafe.db');
+        const db = new sqlite3.Database(resolved, sqlite3.OPEN_READONLY);
+        const timer = setTimeout(() => { try { db.close(); } catch (e) { } resolve(null); }, 2000);
+        db.get('SELECT version, checksum FROM schema_migrations ORDER BY version DESC LIMIT 1', (err, row) => {
+          clearTimeout(timer);
+          try { db.close(); } catch (e) { }
+          resolve(err || !row ? null : { version: row.version, checksum: row.checksum });
+        });
+      } catch (e) {
+        resolve(null);
+      }
+    });
+  }
+
+  async function getAppliedMigrationCached(dbPath) {
+    const now = Date.now();
+    if (_appliedMigrationCache.value && _appliedMigrationCache.dbPath === dbPath && now - _appliedMigrationCache.at < 15000) {
+      return _appliedMigrationCache.value;
+    }
+    const value = await queryAppliedMigration(dbPath);
+    if (value) {
+      _appliedMigrationCache = { at: now, dbPath, value };
+    }
+    return value;
+  }
+
+  // Service worker identity derived from the actual served file content.
+  function getServiceWorkerInfo() {
+    try {
+      const swPath = path.join(__dirname, '../public/sw.js');
+      const content = fs.readFileSync(swPath, 'utf8');
+      const match = content.match(/CACHE_NAME\s*=\s*['"]([^'"]+)['"]/);
+      return {
+        version: match ? match[1] : 'unknown',
+        sha256: crypto.createHash('sha256').update(content).digest('hex')
+      };
+    } catch (e) {
+      return { version: 'unknown', sha256: null };
+    }
   }
 
   function getGitMetadata() {
@@ -148,16 +198,16 @@ function createApp() {
         const repoMatch = remote.match(/[:/]([^/]+\/[^/]+?)(?:\.git)?$/);
         if (repoMatch) repo = repoMatch[1];
       }
-    } catch (e) {}
+    } catch (e) { }
     return { commit, branch, repo };
   }
 
   const { commit: COMMIT_SHA, branch: GIT_BRANCH, repo: REPO_NAME } = getGitMetadata();
-  const { schemaVersion: SCHEMA_VERSION, migrationVersion: MIGRATION_VERSION } = getLatestMigration();
+  const { schemaVersion: DIR_SCHEMA_VERSION, migrationVersion: DIR_MIGRATION_VERSION } = getLatestMigration();
   const BUILD_ID = `build-${COMMIT_SHA.slice(0, 8)}-v2`;
-  const SW_VERSION = 'cafe-os-v3.1';
+  const { version: SW_VERSION, sha256: SW_SHA256 } = getServiceWorkerInfo();
 
-  app.get('/api/build-info', (req, res) => {
+  app.get('/api/build-info', async (req, res) => {
     const env = require('./config/env');
     const { getMode, getDatabasePath } = require('./domain/system/modeService');
     const activeDbPath = getDatabasePath();
@@ -165,13 +215,30 @@ function createApp() {
     const currentMode = getMode();
     const isFixture = dbIdentity.includes('fixture') || dbIdentity.includes('test') || dbIdentity.includes('demo');
 
+    // Applied-migration truth from the live database; directory value only as fallback.
+    let applied = null;
+    try {
+      applied = await getAppliedMigrationCached(activeDbPath);
+    } catch (e) {
+      applied = null;
+    }
+    const appliedVersion = applied ? applied.version : null;
+    const appliedChecksum = applied ? applied.checksum : null;
+    const appliedSource = applied ? 'database' : 'directory-fallback';
+    const schemaVersion = applied ? applied.version : DIR_SCHEMA_VERSION;
+    const migrationVersion = applied
+      ? ((String(applied.version).match(/^(\d+)/) || [null, applied.version])[1])
+      : DIR_MIGRATION_VERSION;
+
     res.setHeader('X-Build-Id', BUILD_ID);
     res.setHeader('X-Commit-Sha', COMMIT_SHA);
     res.setHeader('X-Branch', GIT_BRANCH);
     res.setHeader('X-Repository', REPO_NAME);
-    res.setHeader('X-Schema-Version', SCHEMA_VERSION);
-    res.setHeader('X-Migration-Version', MIGRATION_VERSION);
+    res.setHeader('X-Schema-Version', schemaVersion);
+    res.setHeader('X-Migration-Version', migrationVersion);
     res.setHeader('X-Service-Worker-Version', SW_VERSION);
+    res.setHeader('X-Service-Worker-Sha256', SW_SHA256 || '');
+    res.setHeader('X-Applied-Migration-Source', appliedSource);
     res.setHeader('X-Environment-Mode', env.NODE_ENV || 'development');
     res.setHeader('X-Database-Identity', dbIdentity);
     res.setHeader('X-Process-Start-Time', PROCESS_START_TIME);
@@ -188,9 +255,13 @@ function createApp() {
       commit: COMMIT_SHA,
       branch: GIT_BRANCH,
       repository: REPO_NAME,
-      schemaVersion: SCHEMA_VERSION,
-      migrationVersion: MIGRATION_VERSION,
+      schemaVersion: schemaVersion,
+      migrationVersion: migrationVersion,
+      appliedMigrationVersion: appliedVersion,
+      appliedMigrationSource: appliedSource,
+      appliedMigrationChecksum: appliedChecksum,
       serviceWorkerVersion: SW_VERSION,
+      serviceWorkerSha256: SW_SHA256,
       environmentMode: env.NODE_ENV || 'development',
       environment: env.NODE_ENV || 'development',
       databaseIdentity: dbIdentity,

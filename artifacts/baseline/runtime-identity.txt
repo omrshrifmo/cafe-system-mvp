@@ -1,23 +1,156 @@
-=== CAFE SYSTEM MVP RUNTIME PROVENANCE & BASELINE IDENTITY ===
-Absolute Repository Path: /home/omrshrifmo/cafe-system-mvp
-Git Remote: https://github.com/omrshrifmo/cafe-system-mvp.git
-Git Branch: main
-Commit SHA: 6ef42d711e8609737df0c32a751a571b6435872e
-Working Tree Dirty: true
-Node Version: v22.23.1
-NPM Version: 12.0.1
-Environment Mode: development
-Application Mode: LIVE (Server-Enforced)
-Database Path: /home/omrshrifmo/cafe-system-mvp/cafe.db
-Database SHA-256: 8e7bdfbcf66b284a0786dd21219f8b24b9f736c125daafd3e1badd80ee22f969
-Service Worker Version: cafe-os-v3.1 (Hash: 57cb96548fb033563f83c71dfdcff69c3be1c80dab759753b8e3ed191ddd5811)
-Active Port: 3000
-Process Manager: Native Node.js Subsystem (PID 3835176)
-Latest Migration Applied: 026_reporting_bi_indexes.sql (Total: 26)
-Verified Isolated Fixtures:
-  - fixtures/clean.sqlite
-  - fixtures/demo-normal.sqlite
-  - fixtures/demo-low-stock.sqlite
-  - fixtures/concurrency.sqlite
-  - fixtures/offline.sqlite
-Date: 2026-08-25T15:56:05.945Z
+================================================================================
+RUNTIME IDENTITY — PROMPT 0 BASELINE CAPTURE
+Captured: 2026-08-26T11:00Z (Africa/Cairo 14:00)
+Capture phase: BEFORE build-info repair / BEFORE server restart
+================================================================================
+
+--- REPOSITORY ---
+absolute_path        : /home/omrshrifmo/cafe-system-mvp
+remote_origin        : https://github.com/omrshrifmo/cafe-system-mvp.git
+branch               : main
+commit_sha           : 5cd54d94db0a4feb0555aedc64c9a0d209baa432
+dirty_status         : DIRTY (16 files — all .claude/learning/* tooling metadata and
+                       .github/instructions/*.instructions.md; ZERO application source
+                       files modified at capture time)
+
+--- TOOLCHAIN ---
+node                 : v22.23.1
+npm                  : 12.0.1
+
+--- PROCESS MANAGER / PROCESS ---
+process_manager      : PM2 v7.0.3 God Daemon (/home/omrshrifmo/.pm2), daemon pid 2926833
+pm2_app_name         : cafe-server
+pid                  : 3835176
+port_listener        : 0.0.0.0:3000 (ss -tlnp)
+cmdline              : node /home/omrshrifmo/cafe-system-mvp/server.js
+proc_cwd             : /home/omrshrifmo/cafe-system-mvp  (SAME checkout as edited tree)
+start_time_local     : Tue Aug 25 18:54:46 2026 (EET)
+start_time_utc       : 2026-08-25T15:54:47.332Z (matches build-info.processStartTime)
+uptime_at_capture    : ~19h06m
+pm2_restart_count    : 140
+entry_chain          : server.js -> src/server.js -> src/app.js (createApp)
+
+--- BROWSER BUILD-INFO RESPONSE (live, pre-repair) ---
+GET http://localhost:3000/api/build-info  (envelope-wrapped)
+{
+  "buildId": "build-6ef42d71-v2",
+  "commitSha": "6ef42d711e8609737df0c32a751a571b6435872e",
+  "branch": "main",
+  "repository": "omrshrifmo/cafe-system-mvp",
+  "schemaVersion": "026_reporting_bi_indexes.sql",
+  "migrationVersion": "026",
+  "serviceWorkerVersion": "cafe-os-v3.1",
+  "environmentMode": "development",
+  "databaseIdentity": "cafe.db",
+  "databasePath": "/home/omrshrifmo/cafe-system-mvp/cafe.db",
+  "fixtureId": null,
+  "appMode": "LIVE",
+  "port": 3000,
+  "processStartTime": "2026-08-25T15:54:47.332Z",
+  "serverInstanceId": "a80d4214-6b51-4813-adc9-a349ca66d370"
+}
+
+--- SPLIT-BRAIN DIAGNOSIS (pre-repair) ---
+browser_served_commit : 6ef42d711e8609737df0c32a751a571b6435872e  (stale, baked at
+                        process start Aug 25 15:54 UTC via getGitMetadata())
+checkout_head_commit  : 5cd54d94db0a4feb0555aedc64c9a0d209baa432
+=> MISMATCH #1: served build reports an older commit than HEAD. Process predates
+   newer commits; server was never restarted after commits landed.
+
+migration_truth:
+  running_process_reports : 026 (directory listing frozen at process start)
+  migrations_dir_now      : 27 files, max 027_system_update_packages.sql
+  cafe.db schema_migrations: max applied = 028_analytics_feature.sql
+                            (applied 2026-08-25 20:37:33, status SUCCESS,
+                             checksum 2693aed22ae26742accb4e97e4b7eead...)
+=> MISMATCH #2: process(026) < directory(027) < database(028).
+=> DEFECT P0-PROV-01: cafe.db records migration 028_analytics_feature.sql as
+   APPLIED/SUCCESS but no 028_*.sql file exists in src/db/migrations/. The
+   database schema is ahead of the codebase; the migration source of truth for
+   028 is missing from version control. Recorded in docs/defect-ledger.md.
+
+--- ENVIRONMENT MODE / DATABASE IDENTITY ---
+.app_mode.json       : {"mode":"LIVE","updatedAt":"2026-08-25T17:45:03.226Z"}
+NODE_ENV (served)    : development
+database_file        : /home/omrshrifmo/cafe-system-mvp/cafe.db (+ active -wal/-shm)
+fixture_id           : null (live-named database, NOT an isolated fixture)
+legacy_db_files      : data.db, database.sqlite also present at repo root (unused
+                       by served process per build-info.databasePath)
+
+--- SERVICE WORKER ---
+file                 : public/sw.js
+version_string       : cafe-os-v3.1  (line 1: const CACHE_NAME = 'cafe-os-v3.1';)
+sha256               : 57cb96548fb033563f83c71dfdcff69c3be1c80dab759753b8e3ed191ddd5811
+
+--- PACKAGE SCRIPTS (package.json @ 5cd54d94) ---
+start            : node src/server.js
+dev              : node src/server.js
+db:migrate       : node src/db/cli.js migrate
+db:status        : node src/db/cli.js status
+db:backup        : node src/db/cli.js backup
+db:restore       : node src/db/cli.js restore
+db:fixtures      : node src/domain/system/fixtureService.js
+lint             : eslint src/ test/ public/modules/
+format:check     : echo placeholder ("Checking code format... OK")
+typecheck        : echo placeholder (vanilla-JS notice)
+test             : node scripts/run_all_tests.js
+test:unit        : NODE_ENV=test mocha "test/unit/**/*.test.js" --timeout 10000 --exit
+test:integration : NODE_ENV=test mocha "test/integration/**/*.test.js" --timeout 15000 --exit
+test:security    : NODE_ENV=test mocha "test/security/**/*.test.js" --timeout 20000 --exit
+test:concurrency : NODE_ENV=test mocha "test/integration/concurrency.test.js" ...
+test:e2e         : NODE_ENV=test mocha orders_lifecycle + payments_checkout ...
+test:offline     : NODE_ENV=test mocha sync.test.js
+test:migrations  : NODE_ENV=test mocha admin_config.test.js
+test:backup-restore : NODE_ENV=test mocha production_hardening.test.js
+test:performance : node test/load/soak_simulation.js
+audit:production : echo placeholder ("Passed 0 vulnerabilities")
+test:coverage    : c8 mocha test/**/*.test.js
+
+--- HUNG PROCESSES FOUND AT CAPTURE (prior agent leftovers) ---
+pid 3846525 : mocha test/security/cost_control_inventory.test.js (running ~19h)
+pid 3847924 : mocha test/security/cost_control_inventory.test.js (running ~19h)
+pid 3868850 : inline node -e test-runner loop (running ~18h44m)
+These were terminated before Phase F test runs to avoid DB lock contention and
+double-execution hazards. Termination recorded in command log.
+
+--- NOTES ---
+* All values above measured live on 2026-08-26; nothing copied from prior claims.
+
+POST-REPAIR IDENTITY — after build-info fix + pm2 restart cafe-server
+Captured: 2026-08-26T12:12:42Z
+
+new_pid              : 1774901 (old 3835176 replaced)
+process_start_utc    : 2026-08-26T12:12:40.488Z
+server_instance_id   : 7eb0091f-0e0c-45cc-8e84-6da65b63d7f6
+
+GET /api/build-info (post-repair):
+{
+  "buildId": "build-5cd54d94-v2",
+  "commitSha": "5cd54d94db0a4feb0555aedc64c9a0d209baa432",   == checkout HEAD  ✔
+  "branch": "main",
+  "schemaVersion": "028_analytics_feature.sql",
+  "migrationVersion": "028",
+  "appliedMigrationVersion": "028_analytics_feature.sql",
+  "appliedMigrationSource": "database",
+  "appliedMigrationChecksum": "2693aed22ae26742accb4e97e4b7eead",
+  "serviceWorkerVersion": "cafe-os-v3.1",
+  "serviceWorkerSha256": "57cb96548fb033563f83c71dfdcff69c3be1c80dab759753b8e3ed191ddd5811",
+  "environmentMode": "development",
+  "databaseIdentity": "cafe.db",
+  "fixtureId": null,
+  "appMode": "LIVE",
+  "port": 3000
+}
+
+SPLIT-BRAIN RESOLUTION:
+  browser_served_commit == checkout_head_commit == 5cd54d94...  → PROVEN IDENTICAL
+  migration truth now read from schema_migrations table (source=database),
+  exposing the pre-existing DB-ahead-of-code state (028 applied, file absent)
+  instead of masking it with a directory listing.
+
+RESPONSE HEADERS now include: X-Build-Id, X-Commit-Sha, X-Branch, X-Repository,
+X-Schema-Version, X-Migration-Version, X-Service-Worker-Version,
+X-Service-Worker-Sha256, X-Applied-Migration-Source, X-Environment-Mode,
+X-Database-Identity, X-Process-Start-Time, X-Server-Instance-Id, X-App-Mode,
+X-Fixture-Id, X-Port, X-Process-Id. No secrets or session identifiers exposed.
+================================================================================

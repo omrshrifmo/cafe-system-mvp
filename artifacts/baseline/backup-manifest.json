@@ -1,11 +1,26 @@
 {
-  "backup_created_at": "2026-08-25T15:55:57.565Z",
-  "live_database_path": "/home/omrshrifmo/cafe-system-mvp/cafe.db",
-  "backup_file_path": "/home/omrshrifmo/cafe-system-mvp/backups/cafe-backup-2026-08-25T15-55-57-466Z.sqlite",
-  "backup_sha256": "bd050b7b3553352bd6e5da112a29f3a999a15010b44b6c9322d95b769e6e0133",
-  "restored_verification_file": "/home/omrshrifmo/cafe-system-mvp/backups/cafe_restore_verification.sqlite",
-  "restored_sha256": "bd050b7b3553352bd6e5da112a29f3a999a15010b44b6c9322d95b769e6e0133",
-  "checksums_match": true,
-  "duration_ms": 97,
-  "status": "VERIFIED"
+  "createdAt": "2026-08-26T11:12:00Z",
+  "sourceDatabase": "/home/omrshrifmo/cafe-system-mvp/cafe.db",
+  "backupFile": "/home/omrshrifmo/cafe-system-mvp/backups/baseline-prompt0-2026-08-26.sqlite",
+  "backupSha256": "c9096887a4fc7daff8cd7863124a88016193d510ba91e3ec0d9955ab25779835",
+  "backupBytes": 3325952,
+  "method": "sqlite3 CLI 'VACUUM INTO' from a mode=ro connection (WAL-safe, online, non-destructive)",
+  "integrityCheck": "ok (PRAGMA integrity_check on restored copy via capture tooling; structure verified)",
+  "restoreTarget": "/home/omrshrifmo/cafe-system-mvp/backups/baseline-prompt0-2026-08-26.sqlite used directly as the separate restore file (never copied over cafe.db)",
+  "parityVerification": {
+    "tool": "scratch/prompt0_compare.js",
+    "preCapture": "artifacts/baseline/database-integrity.json (label PRE-BACKUP-LIVE-cafe.db)",
+    "postCapture": "artifacts/baseline/database-integrity-restored.json (label RESTORED-COPY-from-backup)",
+    "tablesMatch": true,
+    "rowCountsMatch": true,
+    "monetaryMatch": true,
+    "stockMatch": true,
+    "migrationsMatch": true,
+    "exitCode": 0
+  },
+  "notes": [
+    "First attempt with node-sqlite3 db.backup() silently produced a 0-byte file (sha e3b0c44... of empty string); detected by size check and redone with VACUUM INTO. Recorded as tooling defect note, not a live-data defect.",
+    "LIVE cafe.db was only read during this procedure; no writes were issued against it.",
+    "Pre-backup metrics: 103 tables, 6439 rows total, 28 applied migrations (max 028_analytics_feature.sql)."
+  ]
 }

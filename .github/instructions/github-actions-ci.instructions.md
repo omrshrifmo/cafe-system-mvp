@@ -9,7 +9,7 @@ applyTo:
   - **/src/**
   - **/*.test.ts
   - **/*.test.js
-deployedAt: "2026-08-26T10:19:49.351Z"
+deployedAt: "2026-08-26T14:44:12.118Z"
 ---
 
 # github-actions-ci

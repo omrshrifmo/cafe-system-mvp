@@ -1,0 +1,37 @@
+TEST COMMAND RESULTS — Prompt 0 baseline
+Captured: 2026-08-26 (all commands run from /home/omrshrifmo/cafe-system-mvp @ 5cd54d94)
+Shell: fish; exit codes are actual process exit codes ($status).
+
+command                          exit  notes
+-------------------------------------  ---------------------------------------------
+npm run lint                       0   eslint src/ test/ public/modules/
+npm run format:check               0   placeholder script (echo only) — flagged in docs
+npm run typecheck                  0   placeholder script (echo only) — flagged in docs
+npm run audit:production           0   placeholder script (echo only) — flagged in docs
+npm run db:status                  0   migration status against configured DB
+npm test                           0   canonical runner: 39/39 suites, 296 tests,
+                                       193.10s (per-file process isolation +
+                                       pristine fixture reset before each suite)
+npm run test:unit                  0   mocha test/unit/** (incl. new build_info: 6/6)
+npm run test:integration           0   mocha test/integration/**
+npm run test:concurrency           0   concurrency.test.js
+npm run test:e2e                   0   orders_lifecycle + payments_checkout
+npm run test:offline               0   sync.test.js
+npm run test:migrations            0   admin_config.test.js
+npm run test:backup-restore        0   production_hardening.test.js
+npm run test:security             48   FAIL — 48 failures when all 16 security
+                                       suites share ONE mocha process (cross-suite
+                                       state pollution; first failure: "before all"
+                                       hook in auth_boundary). Same suites PASS via
+                                       npm test per-file isolation. See ledger
+                                       NEW-TEST-01. Log: /tmp/p0_tsec.log
+npm run test:performance           0   soak_simulation.js
+
+LIVE-DATABASE SAFETY PROOF
+  cafe.db sha256 BEFORE fixture generation : a611368bade1076e480b4fb725c3cbf9c62cc0ddf18d8f1fe0b4a90bd32d4e9e
+  cafe.db sha256 AFTER  fixture generation : a611368bade1076e480b4fb725c3cbf9c62cc0ddf18d8f1fe0b4a90bd32d4e9e
+  cafe.db sha256 AFTER  full npm test      : a611368bade1076e480b4fb725c3cbf9c62cc0ddf18d8f1fe0b4a90bd32d4e9e
+  => The live database was NOT mutated by any test or fixture command.
+
+HUNG PROCESSES TERMINATED BEFORE SUITE RUNS (prior agent leftovers):
+  kill -9 3846525 3847924 3868850 → KILL_EXIT=0
