@@ -2,7 +2,7 @@
   "gate_name": "FULL_DAY_DETERMINISTIC_SIMULATOR_GATE",
   "version": "v3.2-prod",
   "decision": "GO / PASS",
-  "evaluation_timestamp": "2026-08-25T05:28:41.064Z",
+  "evaluation_timestamp": "2026-08-25T17:46:00.702Z",
   "metrics": {
     "tables_executed": 30,
     "shifts_closed": 2,

@@ -21,7 +21,6 @@ describe('Safe Raw-Material, Purchasing Lifecycle & Operating-Cost Control', fun
     await runQuery(`UPDATE v3_users SET pin_hash = ? WHERE role_id = 'R_OWNER'`, [ownerHash]);
     await runQuery(`UPDATE v3_users SET role_id = 'R_OWNER', pin_hash = ? WHERE id = '43'`, [ownerHash]);
     await runQuery(`UPDATE v3_users SET role_id = 'R_OWNER', pin_hash = ? WHERE id = '102'`, [ownerHash]);
-    await runQuery(`UPDATE inventory SET unit_cost = 1.0 WHERE unit_cost = 0`);
     await runQuery(`UPDATE inventory_items SET cost_per_unit_minor = 100 WHERE cost_per_unit_minor = 0`);
 
     // Login as OWNER (User 102 / PIN 1009)

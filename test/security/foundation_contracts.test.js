@@ -19,17 +19,23 @@ describe('Foundation Repair, Migration Integrity & API Contracts', function () {
     await runMigrations();
     app = createApp();
 
-    // Login as OWNER (User 102 / PIN 8802 or User 43 / PIN 1009)
-    const ownerRes = await request(app)
+    // Login as OWNER (PIN 1009 / User 2/43 or PIN 8802)
+    let ownerRes = await request(app)
       .post('/api/auth/login')
-      .send({ pin: '8802' });
-    ownerCookies = ownerRes.headers['set-cookie'] || [`session_token=${ownerRes.body.sessionId}`];
+      .send({ pin: '1009' });
+    if (ownerRes.status !== 200) {
+      ownerRes = await request(app).post('/api/auth/login').send({ pin: '8802' });
+    }
+    ownerCookies = ownerRes.headers['set-cookie'];
 
-    // Login as CASHIER (User 104 / PIN 8804)
-    const cashierRes = await request(app)
+    // Login as CASHIER (PIN 1004 or 8804)
+    let cashierRes = await request(app)
       .post('/api/auth/login')
-      .send({ pin: '8804' });
-    cashierCookies = cashierRes.headers['set-cookie'] || [`session_token=${cashierRes.body.sessionId}`];
+      .send({ pin: '1004' });
+    if (cashierRes.status !== 200) {
+      cashierRes = await request(app).post('/api/auth/login').send({ pin: '8804' });
+    }
+    cashierCookies = cashierRes.headers['set-cookie'];
   });
 
   describe('1. Schema Migrations & Foreign Key Constraints Integrity', () => {

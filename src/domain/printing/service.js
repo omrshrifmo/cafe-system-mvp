@@ -54,8 +54,8 @@ function formatReceiptEscPos(data) {
   const chunks = [];
   chunks.push(CMD.INIT);
 
-  // Safe Drawer Kick: Only if kick_drawer is requested AND payment method is CASH
-  if (data.kick_drawer && (data.payment_method === 'CASH' || data.is_cash_settlement)) {
+  // Safe Drawer Kick: Only if kick_drawer is requested AND payment method is CASH or unspecified
+  if (data.kick_drawer && (data.payment_method === 'CASH' || data.is_cash_settlement || !data.payment_method)) {
     chunks.push(CMD.DRAWER_KICK);
   }
 

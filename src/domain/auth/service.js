@@ -91,7 +91,12 @@ async function authenticateWithPin(pin, ip = null, userAgent = null, deviceId = 
   }
 
   const roleRow = await getQuery(`SELECT name FROM roles WHERE id = ?`, [matchedUser.role_id]);
-  const roleName = normalizeRole(roleRow ? roleRow.name : matchedUser.role_id);
+  let roleName = roleRow ? roleRow.name : matchedUser.role_id;
+  if (!roleName) {
+    const legacyUser = await getQuery(`SELECT role FROM users WHERE id = ?`, [matchedUser.id]);
+    roleName = legacyUser ? ('R_' + legacyUser.role.toUpperCase()) : 'WAITER';
+  }
+  roleName = normalizeRole(roleName);
   const defaultRoute = getRoleDefaultRoute(roleName);
 
   const rawSessionToken = crypto.randomBytes(32).toString('hex');
@@ -131,7 +136,8 @@ async function validateSession(rawSessionToken, touch = true) {
   const sessionHash = hashToken(rawSessionToken);
   const session = await getQuery(
     `SELECT s.id as session_id, s.user_id, s.venue_id, s.absolute_expiry_at, s.inactivity_expiry_at, s.revoked_at,
-            u.name, u.role_id, u.is_active, COALESCE(r.name, u.role_id) as role_name
+            u.name, u.role_id, u.is_active, 
+            COALESCE(r.name, u.role_id, (SELECT 'R_' || UPPER(legacy.role) FROM users legacy WHERE legacy.id = u.id)) as role_name
      FROM v3_user_sessions s
      JOIN v3_users u ON s.user_id = u.id
      LEFT JOIN roles r ON u.role_id = r.id

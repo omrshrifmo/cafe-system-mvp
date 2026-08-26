@@ -37,7 +37,7 @@ const POLICY_VERSION = 'pol-menacafe-v3';
  */
 async function buildReportScope(params = {}) {
   const venueId = params.venueId || 'V_DEFAULT';
-  const branchId = params.branchId || 'B_DEFAULT';
+  const branchId = params.branchId || 'BR_DEFAULT';
   const timezone = params.timezone || 'Africa/Cairo';
   const requestId = params.requestId || crypto.randomUUID();
 

@@ -30,6 +30,7 @@ const hrRoutes = require('./http/routes/hr');
 const usersRoutes = require('./http/routes/users');
 const setupRoutes = require('./http/routes/setup');
 const adminRoutes = require('./http/routes/admin');
+const updatesRoutes = require('./http/routes/updates');
 const { securityHeaders, strictCors, csrfProtection } = require('./http/middleware/security');
 const { router: healthRoutes, recordRequestMetric } = require('./http/routes/health');
 
@@ -99,6 +100,7 @@ function createApp() {
   app.use('/api', syncRoutes);
   app.use('/api', printRoutes);
   app.use('/api/setup', setupRoutes);
+  app.use('/api/admin/updates', updatesRoutes);
   app.use('/api/admin', adminRoutes);
   app.use('/api', adminRoutes);
   app.use('/api', healthRoutes);

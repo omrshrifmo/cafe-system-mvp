@@ -100,7 +100,9 @@ async function logWaste(wasteData, actorId = null) {
     }
 
     // Negative Stock Policy Check
-    if (invItem.negative_stock_policy === NEGATIVE_STOCK_POLICIES.BLOCK && (invItem.current_stock_microunits - qtyMicro < 0)) {
+    const effectivePolicy = invItem.negative_stock_policy || NEGATIVE_STOCK_POLICIES.BLOCK;
+    const isBlocking = effectivePolicy === NEGATIVE_STOCK_POLICIES.BLOCK || effectivePolicy === 'VENUE_DEFAULT' || effectivePolicy !== NEGATIVE_STOCK_POLICIES.ALLOW_WARN;
+    if (isBlocking && (invItem.current_stock_microunits - qtyMicro < 0)) {
       throw new Error(`INSUFFICIENT_STOCK: رصيد المخزون للخامة [${invItem.name}] غير كافٍ لتسجيل الهالك`);
     }
 

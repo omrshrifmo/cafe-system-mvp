@@ -100,6 +100,8 @@ async function generateCleanFixture(targetDir = ROOT_FIXTURES_DIR) {
   logger.info('Generating Clean Fixture...', { dbPath });
   const db = await openFixtureDb(dbPath);
   await runMigrations(db);
+  await execSql(db, `ALTER TABLE purchases ADD COLUMN invoice_ref TEXT NULL;`).catch(() => {});
+  await execSql(db, `ALTER TABLE purchases ADD COLUMN total_cost REAL DEFAULT 0;`).catch(() => {});
   await closeFixtureDb(db);
   
   // Also create clean_fixture.db for legacy test compatibility
@@ -190,6 +192,8 @@ async function generateFullDayFixture(targetDir = FIXTURES_DIR, filename = 'full
   logger.info('Generating Full Day Fixture...', { dbPath });
   const db = await openFixtureDb(dbPath);
   await runMigrations(db);
+  await execSql(db, `ALTER TABLE purchases ADD COLUMN invoice_ref TEXT NULL;`).catch(() => {});
+  await execSql(db, `ALTER TABLE purchases ADD COLUMN total_cost REAL DEFAULT 0;`).catch(() => {});
 
   // A. Venues & Branches
   await execSql(db, `
@@ -201,43 +205,87 @@ async function generateFullDayFixture(targetDir = FIXTURES_DIR, filename = 'full
 
     INSERT OR REPLACE INTO branches (id, venue_id, name, status)
     VALUES ('BR_DEFAULT', 'V_DEFAULT', 'الفرع الرئيسي', 'ACTIVE');
+    INSERT OR REPLACE INTO branches (id, venue_id, name, status)
+    VALUES ('B_DEFAULT', 'V_DEFAULT', 'الفرع الرئيسي', 'ACTIVE');
   `);
 
   // B. Staff Role Matrix & Users (Hashed PINs)
   const allRoles = [
     'SUPER_ADMIN', 'OWNER', 'OP_MANAGER', 'OP_ASSISTANT_CASHIER', 'CASHIER',
-    'HEAD_CHEF', 'BARISTA', 'SHISHA_WAITER', 'HEAD_WAITER', 'WAITER',
-    'RUNNER', 'ACCOUNTANT', 'JOKER'
+    'HEAD_CHEF', 'CHEF', 'BARISTA', 'SHISHA_WAITER', 'SHISHA', 'HEAD_WAITER', 'WAITER',
+    'RUNNER', 'ACCOUNTANT', 'HALL_MANAGER', 'BOM_MANAGER', 'HR_PAYROLL', 'QA', 'READ_ONLY', 'JOKER', 'MANAGER'
   ];
 
   for (const r of allRoles) {
-    await execSql(db, `
-      INSERT OR REPLACE INTO roles (id, venue_id, name) VALUES (?, 'V_DEFAULT', ?)
-    `, [r, r]);
+    await execSql(db, `INSERT OR REPLACE INTO roles (id, venue_id, name) VALUES (?, 'V_DEFAULT', ?)`, [r, r]);
+    await execSql(db, `INSERT OR REPLACE INTO roles (id, venue_id, name) VALUES ('R_' || ?, 'V_DEFAULT', ?)`, [r, r]);
   }
 
   const pinUsers = [
-    { id: '1', name: 'عمر (مدير النظام)', role: 'SUPER_ADMIN', pin: '1001' },
-    { id: '2', name: 'فاطمة (المالك)', role: 'OWNER', pin: '1009' },
-    { id: '3', name: 'وائل (مدير العمليات)', role: 'OP_MANAGER', pin: '1008' },
-    { id: '4', name: 'أحمد كركر (كاشير رئيسي)', role: 'OP_ASSISTANT_CASHIER', pin: '1007' },
-    { id: '5', name: 'سارة محمود (كاشير مسائي)', role: 'CASHIER', pin: '1006' },
-    { id: '6', name: 'الشيف مصطفى (رئيس المطبخ)', role: 'HEAD_CHEF', pin: '1005' },
-    { id: '7', name: 'هاجر / بيبو (باريستا)', role: 'BARISTA', pin: '1002' },
-    { id: '8', name: 'عماد فحم (معلم الشيشة)', role: 'SHISHA_WAITER', pin: '1003' },
-    { id: '9', name: 'كريم (كابتن صالة)', role: 'HEAD_WAITER', pin: '1004' },
-    { id: '10', name: 'علي (ويتر)', role: 'WAITER', pin: '1010' },
-    { id: '11', name: 'حسن سريع (مساعد صالة / رانر)', role: 'RUNNER', pin: '1011' },
-    { id: '12', name: 'مدحت مالي (محاسب)', role: 'ACCOUNTANT', pin: '1012' }
+    { id: '1', name: 'عمر (مدير النظام)', role: 'R_SUPER_ADMIN', pin: '1001' },
+    { id: '2', name: 'فاطمة (المالك)', role: 'R_OWNER', pin: '1009' },
+    { id: '3', name: 'وائل (مدير العمليات)', role: 'R_OP_MANAGER', pin: '1008' },
+    { id: '4', name: 'أحمد كركر (كاشير رئيسي)', role: 'R_OP_ASSISTANT_CASHIER', pin: '1007' },
+    { id: '5', name: 'سارة محمود (كاشير مسائي)', role: 'R_CASHIER', pin: '1006' },
+    { id: '6', name: 'الشيف مصطفى (رئيس المطبخ)', role: 'R_CHEF', pin: '1005' },
+    { id: '7', name: 'هاجر / بيبو (باريستا)', role: 'R_BARISTA', pin: '1002' },
+    { id: '8', name: 'عماد فحم (معلم الشيشة)', role: 'R_SHISHA', pin: '1003' },
+    { id: '9', name: 'كريم (كابتن صالة)', role: 'R_HALL_MANAGER', pin: '1004' },
+    { id: '10', name: 'علي (ويتر)', role: 'R_WAITER', pin: '1010' },
+    { id: '11', name: 'حسن سريع (مساعد صالة / رانر)', role: 'R_RUNNER', pin: '1011' },
+    { id: '12', name: 'مدحت مالي (محاسب)', role: 'R_OP_MANAGER', pin: '1012' },
+
+    // Legacy migration IDs
+    { id: '35', name: 'أحمد (جوكر/ويتر)', role: 'R_JOKER', pin: '1001' },
+    { id: '36', name: 'هاجر/بيبو (باريستا)', role: 'R_BARISTA', pin: '1002' },
+    { id: '37', name: 'أسماء (مسؤول شيشة)', role: 'R_SHISHA', pin: '1003' },
+    { id: '38', name: 'شيف المطبخ', role: 'R_CHEF', pin: '1005' },
+    { id: '39', name: 'أمل (ويتر)', role: 'R_WAITER', pin: '1004' },
+    { id: '40', name: 'إبراهيم (مدير صالة)', role: 'R_HALL_MANAGER', pin: '1008' },
+    { id: '41', name: 'أحمد كركر (كاشير)', role: 'R_OP_ASSISTANT_CASHIER', pin: '1007' },
+    { id: '42', name: 'وائل (مدير عمليات)', role: 'R_OP_MANAGER', pin: '1008' },
+    { id: '43', name: 'فاطمة (مالك)', role: 'R_OWNER', pin: '1009' },
+    { id: '44', name: 'وائل 2 (مالك)', role: 'R_OWNER', pin: '1009' },
+    { id: '45', name: 'عمر (مسؤول نظام)', role: 'R_SUPER_ADMIN', pin: '1001' },
+    { id: '46', name: 'شعراوي (مدير تكاليف BOM)', role: 'R_BOM_MANAGER', pin: '1008' },
+
+    // Role-matrix test users (PIN 8801 - 8814)
+    { id: '101', name: 'سوبر أدمن', role: 'R_SUPER_ADMIN', pin: '8801' },
+    { id: '102', name: 'المالك التجريبي', role: 'R_OWNER', pin: '8802' },
+    { id: '103', name: 'مدير العمليات', role: 'R_OP_MANAGER', pin: '8803' },
+    { id: '104', name: 'كاشير رئيسي', role: 'R_OP_ASSISTANT_CASHIER', pin: '8804' },
+    { id: '105', name: 'باريستا', role: 'R_BARISTA', pin: '8805' },
+    { id: '106', name: 'شيف المطبخ', role: 'R_CHEF', pin: '8806' },
+    { id: '107', name: 'مسؤول الشيشة', role: 'R_SHISHA', pin: '8807' },
+    { id: '108', name: 'ويتر الصالة', role: 'R_WAITER', pin: '8808' },
+    { id: '109', name: 'رانر التوصيل', role: 'R_RUNNER', pin: '8809' },
+    { id: '110', name: 'مدير الصالة', role: 'R_HALL_MANAGER', pin: '8810' },
+    { id: '111', name: 'مدير المخزون والوصفات', role: 'R_BOM_MANAGER', pin: '8811' },
+    { id: '112', name: 'مسؤول الرواتب وشؤون الموظفين', role: 'R_HR_PAYROLL', pin: '8812' },
+    { id: '113', name: 'مراقب الجودة', role: 'R_QA', pin: '8813' },
+    { id: '114', name: 'مستخدم تقارير للقراءة فقط', role: 'R_READ_ONLY', pin: '8814' },
+
+    // Station test users
+    { id: '201', name: 'Barista User', role: 'R_BARISTA', pin: '1002' },
+    { id: '202', name: 'Chef User', role: 'R_CHEF', pin: '1005' },
+    { id: '203', name: 'Runner User', role: 'R_RUNNER', pin: '1011' },
+    { id: '204', name: 'Manager User', role: 'R_OP_MANAGER', pin: '1008' },
+
+    // Shifts test users
+    { id: '301', name: 'كاشير الصباح', role: 'R_OP_ASSISTANT_CASHIER', pin: '1007' },
+    { id: '302', name: 'مالك الكافيه', role: 'R_OWNER', pin: '1009' }
   ];
 
   for (const u of pinUsers) {
     const hashed = await hashPin(u.pin);
+    const numericId = parseInt(u.id, 10);
     // Legacy users table
-    await execSql(db, `
-      INSERT OR REPLACE INTO users (id, name, pin_hash, role, is_active)
-      VALUES (?, ?, ?, ?, 1)
-    `, [parseInt(u.id, 10), u.name, hashed, u.role]);
+    if (!isNaN(numericId)) {
+      await execSql(db, `
+        INSERT OR REPLACE INTO users (id, name, pin_hash, role, is_active)
+        VALUES (?, ?, ?, ?, 1)
+      `, [numericId, u.name, hashed, u.role.replace(/^R_/, '')]);
+    }
 
     // V3 users table
     await execSql(db, `
@@ -300,46 +348,57 @@ async function generateFullDayFixture(targetDir = FIXTURES_DIR, filename = 'full
         id, venue_id, name, category, unit, min_limit, cost_per_unit_minor
       ) VALUES (?, 'V_DEFAULT', ?, ?, ?, ?, ?)
     `, [String(mat.id), mat.name, mat.cat, mat.unit, mat.reorder, mat.cost_minor]);
+
+    await execSql(db, `
+      INSERT OR IGNORE INTO inventory_ledger (
+        inventory_item_id, event_type, quantity_delta_microunits,
+        unit, unit_cost_minor, source_type, source_id, idempotency_key, actor_id, reason, cost_basis
+      ) VALUES (
+        ?, 'OPENING_BALANCE', ?,
+        ?, ?, 'OPENING_COUNT', 'INIT', ?, 1, 'الرصيد الافتتاحي الموثق', 'ACTUAL'
+      )
+    `, [mat.id, mat.stock_micro, mat.unit, mat.cost_minor, `OPENING_${mat.id}`]);
   }
 
   // E. Canonical Menu Categories & Items
   await execSql(db, `
-    INSERT OR REPLACE INTO menu_categories (id, name, name_en, sort_order, is_active) VALUES
-    (1, 'مشروبات ساخنة', 'Hot Beverages', 1, 1),
-    (2, 'مشروبات باردة', 'Cold Beverages', 2, 1),
-    (3, 'شيشة ومعسل', 'Shisha & Hookah', 3, 1),
-    (4, 'المأكولات والسندوتشات', 'Food & Sandwiches', 4, 1),
-    (5, 'الحلويات والمخبوزات', 'Desserts', 5, 1);
+    INSERT OR REPLACE INTO menu_categories (id, name, name_en, icon, color, sort_order, is_active, is_quarantined) VALUES
+    (1, 'مشروبات ساخنة', 'Hot Drinks', '☕', '#d97706', 1, 1, 0),
+    (2, 'حلويات', 'Desserts', '🍰', '#db2777', 3, 1, 0),
+    (3, 'مشروبات باردة', 'Cold Drinks', '🧊', '#0284c7', 2, 1, 0),
+    (6, 'مأكولات', 'Food', '🥪', '#16a34a', 4, 1, 0),
+    (7, 'شيشة', 'Shisha', '💨', '#7c3aed', 5, 1, 0);
 
     INSERT OR REPLACE INTO v3_menu_categories (id, venue_id, name, icon, display_order) VALUES
     ('CAT-1', 'V_DEFAULT', 'مشروبات ساخنة', '☕', 1),
-    ('CAT-2', 'V_DEFAULT', 'مشروبات باردة', '🥤', 2),
-    ('CAT-3', 'V_DEFAULT', 'شيشة ومعسل', '💨', 3),
-    ('CAT-4', 'V_DEFAULT', 'المأكولات والسندوتشات', '🥪', 4),
-    ('CAT-5', 'V_DEFAULT', 'الحلويات والمخبوزات', '🍰', 5);
+    ('CAT-2', 'V_DEFAULT', 'حلويات', '🍰', 3),
+    ('CAT-3', 'V_DEFAULT', 'مشروبات باردة', '🧊', 2),
+    ('CAT-6', 'V_DEFAULT', 'مأكولات', '🥪', 4),
+    ('CAT-7', 'V_DEFAULT', 'شيشة', '💨', 5);
   `);
 
   const menuItems = [
-    { id: 1, cat: 1, name: 'Espresso Single', ar: 'إسبريسو سنغل', price: 3500, dept: 'BARISTA' },
-    { id: 2, cat: 1, name: 'Espresso Double', ar: 'إسبريسو دبل', price: 5000, dept: 'BARISTA' },
-    { id: 3, cat: 1, name: 'Cafe Latte', ar: 'كافيه لاتيه', price: 5000, dept: 'BARISTA' },
-    { id: 4, cat: 1, name: 'Cappuccino', ar: 'كابتشينو إيطالي', price: 5000, dept: 'BARISTA' },
-    { id: 5, cat: 2, name: 'Iced Vanilla Latte', ar: 'أيس فانيليا لاتيه', price: 6000, dept: 'BARISTA' },
-    { id: 6, cat: 2, name: 'Mint Lemon Mojito', ar: 'موهيتو ليمون نعناع', price: 4500, dept: 'BARISTA' },
-    { id: 7, cat: 3, name: 'Shisha Double Apple', ar: 'شيشة تفاحتين فاخر', price: 6500, dept: 'SHISHA' },
-    { id: 8, cat: 3, name: 'Shisha Mint', ar: 'شيشة نعناع بارد', price: 6500, dept: 'SHISHA' },
-    { id: 9, cat: 4, name: 'Club Sandwich Chicken', ar: 'كلوب ساندوتش فراخ مشوية', price: 10000, dept: 'KITCHEN' },
-    { id: 10, cat: 4, name: 'French Fries Platter', ar: 'طبق بطاطس مقلية مقرمشة', price: 4000, dept: 'KITCHEN' },
-    { id: 11, cat: 5, name: 'Creme Brulee', ar: 'كريم بروليه فاخر', price: 3500, dept: 'KITCHEN' },
-    { id: 12, cat: 5, name: 'Molten Chocolate Cake', ar: 'مولتن شوكولاتة مع آيس كريم', price: 8000, dept: 'KITCHEN' }
+    { id: 1, cat: 1, name: 'Single Espresso', ar: 'إسبريسو سنغل', price: 3500, dept: 'BARISTA', sku: 'SKU-BEV-ESPRESSO-SGL' },
+    { id: 2, cat: 1, name: 'Double Espresso', ar: 'إسبريسو دبل', price: 5000, dept: 'BARISTA', sku: 'SKU-BEV-ESPRESSO-DBL' },
+    { id: 3, cat: 1, name: 'Caffe Latte', ar: 'كافيه لاتيه', price: 5000, dept: 'BARISTA', sku: 'SKU-BEV-LATTE' },
+    { id: 4, cat: 1, name: 'Italian Cappuccino', ar: 'كابتشينو إيطالي', price: 5000, dept: 'BARISTA', sku: 'SKU-BEV-CAPPUCCINO' },
+    { id: 5, cat: 3, name: 'Iced Vanilla Latte', ar: 'أيس فانيليا لاتيه', price: 6000, dept: 'BARISTA', sku: 'SKU-BEV-LATTE-ICE' },
+    { id: 6, cat: 3, name: 'Lemon Mint Mojito', ar: 'موهيتو ليمون نعناع', price: 4500, dept: 'BARISTA', sku: 'SKU-BEV-MOJITO-MINT' },
+    { id: 7, cat: 7, name: 'Double Apple Shisha', ar: 'شيشة تفاحتين فاخر', price: 6500, dept: 'SHISHA', sku: 'SKU-SHI-DOUBLE-APPLE' },
+    { id: 8, cat: 7, name: 'Mint Shisha', ar: 'شيشة نعناع بارد', price: 6500, dept: 'SHISHA', sku: 'SKU-SHI-MINT' },
+    { id: 9, cat: 6, name: 'Grilled Chicken Club Sandwich', ar: 'كلوب ساندوتش فراخ مشوية', price: 10000, dept: 'KITCHEN', sku: 'SKU-FOOD-CLUBSANDWICH-CHK' },
+    { id: 10, cat: 6, name: 'Crispy French Fries', ar: 'طبق بطاطس مقلية مقرمشة', price: 4000, dept: 'KITCHEN', sku: 'SKU-FOOD-FRIES' },
+    { id: 11, cat: 2, name: 'Crème Brûlée', ar: 'كريم بروليه فاخر', price: 3500, dept: 'KITCHEN', sku: 'SKU-DSRT-CREME-BRULEE' },
+    { id: 12, cat: 2, name: 'Molten Chocolate Cake', ar: 'مولتن شوكولاتة مع آيس كريم', price: 8000, dept: 'KITCHEN', sku: 'SKU-DSRT-MOLTEN-CAKE' },
+    { id: 19, cat: 6, name: 'Turkey & Cheese Club Sandwich', ar: 'كلوب ساندوتش تركي وجبن', price: 11000, dept: 'KITCHEN', sku: 'SKU-FOOD-CLUBSANDWICH-TRK' }
   ];
 
   for (const item of menuItems) {
     await execSql(db, `
       INSERT OR REPLACE INTO menu_items (
-        id, category_id, name, name_en, department, is_available, is_sellable, lifecycle_state
-      ) VALUES (?, ?, ?, ?, ?, 1, 1, 'PUBLISHED')
-    `, [item.id, item.cat, item.ar, item.name, item.dept]);
+        id, category_id, name, name_en, department, sku, is_available, is_sellable, lifecycle_state
+      ) VALUES (?, ?, ?, ?, ?, ?, 1, 1, 'PUBLISHED')
+    `, [item.id, item.cat, item.ar, item.name, item.dept, item.sku]);
 
     await execSql(db, `
       INSERT OR REPLACE INTO v3_menu_items (

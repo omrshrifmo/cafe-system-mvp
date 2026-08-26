@@ -17,13 +17,13 @@ describe('Orders Lifecycle & BOM Integration Tests', () => {
     const waiterRes = await request(app)
       .post('/api/auth/login')
       .send({ pin: '1001' });
-    waiterToken = waiterRes.body.token;
+    waiterToken = waiterRes.body.sessionId || waiterRes.body.token || (waiterRes.headers['set-cookie'] ? waiterRes.headers['set-cookie'][0].split(';')[0].split('=')[1] : null);
 
     // Login as Barista
     const baristaRes = await request(app)
       .post('/api/auth/login')
       .send({ pin: '1002' });
-    baristaToken = baristaRes.body.token;
+    baristaToken = baristaRes.body.sessionId || baristaRes.body.token || (baristaRes.headers['set-cookie'] ? baristaRes.headers['set-cookie'][0].split(';')[0].split('=')[1] : null);
   });
 
   it('should submit order with table, deduct exact BOM inventory ledger atomically', async () => {

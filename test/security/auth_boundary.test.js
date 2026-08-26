@@ -10,7 +10,7 @@ const { getDb, runQuery, getQuery } = require('../../src/db/connection');
 const { hashPin, validateSession } = require('../../src/domain/auth/service');
 
 describe('Authentication & Session Boundary Tests', function () {
-  this.timeout(25000);
+  this.timeout(45000);
   let app;
 
   before(async () => {

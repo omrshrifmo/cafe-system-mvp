@@ -26,6 +26,11 @@ describe('Performance & Latency Benchmarks Suite', function () {
     app = createApp();
     const coldStartMs = Date.now() - coldStartStart;
 
+    // Ensure owner PIN 8802 is active
+    const { hashPin } = require('../../src/domain/auth/service');
+    const ownerHash = await hashPin('8802');
+    await runQuery(`UPDATE v3_users SET pin_hash = ? WHERE id = '102' OR role_id = 'R_OWNER'`, [ownerHash]);
+
     // Authenticate owner for authenticated benchmarks
     const res = await request(app).post('/api/auth/login').send({ pin: '8802' });
     ownerToken = res.body.token || res.body.data?.token || (res.headers['set-cookie'] ? res.headers['set-cookie'][0].split(';')[0].split('=')[1] : null);
@@ -75,7 +80,7 @@ describe('Performance & Latency Benchmarks Suite', function () {
       const sessionId = `SESSION-PERF-${Date.now()}-${idx}-${Math.random().toString(36).substring(2, 6)}`;
       return runQuery(`
         INSERT INTO v3_order_sessions (id, branch_id, table_id, created_by, status, subtotal_minor, total_minor)
-        VALUES (?, 'B_DEFAULT', 'T-5', '102', 'OPEN', 1000, 1000)
+        VALUES (?, (SELECT id FROM branches LIMIT 1), null, (SELECT id FROM v3_users LIMIT 1), 'OPEN', 1000, 1000)
       `, [sessionId]);
     });
 

@@ -138,7 +138,153 @@
         </div>
       </section>
 
-      <!-- Card 4: Factory Reset & Client Handover -->
+      <!-- Card 4: System Updates & Safe Package Management (Non-Technical Admin) -->
+      <section class="stat-card space-y-4 border-indigo-500/30 bg-indigo-950/10 md:col-span-2">
+        <div class="flex flex-wrap items-center justify-between border-b border-indigo-500/20 pb-3 gap-2">
+          <div class="flex items-center gap-2">
+            <span class="text-xl">🚀</span>
+            <div>
+              <h2 class="text-base font-extrabold text-white">ترقية النظام وتحديث الحزم الآمنة (Safe System Updates)</h2>
+              <p class="text-[11px] text-slate-400">تحديث آمن ومشفر بدون كود برمجي مع فحص سلامة تلقائي ونسخ احتياطي فوري</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <span id="version-badge" class="px-3 py-1 bg-indigo-500/20 border border-indigo-500/40 text-indigo-300 font-mono font-bold text-xs rounded-lg flex items-center gap-1.5">
+              <span>الإصدار الحالي:</span>
+              <span id="current-version-text" class="text-white font-black">v2.0.0</span>
+            </span>
+            <button onclick="loadUpdateCatalogAndHistory()" class="p-1.5 text-slate-400 hover:text-white bg-slate-900 border border-slate-800 rounded-lg text-xs" title="تحديث القائمة">
+              🔄
+            </button>
+          </div>
+        </div>
+
+        <!-- Package Selection Modes -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <!-- Option A: Pre-Approved Packages Catalog -->
+          <div class="p-4 bg-slate-950/80 rounded-2xl border border-slate-800 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-black text-amber-400 flex items-center gap-1.5">
+                <span>📦</span>
+                <span>الحزم الرسمية المعتمدة (Approved Catalog)</span>
+              </span>
+              <span class="text-[10px] px-2 py-0.5 bg-emerald-500/20 text-emerald-300 rounded-full font-bold">موقعة ومفحوصة</span>
+            </div>
+            <p class="text-[11px] text-slate-400">اختر إحدى حزم التحديثات المعتمدة والمعتمدة رقمياً لتطبيقها بنقرة واحدة.</p>
+            
+            <div id="catalog-list" class="space-y-2">
+              <div class="p-3 bg-slate-900/60 rounded-xl border border-slate-800 flex items-center justify-between">
+                <div class="text-xs">
+                  <p class="font-bold text-white">جاري تحميل حزم التحديث...</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Option B: Upload Package File (.json) -->
+          <div class="p-4 bg-slate-950/80 rounded-2xl border border-slate-800 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-black text-indigo-400 flex items-center gap-1.5">
+                <span>📥</span>
+                <span>تحميل ملف حزمة تحديث (.json)</span>
+              </span>
+              <span class="text-[10px] px-2 py-0.5 bg-indigo-500/20 text-indigo-300 rounded-full font-bold">فحص التوقيع الرقمي</span>
+            </div>
+            <p class="text-[11px] text-slate-400">اسحب ملف الحزمة المعتمدة إلى هنا أو اضغط للاختيار من جهازك.</p>
+
+            <div id="drop-zone" onclick="document.getElementById('pkg-file-input').click()" class="border-2 border-dashed border-slate-700 hover:border-indigo-500/60 bg-slate-900/40 hover:bg-slate-900/80 rounded-xl p-5 text-center cursor-pointer transition-all">
+              <span class="text-2xl block mb-1">📁</span>
+              <p class="text-xs font-bold text-slate-300">اضغط لاختيار ملف الحزمة (.json)</p>
+              <p class="text-[10px] text-slate-500 mt-1">يتم فحص التوقيع الرقمي والبصمة ومخطط التحديث تلقائياً قبل التثبيت</p>
+              <input type="file" id="pkg-file-input" accept=".json" class="hidden" onchange="handlePackageFileUpload(event)" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Update Inspection & Impact Report Card (Hidden until inspected) -->
+        <div id="inspection-card" class="hidden p-4 bg-slate-900/90 rounded-2xl border border-indigo-500/40 space-y-4">
+          <div class="flex flex-wrap items-center justify-between border-b border-slate-800 pb-3 gap-2">
+            <div class="flex items-center gap-2">
+              <span class="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-sm">✅</span>
+              <div>
+                <h3 id="inspect-pkg-name" class="text-sm font-black text-white">ترقية النظام v2.1.0</h3>
+                <p id="inspect-pkg-ver" class="text-[11px] text-slate-400 font-mono">الإصدار المستهدف: 2.1.0 | البصمة: Verified</p>
+              </div>
+            </div>
+            <span class="px-2.5 py-1 bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-xs font-bold rounded-lg flex items-center gap-1">
+              <span>🔒 التوقيع الرقمي معتمد HMAC-SHA256</span>
+            </span>
+          </div>
+
+          <!-- Impact Summary Grid -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+            <div class="p-2.5 bg-slate-950 rounded-xl border border-slate-800">
+              <span class="text-[10px] text-slate-400 block">ترحيل قواعد البيانات:</span>
+              <span id="inspect-migrations-count" class="font-bold text-amber-400">1 ملف</span>
+            </div>
+            <div class="p-2.5 bg-slate-950 rounded-xl border border-slate-800">
+              <span class="text-[10px] text-slate-400 block">الوحدات المتأثرة:</span>
+              <span id="inspect-modules" class="font-bold text-indigo-300">REPORTS, SETTINGS</span>
+            </div>
+            <div class="p-2.5 bg-slate-950 rounded-xl border border-slate-800">
+              <span class="text-[10px] text-slate-400 block">النسخ الاحتياطي التلقائي:</span>
+              <span class="font-bold text-emerald-400">مضمون قبل الترحيل ✅</span>
+            </div>
+            <div class="p-2.5 bg-slate-950 rounded-xl border border-slate-800">
+              <span class="text-[10px] text-slate-400 block">زمن التوقف المقدر:</span>
+              <span class="font-bold text-white">أقل من ثانيتين</span>
+            </div>
+          </div>
+
+          <!-- Release Notes -->
+          <div class="p-3 bg-slate-950 rounded-xl border border-slate-800 space-y-1 text-xs">
+            <span class="font-bold text-slate-300 block">ملاحظات الإصدار والتحسينات (Release Notes):</span>
+            <p id="inspect-release-notes" class="text-slate-300 leading-relaxed text-[11px]"></p>
+          </div>
+
+          <!-- Confirmation & PIN Trigger -->
+          <div class="p-3 bg-indigo-950/40 rounded-xl border border-indigo-500/30 flex flex-wrap items-center justify-between gap-3">
+            <div class="text-xs">
+              <p class="font-bold text-indigo-200">جاهز لتطبيق الترقية الآمنة</p>
+              <p class="text-[10px] text-slate-400">سيقوم النظام بإنشاء نسخة احتياطية فورية وفحص كافة الفحوصات التشغيلية آلياً.</p>
+            </div>
+            <button onclick="openApplyConfirmationModal()" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-xl text-xs shadow-lg shadow-indigo-900/40 flex items-center gap-2 cursor-pointer transition-all">
+              <span>🚀 بدء تطبيق الترقية</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Updates History & Rollback Table -->
+        <div class="space-y-2 pt-2 border-t border-slate-800">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-extrabold text-slate-300 flex items-center gap-1">
+              <span>📜</span>
+              <span>سجل التحديثات السابقة واسترجاع النسخ (Update History)</span>
+            </span>
+          </div>
+          <div class="overflow-x-auto rounded-xl border border-slate-800">
+            <table class="w-full text-right text-xs">
+              <thead class="bg-slate-900/90 text-slate-400 text-[10px]">
+                <tr>
+                  <th class="p-2.5">معرف الحزمة / الاسم</th>
+                  <th class="p-2.5">الإصدار</th>
+                  <th class="p-2.5">الحالة</th>
+                  <th class="p-2.5">تاريخ التطبيق</th>
+                  <th class="p-2.5">النسخة الاحتياطية</th>
+                  <th class="p-2.5 text-center">إجراء الاسترجاع</th>
+                </tr>
+              </thead>
+              <tbody id="history-table-body" class="divide-y divide-slate-800 text-slate-300">
+                <tr>
+                  <td colspan="6" class="p-3 text-center text-slate-500">جاري تحميل سجل التحديثات...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Card 5: Factory Reset & Client Handover -->
       <section class="stat-card space-y-4 border-rose-500/30 bg-rose-950/10">
         <div class="flex items-center gap-2 border-b border-rose-500/30 pb-3">
           <span class="text-xl">🚨</span>
@@ -166,17 +312,68 @@
 
   </main>
 
+  <!-- Apply Update Confirmation & PIN Modal -->
+  <div id="apply-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-slate-900 border border-indigo-500/40 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div class="flex items-center gap-2 text-indigo-400">
+          <span class="text-xl">🚀</span>
+          <h3 class="font-extrabold text-sm text-white">تأكيد تطبيق ترقية النظام</h3>
+        </div>
+        <button onclick="closeApplyModal()" class="text-slate-400 hover:text-white text-lg">✕</button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div class="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-300 text-[11px] leading-relaxed">
+          ⚠️ <strong>تنبيه أمني:</strong> سيتم أخذ نسخة احتياطية مشفرة وفحص سلامة قواعد البيانات تلقائياً. يرجى إدخال رمز PIN وتأكيد الترقية.
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-300 mb-1">رمز PIN الخاص بالمالك/المسؤول:</label>
+          <input type="password" id="apply-pin" maxlength="6" class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-center text-indigo-400 font-mono font-black text-base tracking-widest focus:border-indigo-500 focus:outline-none" placeholder="••••" />
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-300 mb-1">اكتب عبارة التأكيد <span class="text-indigo-400 font-mono font-bold">"CONFIRM UPDATE"</span>:</label>
+          <input type="text" id="apply-confirm-text" class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-center text-white font-mono font-bold focus:border-indigo-500 focus:outline-none" placeholder="CONFIRM UPDATE أو تأكيد التحديث" />
+        </div>
+
+        <!-- Progress Tracker (Hidden until execution) -->
+        <div id="apply-progress-box" class="hidden p-3 bg-slate-950 rounded-xl border border-indigo-500/40 space-y-2">
+          <div class="flex items-center justify-between text-[11px] font-bold text-indigo-300">
+            <span id="apply-progress-text">جاري فحص الحزمة...</span>
+            <span id="apply-progress-spinner" class="animate-spin">🔄</span>
+          </div>
+          <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+            <div id="apply-progress-bar" class="bg-indigo-500 h-full w-1/4 transition-all duration-300"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+        <button onclick="closeApplyModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl text-xs">
+          إلغاء
+        </button>
+        <button id="execute-apply-btn" onclick="executePackageUpdate()" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-xl text-xs flex items-center gap-2">
+          <span>🚀 تأكيد وتنفيذ الترقية</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast Notification -->
   <div id="toast" class="fixed bottom-10 left-1/2 -translate-x-1/2 px-4 py-2 bg-slate-900 text-white border border-slate-700 rounded-xl text-xs font-bold shadow-2xl transition-all duration-300 opacity-0 pointer-events-none z-50">
   </div>
 
   <script>
+    let activeInspectedPackage = null;
+
     function showToast(msg, isError = false) {
       const t = document.getElementById('toast');
       t.textContent = msg;
       t.className = `fixed bottom-10 left-1/2 -translate-x-1/2 px-4 py-2 rounded-xl text-xs font-bold shadow-2xl transition-all duration-300 z-50 ${isError ? 'bg-rose-600 text-white' : 'bg-emerald-600 text-white'}`;
       t.style.opacity = '1';
-      setTimeout(() => { t.style.opacity = '0'; }, 3000);
+      setTimeout(() => { t.style.opacity = '0'; }, 3500);
     }
 
     function toggleTaxFields() {
@@ -188,7 +385,7 @@
 
     async function loadSettings() {
       const user = JSON.parse(localStorage.getItem('currentUser') || localStorage.getItem('user') || '{}');
-      if (user.role && user.role !== 'OWNER' && user.role !== 'ADMIN') {
+      if (user.role && user.role !== 'OWNER' && user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN') {
         document.getElementById('role-guard-alert').classList.remove('hidden');
       }
 
@@ -216,6 +413,227 @@
         }
       } catch (err) {
         showToast('خطأ في تحميل إعدادات النظام', true);
+      }
+
+      await loadUpdateCatalogAndHistory();
+    }
+
+    async function loadUpdateCatalogAndHistory() {
+      try {
+        // Load Current Version
+        const curRes = await fetch('/api/admin/updates/current');
+        const curData = await curRes.json();
+        if (curData.success) {
+          document.getElementById('current-version-text').textContent = 'v' + curData.appVersion;
+        }
+
+        // Load Approved Catalog
+        const catRes = await fetch('/api/admin/updates/catalog');
+        const catData = await catRes.json();
+        const catalogList = document.getElementById('catalog-list');
+        catalogList.innerHTML = '';
+
+        if (catData.success && catData.packages && catData.packages.length > 0) {
+          catData.packages.forEach(pkg => {
+            const el = document.createElement('div');
+            el.className = 'p-3 bg-slate-900 hover:bg-slate-800/80 rounded-xl border border-slate-800 hover:border-indigo-500/50 transition-all flex flex-wrap items-center justify-between gap-2';
+            el.innerHTML = `
+              <div class="text-xs">
+                <div class="flex items-center gap-2">
+                  <span class="font-black text-white">${pkg.name}</span>
+                  <span class="px-2 py-0.5 bg-indigo-500/20 text-indigo-300 font-mono font-bold text-[10px] rounded-md">v${pkg.version}</span>
+                </div>
+                <p class="text-[10px] text-slate-400 mt-0.5">${pkg.releaseNotes?.ar || ''}</p>
+              </div>
+              <button onclick='inspectSpecificPackage(${JSON.stringify(pkg)})' class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg text-xs flex items-center gap-1 cursor-pointer">
+                <span>🔍 فحص الحزمة</span>
+              </button>
+            `;
+            catalogList.appendChild(el);
+          });
+        } else {
+          catalogList.innerHTML = '<p class="text-slate-500 text-xs text-center py-2">لا توجد حزم معلقة في الدليل، النظام يعمل بآخر إصدار مستقر ✅</p>';
+        }
+
+        // Load Update History
+        const histRes = await fetch('/api/admin/updates/history');
+        const histData = await histRes.json();
+        const tbody = document.getElementById('history-table-body');
+        tbody.innerHTML = '';
+
+        const list = histData.history || [];
+        if (list.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" class="p-3 text-center text-slate-500">لا توجد سجلات ترقية سابقة.</td></tr>';
+        } else {
+          list.forEach(h => {
+            const tr = document.createElement('tr');
+            tr.className = 'hover:bg-slate-900/50 transition-all';
+            const statusColor = h.status === 'ACTIVE' ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30' :
+                                h.status === 'ROLLED_BACK' ? 'text-amber-400 bg-amber-500/10 border-amber-500/30' :
+                                'text-rose-400 bg-rose-500/10 border-rose-500/30';
+            
+            const rollbackBtn = h.status === 'ACTIVE' ? `
+              <button onclick="promptRollback('${h.id}')" class="px-2.5 py-1 bg-amber-600/20 hover:bg-amber-600 text-amber-300 hover:text-white border border-amber-500/30 rounded-lg text-[10px] font-bold transition-all">
+                🔄 استرجاع النسخة
+              </button>
+            ` : `<span class="text-slate-500 text-[10px]">-</span>`;
+
+            tr.innerHTML = `
+              <td class="p-2.5 font-bold text-white">${h.package_name || h.id}</td>
+              <td class="p-2.5 font-mono text-indigo-300">v${h.version}</td>
+              <td class="p-2.5"><span class="px-2 py-0.5 rounded-full border text-[10px] font-bold ${statusColor}">${h.status}</span></td>
+              <td class="p-2.5 text-slate-400 font-mono text-[11px]">${h.applied_at || '-'}</td>
+              <td class="p-2.5 font-mono text-[10px] text-slate-400">${h.backup_file || '-'}</td>
+              <td class="p-2.5 text-center">${rollbackBtn}</td>
+            `;
+            tbody.appendChild(tr);
+          });
+        }
+      } catch (err) {
+        console.error('Failed to load updates info:', err);
+      }
+    }
+
+    async function inspectSpecificPackage(pkg) {
+      try {
+        showToast('جاري فحص التوقيع الرقمي ومحتويات الحزمة...');
+        const res = await fetch('/api/admin/updates/inspect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ package: pkg })
+        });
+        const data = await res.json();
+        if (data.success && data.impact) {
+          activeInspectedPackage = pkg;
+          const impact = data.impact;
+          
+          document.getElementById('inspection-card').classList.remove('hidden');
+          document.getElementById('inspect-pkg-name').textContent = impact.name;
+          document.getElementById('inspect-pkg-ver').textContent = `الإصدار المستهدف: v${impact.version} | معرّف الحزمة: ${impact.packageId}`;
+          document.getElementById('inspect-migrations-count').textContent = `${impact.statistics.migrationStatements} ملف ترحيل`;
+          document.getElementById('inspect-modules').textContent = (impact.affectedModules || []).join(', ');
+          document.getElementById('inspect-release-notes').textContent = impact.releaseNotes?.ar || impact.releaseNotes?.en || '';
+          
+          document.getElementById('inspection-card').scrollIntoView({ behavior: 'smooth' });
+          showToast('✅ تم التحقق من سلامة التوقيع الرقمي بنجاح!');
+        } else {
+          showToast(data.error || 'فشل فحص الحزمة', true);
+        }
+      } catch (err) {
+        showToast('خطأ في الاتصال بالخادم أثناء الفحص', true);
+      }
+    }
+
+    function handlePackageFileUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const pkg = JSON.parse(e.target.result);
+          await inspectSpecificPackage(pkg);
+        } catch (parseErr) {
+          showToast('الملف المرفق ليس بصيغة JSON صالحة', true);
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function openApplyConfirmationModal() {
+      if (!activeInspectedPackage) return;
+      document.getElementById('apply-pin').value = '';
+      document.getElementById('apply-confirm-text').value = '';
+      document.getElementById('apply-progress-box').classList.add('hidden');
+      document.getElementById('execute-apply-btn').disabled = false;
+      document.getElementById('apply-modal').classList.remove('hidden');
+      document.getElementById('apply-pin').focus();
+    }
+
+    function closeApplyModal() {
+      document.getElementById('apply-modal').classList.add('hidden');
+    }
+
+    async function executePackageUpdate() {
+      const pin = document.getElementById('apply-pin').value.trim();
+      const confirmation = document.getElementById('apply-confirm-text').value.trim();
+
+      if (!pin) {
+        showToast('يرجى إدخال رمز PIN الخاص بالمسؤول', true);
+        return;
+      }
+      if (!confirmation) {
+        showToast('يرجى كتابة عبارة التأكيد "CONFIRM UPDATE"', true);
+        return;
+      }
+
+      const progressBox = document.getElementById('apply-progress-box');
+      const progressText = document.getElementById('apply-progress-text');
+      const progressBar = document.getElementById('apply-progress-bar');
+      const execBtn = document.getElementById('execute-apply-btn');
+
+      progressBox.classList.remove('hidden');
+      execBtn.disabled = true;
+
+      try {
+        // Step 1
+        progressText.textContent = '1/4: جاري إنشاء نسخة احتياطية مشفرة فورية...';
+        progressBar.style.width = '25%';
+
+        // Step 2 & 3: Send Apply Request
+        const res = await fetch('/api/admin/updates/apply', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            package: activeInspectedPackage,
+            pin,
+            confirmation
+          })
+        });
+
+        const data = await res.json();
+        if (data.success) {
+          progressText.textContent = '4/4: تم اجتياز كافة الفحوصات وترقية النظام بنجاح! 🚀';
+          progressBar.style.width = '100%';
+          progressBar.className = 'bg-emerald-500 h-full transition-all duration-300';
+          
+          setTimeout(() => {
+            alert(`✅ ${data.message}`);
+            closeApplyModal();
+            loadSettings();
+          }, 800);
+        } else {
+          showToast(data.error || 'فشل تطبيق الترقية', true);
+          progressBox.classList.add('hidden');
+          execBtn.disabled = false;
+        }
+      } catch (err) {
+        showToast('خطأ في الاتصال بالخادم أثناء تطبيق الترقية', true);
+        progressBox.classList.add('hidden');
+        execBtn.disabled = false;
+      }
+    }
+
+    async function promptRollback(packageId) {
+      const pin = prompt('⚠️ أدخل رمز PIN للمسؤول لتأكيد استرجاع النظام من النسخة الاحتياطية:');
+      if (!pin) return;
+
+      try {
+        showToast('جاري استرجاع النظام من النسخة الاحتياطية المعتمدة...');
+        const res = await fetch(`/api/admin/updates/${packageId}/rollback`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pin })
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert(`✅ ${data.message}`);
+          loadSettings();
+        } else {
+          showToast(data.error || 'فشل استرجاع النظام', true);
+        }
+      } catch (err) {
+        showToast('خطأ في الاتصال بالسيرفر أثناء الاسترجاع', true);
       }
     }
 
