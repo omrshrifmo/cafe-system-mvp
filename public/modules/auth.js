@@ -37,6 +37,9 @@ async function loginWithPin(pin) {
   }
 
   currentUser = data.user;
+  if (data.token) {
+    setTabToken(data.token);
+  }
   resetInactivityTimer();
   return data;
 }

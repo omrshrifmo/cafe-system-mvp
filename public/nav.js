@@ -733,8 +733,8 @@
       </footer>
     `;
 
-    // Wrap page structure cleanly
-    if (document.getElementById('mazaj-app-root')) return;
+    // Wrap page structure cleanly (Skip on portal.html which has its own native dashboard grid layout)
+    if (document.getElementById('mazaj-app-root') || pathname.endsWith('portal.html')) return;
 
     const rootContainer = document.createElement('div');
     rootContainer.id = 'mazaj-app-root';

@@ -48,6 +48,14 @@
           <div id="userRole" class="text-[10px] text-slate-400">---</div>
         </div>
       </div>
+      <button onclick="window.AuthModule.lockScreen()" id="nav-lock-btn" title="قفل الشاشة مؤقتاً" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 rounded-xl text-xs font-bold cursor-pointer transition-colors flex items-center gap-1.5 shadow-sm">
+        <span>🔒</span>
+        <span class="hidden xs:inline">قفل</span>
+      </button>
+      <button onclick="window.AuthModule.logout()" id="nav-logout-btn" title="تسجيل الخروج" class="px-3 py-1.5 bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 border border-rose-500/30 rounded-xl text-xs font-bold cursor-pointer transition-colors flex items-center gap-1.5 shadow-sm">
+        <span>🚪</span>
+        <span class="hidden xs:inline">خروج</span>
+      </button>
     </div>
   </div>
 
@@ -196,8 +204,10 @@
       const rawRole = (currentUser && currentUser.role) || 'WAITER';
       const userRole = String(rawRole).toUpperCase().replace(/^ROLE_/, '').replace(/^R_/, '');
 
-      document.getElementById('userName').textContent = currentUser.name || "مستخدم";
-      document.getElementById('userRole').textContent = roleLabels[userRole] || roleLabels[rawRole] || userRole;
+      const userNameEl = document.getElementById('userName');
+      if (userNameEl) userNameEl.textContent = currentUser.name || "مستخدم";
+      const userRoleEl = document.getElementById('userRole');
+      if (userRoleEl) userRoleEl.textContent = roleLabels[userRole] || roleLabels[rawRole] || userRole;
 
       const tools = (userRole === 'OWNER' || userRole === 'SUPER_ADMIN')
         ? ALL_TOOLS
@@ -214,7 +224,9 @@
 
     function renderTools(tools) {
       const grid = document.getElementById('toolsGrid');
-      document.getElementById('toolCount').textContent = `${tools.length} أدوات`;
+      const toolCountEl = document.getElementById('toolCount');
+      if (toolCountEl) toolCountEl.textContent = `${tools.length} أدوات`;
+      if (!grid) return;
       grid.innerHTML = "";
 
       if (tools.length === 0) {
@@ -258,16 +270,16 @@
         if (data.success && data.shift && data.shift.status === 'ACTIVE') {
           currentShift = data.shift;
           const clockInTime = new Date(data.shift.clock_in).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
-          statusText.innerHTML = `<span class="text-emerald-400 font-bold">ورديتك نشطة حالياً 🟢</span> <span class="text-xs text-slate-400">(حضور: ${clockInTime})</span>`;
-          shiftIcon.className = "w-12 h-12 rounded-xl bg-emerald-950/60 border border-emerald-800 text-emerald-400 flex items-center justify-center text-2xl shrink-0";
-          clockBtn.className = "w-full sm:w-auto px-6 py-2.5 rounded-xl font-bold text-xs border flex items-center justify-center gap-2 shadow-md bg-rose-950 hover:bg-rose-900 text-rose-300 border-rose-800";
-          clockBtnText.textContent = "تسجيل انصراف ⏱️";
+          if (statusText) statusText.innerHTML = `<span class="text-emerald-400 font-bold">ورديتك نشطة حالياً 🟢</span> <span class="text-xs text-slate-400">(حضور: ${clockInTime})</span>`;
+          if (shiftIcon) shiftIcon.className = "w-12 h-12 rounded-xl bg-emerald-950/60 border border-emerald-800 text-emerald-400 flex items-center justify-center text-2xl shrink-0";
+          if (clockBtn) clockBtn.className = "w-full sm:w-auto px-6 py-2.5 rounded-xl font-bold text-xs border flex items-center justify-center gap-2 shadow-md bg-rose-950 hover:bg-rose-900 text-rose-300 border-rose-800";
+          if (clockBtnText) clockBtnText.textContent = "تسجيل انصراف ⏱️";
         } else {
           currentShift = null;
-          statusText.innerHTML = `<span class="text-rose-400 font-bold">غير مسجل حضور حالياً 🔴</span>`;
-          shiftIcon.className = "w-12 h-12 rounded-xl bg-slate-800 border border-slate-700 text-slate-400 flex items-center justify-center text-2xl shrink-0";
-          clockBtn.className = "w-full sm:w-auto px-6 py-2.5 rounded-xl font-bold text-xs border flex items-center justify-center gap-2 shadow-md bg-amber-500 hover:bg-amber-400 text-slate-950 border-amber-500 font-black";
-          clockBtnText.textContent = "تسجيل حضور ⏰";
+          if (statusText) statusText.innerHTML = `<span class="text-rose-400 font-bold">غير مسجل حضور حالياً 🔴</span>`;
+          if (shiftIcon) shiftIcon.className = "w-12 h-12 rounded-xl bg-slate-800 border border-slate-700 text-slate-400 flex items-center justify-center text-2xl shrink-0";
+          if (clockBtn) clockBtn.className = "w-full sm:w-auto px-6 py-2.5 rounded-xl font-bold text-xs border flex items-center justify-center gap-2 shadow-md bg-amber-500 hover:bg-amber-400 text-slate-950 border-amber-500 font-black";
+          if (clockBtnText) clockBtnText.textContent = "تسجيل حضور ⏰";
         }
       } catch (err) {}
     }
@@ -283,13 +295,19 @@
         });
         const data = await res.json();
         if (data.success) {
-          UIState.showToast(currentShift ? 'تم تسجيل الانصراف بنجاح' : 'تم تسجيل الحضور وبدء الوردية بنجاح', 'success');
+          if (window.UIState && window.UIState.showToast) {
+            UIState.showToast(currentShift ? 'تم تسجيل الانصراف بنجاح' : 'تم تسجيل الحضور وبدء الوردية بنجاح', 'success');
+          }
           await fetchShiftStatus();
         } else {
-          UIState.showApiError(data.error || "تعذر إتمام عملية الوردية");
+          if (window.UIState && window.UIState.showApiError) {
+            UIState.showApiError(data.error || "تعذر إتمام عملية الوردية");
+          }
         }
       } catch (err) {
-        UIState.showToast("حدث خطأ أثناء الاتصال بالخادم", 'error');
+        if (window.UIState && window.UIState.showToast) {
+          UIState.showToast("حدث خطأ أثناء الاتصال بالخادم", 'error');
+        }
       }
     }
 
@@ -299,7 +317,8 @@
         if (repRes.ok) {
           const d = await repRes.json();
           const rev = (d.report && d.report.total_revenue) || (d.summary && d.summary.total_revenue) || 0;
-          document.getElementById('kpiRevenue').textContent = Number(rev).toFixed(0) + ' ج.م';
+          const kpiRev = document.getElementById('kpiRevenue');
+          if (kpiRev) kpiRev.textContent = Number(rev).toFixed(0) + ' ج.م';
         }
       } catch (e) {}
 
@@ -308,7 +327,8 @@
         if (tabRes.ok) {
           const d = await tabRes.json();
           const open = (d.tables || []).filter(t => t.status === 'OCCUPIED' || t.status === 'SEATED').length;
-          document.getElementById('kpiTables').textContent = open + ' طاولة';
+          const kpiTab = document.getElementById('kpiTables');
+          if (kpiTab) kpiTab.textContent = open + ' طاولة';
         }
       } catch (e) {}
 
@@ -318,8 +338,11 @@
           const d = await invRes.json();
           const items = d.inventory || d.items || [];
           const low = items.filter(i => (i.current_stock_microunits / 1000000.0) <= (i.min_limit || 5)).length;
-          document.getElementById('kpiLowStock').textContent = low > 0 ? low + ' أصناف' : '✅ لا تنبيهات';
-          document.getElementById('kpiLowStock').className = `text-lg font-black ${low > 0 ? 'text-rose-400' : 'text-emerald-400'}`;
+          const kpiLow = document.getElementById('kpiLowStock');
+          if (kpiLow) {
+            kpiLow.textContent = low > 0 ? low + ' أصناف' : '✅ لا تنبيهات';
+            kpiLow.className = `text-lg font-black ${low > 0 ? 'text-rose-400' : 'text-emerald-400'}`;
+          }
         }
       } catch (e) {}
     }
@@ -338,6 +361,13 @@
     window.addEventListener('DOMContentLoaded', () => {
       initPortal();
     });
+    window.addEventListener('load', () => {
+      initPortal();
+    });
+    // Auto-run if DOM is already parsed
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+      initPortal();
+    }
   </script>
 </body>
 </html>

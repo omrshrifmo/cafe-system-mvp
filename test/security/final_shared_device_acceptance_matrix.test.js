@@ -48,6 +48,7 @@ describe('Prompt S10 — Final Shared-Device Acceptance Matrix & System-Wide Int
   let app;
   let server;
   let baseUrl;
+  let initialLiveHash = null;
 
   // Track session tokens and users
   const testUsers = [
@@ -70,6 +71,11 @@ describe('Prompt S10 — Final Shared-Device Acceptance Matrix & System-Wide Int
   ];
 
   before(async () => {
+    const liveDb = path.join(__dirname, '../../cafe.db');
+    if (fs.existsSync(liveDb)) {
+      initialLiveHash = await calculateFileSha256(liveDb);
+    }
+
     // Reset and seed full isolated test fixture
     for (const suffix of ['', '-wal', '-shm']) {
       const f = TEST_DB + suffix;
@@ -633,13 +639,12 @@ describe('Prompt S10 — Final Shared-Device Acceptance Matrix & System-Wide Int
 
     it('30. Database Baseline Invariance: cafe.db SHA-256 hash remains pristine and unmodified throughout testing', async () => {
       const liveDbPath = path.join(__dirname, '../../cafe.db');
-      if (fs.existsSync(liveDbPath)) {
+      if (fs.existsSync(liveDbPath) && initialLiveHash) {
         const liveHash = await calculateFileSha256(liveDbPath);
-        const EXPECTED_HASH = '434bc1901865647dfb2fc03b0eea5874ee0cdf9806b68c576b3218eca69af03e';
         assert.strictEqual(
           liveHash,
-          EXPECTED_HASH,
-          `FATAL: Live database cafe.db was modified during test run! Expected ${EXPECTED_HASH}, got ${liveHash}`
+          initialLiveHash,
+          `FATAL: Live database cafe.db was modified during test run! Expected ${initialLiveHash}, got ${liveHash}`
         );
       }
     });
