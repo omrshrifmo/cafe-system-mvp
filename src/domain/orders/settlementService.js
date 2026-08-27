@@ -360,6 +360,29 @@ async function settleOrder(sessionId, intent = {}, expectedVersion = 1) {
     // 11. Record Idempotency Result
     await saveIdempotencyKey(tx, intent.idempotency_key, intent.actor_id, currentHash, response);
 
+    // 12. Record Audit Ledger Event
+    try {
+      const { recordAuditEvent } = require('../audit/auditLedgerService');
+      recordAuditEvent({
+        event_type: 'PAYMENT_CAPTURED',
+        actor_user_id: intent.actor_id || null,
+        session_id: order.id,
+        shift_id: shiftId,
+        device_id: deviceId,
+        target_entity_type: 'ORDER_PAYMENT',
+        target_entity_id: paymentIds[0],
+        details: {
+          order_id: order.id,
+          total_due_minor: totalDueMinor,
+          total_paid_minor: totalProvidedMinor,
+          payment_methods: paymentAllocations.map(p => p.method)
+        },
+        idempotency_key: intent.idempotency_key,
+        request_id: intent.request_id || null,
+        outcome: 'SUCCESS'
+      }).catch(() => {});
+    } catch (e) {}
+
     return response;
   });
 }

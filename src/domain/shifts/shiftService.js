@@ -100,7 +100,7 @@ async function openShift(venueId, shiftType, businessDate, timezone = 'UTC', ope
       [eventId, shiftId, JSON.stringify(payload), seqRow ? seqRow.seq : 1, venueId]
     );
 
-    return {
+    const openRes = {
       status: 'SUCCESS',
       shift_id: shiftId,
       shift_type: shiftType,
@@ -108,8 +108,25 @@ async function openShift(venueId, shiftType, businessDate, timezone = 'UTC', ope
       opening_float_minor: Math.round(openingFloatMinor),
       assigned_staff: assignedStaff,
       assigned_devices: assignedDevices,
-      version: 1
+      opened_at: nowIso
     };
+
+    try {
+      const { recordAuditEvent } = require('../audit/auditLedgerService');
+      recordAuditEvent({
+        event_type: 'SHIFT_STARTED',
+        actor_user_id: actorId,
+        venue_id: venueId,
+        shift_id: shiftId,
+        business_date: businessDate,
+        target_entity_type: 'SHIFT',
+        target_entity_id: shiftId,
+        details: { shift_type: shiftType, opening_float_minor: Math.round(openingFloatMinor) },
+        outcome: 'SUCCESS'
+      }).catch(() => {});
+    } catch (e) {}
+
+    return openRes;
   });
 }
 
@@ -555,7 +572,7 @@ async function closeShift(shiftId, actorId, expectedVersion = null, userRole = '
     // Mask variance for Cashiers if role is not privileged
     const privileged = isPrivilegedRole(userRole);
 
-    return {
+    const closeRes = {
       status: 'SUCCESS',
       shift_id: shiftId,
       shift_status: 'CLOSED',
@@ -567,6 +584,29 @@ async function closeShift(shiftId, actorId, expectedVersion = null, userRole = '
       variance_minor: privileged ? variance : null,
       reconciliation: privileged ? recon : null
     };
+
+    try {
+      const { recordAuditEvent } = require('../audit/auditLedgerService');
+      recordAuditEvent({
+        event_type: 'EOD_CLOSED',
+        actor_user_id: actorId,
+        actor_role: userRole,
+        venue_id: shift.venue_id,
+        shift_id: shiftId,
+        business_date: shift.business_date,
+        target_entity_type: 'SHIFT',
+        target_entity_id: shiftId,
+        details: {
+          shift_type: shift.shift_type,
+          counted_cash_minor: countedCash,
+          expected_cash_minor: expectedCash,
+          variance_minor: variance
+        },
+        outcome: 'SUCCESS'
+      }).catch(() => {});
+    } catch (e) {}
+
+    return closeRes;
   });
 }
 

@@ -595,6 +595,12 @@
             <span class="text-amber-400 text-[10px] font-mono font-black">(${userRole})</span>
           </div>
 
+          <button onclick="window.MazajNav.showNotificationsModal()" id="nav-notifications-btn" title="التنبيهات والإشعارات الأمنية" class="px-2 md:px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 rounded-lg text-[11px] font-bold cursor-pointer transition-colors flex items-center gap-1 relative">
+            <span>🔔</span>
+            <span class="hidden sm:inline">الإشعارات</span>
+            <span id="nav-notifications-badge" class="hidden bg-rose-500 text-white rounded-full px-1.5 py-0.2 text-[9px] font-black animate-pulse">0</span>
+          </button>
+
           <button onclick="window.AuthModule ? window.AuthModule.lockScreen() : null" title="قفل الشاشة مؤقتاً" class="px-2 md:px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 rounded-lg text-[11px] font-bold cursor-pointer transition-colors flex items-center gap-1">
             <span>🔒</span>
             <span class="hidden xs:inline">قفل</span>
@@ -680,15 +686,19 @@
     `;
 
     // Footer HTML (Height: 28px)
+    const seatId = (typeof localStorage !== 'undefined' && localStorage.getItem('cafe_seat_id')) || 'POS-01';
+    const shiftLabelAr = currentShift === 'MORNING' ? 'صباحية' : 'مسائية';
     const footerHTML = `
       <footer role="contentinfo" class="h-[28px] bg-slate-950/95 border-t border-slate-800 px-4 flex items-center justify-between text-[11px] text-slate-500 shrink-0 z-50 select-none">
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2 sm:gap-3">
           <span class="flex items-center gap-1 text-emerald-400 font-bold">
             <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
             <span>نظام التشغيل نشط</span>
           </span>
           <span class="text-slate-700">|</span>
-          <span class="text-slate-400 truncate">كافيه مزاج - نظام إدارة العمليات والضيافة</span>
+          <span class="text-slate-300 font-medium truncate">
+            المشغل: <strong class="text-amber-400 font-bold">${currentUser.name || 'مستخدم'}</strong> (${userRole}) | وردية: <span class="text-slate-200 font-bold">${shiftLabelAr}</span> | جهاز: <span class="font-mono text-slate-400">${seatId}</span>
+          </span>
         </div>
         <div class="flex items-center gap-3 font-mono text-[10px]">
           <span>شبكة محلية (LAN)</span>
@@ -750,6 +760,61 @@
     setInterval(updateClock, 1000);
     updateClock();
     updateNetworkStatusBadge();
+    checkNotificationsBadge();
+    setInterval(checkNotificationsBadge, 30000);
+  }
+
+  async function checkNotificationsBadge() {
+    try {
+      const res = await fetch('/api/audit/notifications?limit=5', {
+        headers: { 'Accept': 'application/json' }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const badge = document.getElementById('nav-notifications-badge');
+        if (badge) {
+          if (data.unread_count > 0) {
+            badge.textContent = data.unread_count > 99 ? '99+' : data.unread_count;
+            badge.classList.remove('hidden');
+          } else {
+            badge.classList.add('hidden');
+          }
+        }
+      }
+    } catch (e) {}
+  }
+
+  async function showNotificationsModal() {
+    try {
+      const res = await fetch('/api/audit/notifications?limit=20', {
+        headers: { 'Accept': 'application/json' }
+      });
+      if (!res.ok) throw new Error('فشل جلب الإشعارات');
+      const data = await res.json();
+      const notifs = data.notifications || [];
+
+      let listHtml = notifs.length === 0 
+        ? '<div class="text-center py-6 text-slate-400 text-xs">لا توجد إشعارات أو تنبيهات حالية.</div>'
+        : `<div class="space-y-2 max-h-80 overflow-y-auto scrollbar-thin">` + notifs.map(n => `
+          <div class="p-3 bg-slate-900/80 border ${n.severity === 'CRITICAL' ? 'border-rose-500/50 bg-rose-950/20' : n.severity === 'HIGH' ? 'border-amber-500/40 bg-amber-950/20' : 'border-slate-800'} rounded-xl text-right">
+            <div class="flex items-center justify-between text-[11px] mb-1">
+              <span class="font-bold text-amber-400">${n.title || 'تنبيه أمني'}</span>
+              <span class="text-[10px] text-slate-500 font-mono">${new Date(n.created_at).toLocaleTimeString('ar-SA')}</span>
+            </div>
+            <div class="text-xs text-slate-300 mb-1.5">${n.body || ''}</div>
+            ${n.recommended_action_ar ? `<div class="text-[10px] bg-slate-950/60 p-1.5 rounded-lg border border-slate-800 text-amber-200">💡 <strong>الإجراء المقترح:</strong> ${n.recommended_action_ar}</div>` : ''}
+          </div>
+        `).join('') + `</div>`;
+
+      if (window.UIState && window.UIState.showInPageAlert) {
+        await window.UIState.showInPageAlert(listHtml, 'مركز الإشعارات والتنبيهات الأمنية', 'info', 'إغلاق');
+      }
+      checkNotificationsBadge();
+    } catch (err) {
+      if (window.UIState && window.UIState.showToast) {
+        window.UIState.showToast(err.message, 'error');
+      }
+    }
   }
 
   // Export functions globally
@@ -760,6 +825,8 @@
     toggleCaffeineModal,
     submitEnableCaffeine,
     submitDisableCaffeine,
+    showNotificationsModal,
+    checkNotificationsBadge,
     logout,
     initNav: validateSessionAndRender
   };

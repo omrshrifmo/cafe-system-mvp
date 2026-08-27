@@ -66,11 +66,11 @@ const routeRegistry = [
   { method: 'ALL', pathRegex: /^\/api\/(allowances|staff-allowances)(\/.*)?$/, permission: 'authenticated' },
   { method: 'ALL', pathRegex: /^\/api\/adjustments(\/.*)?$/, permission: 'authenticated' },
   
-  // CRM / Hospitality / Quality / Complaints / Audit
+  // CRM / Hospitality / Quality / Complaints / Audit / Activity Ledger
   { method: 'ALL', pathRegex: /^\/api\/(crm|customers)(\/.*)?$/, permission: 'crm:read' },
   { method: 'ALL', pathRegex: /^\/api\/reservations(\/.*)?$/, permission: 'reservations:read' },
   { method: 'ALL', pathRegex: /^\/api\/(quality|qa|complaints)(\/.*)?$/, permission: 'authenticated' },
-  { method: 'ALL', pathRegex: /^\/api\/audit(\/.*)?$/, permission: 'system:settings' },
+  { method: 'ALL', pathRegex: /^\/api\/(audit|activity-ledger)(\/.*)?$/, permission: 'authenticated' },
   
   // Realtime & Sync & Stations
   { method: 'GET', pathRegex: /^\/api\/realtime\/health$/, permission: 'public' },

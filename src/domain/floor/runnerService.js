@@ -108,13 +108,32 @@ async function claimTask(taskId, runnerId, expectedVersion = 1, context = {}) {
       [eventId, taskId, JSON.stringify(payload), nextSeq, newVersion, task.venue_id, context.deviceId || null]
     );
 
-    return {
+    const resObj = {
       status: 'SUCCESS',
       task_id: taskId,
       runner_id: runnerId,
       task_status: 'CLAIMED',
       version: newVersion
     };
+
+    try {
+      const { recordAuditEvent } = require('../audit/auditLedgerService');
+      recordAuditEvent({
+        event_type: 'RUNNER_TASK_CLAIMED',
+        actor_user_id: runnerId,
+        actor_role: 'RUNNER',
+        venue_id: task.venue_id,
+        shift_id: task.shift_id || null,
+        device_id: context.deviceId || null,
+        target_entity_type: 'RUNNER_TASK',
+        target_entity_id: taskId,
+        details: { task_type: task.task_type },
+        request_id: context.requestId || null,
+        outcome: 'SUCCESS'
+      }).catch(() => {});
+    } catch (e) {}
+
+    return resObj;
   });
 }
 
@@ -184,13 +203,32 @@ async function completeTask(taskId, runnerId, expectedVersion = null, context = 
       [eventId, taskId, JSON.stringify(payload), nextSeq, newVersion, task.venue_id, context.deviceId || null]
     );
 
-    return {
+    const completeRes = {
       status: 'SUCCESS',
       task_id: taskId,
       runner_id: runnerId,
       task_status: 'COMPLETED',
       version: newVersion
     };
+
+    try {
+      const { recordAuditEvent } = require('../audit/auditLedgerService');
+      recordAuditEvent({
+        event_type: 'RUNNER_TASK_COMPLETED',
+        actor_user_id: runnerId,
+        actor_role: 'RUNNER',
+        venue_id: task.venue_id,
+        shift_id: task.shift_id || null,
+        device_id: context.deviceId || null,
+        target_entity_type: 'RUNNER_TASK',
+        target_entity_id: taskId,
+        details: { task_type: task.task_type },
+        request_id: context.requestId || null,
+        outcome: 'SUCCESS'
+      }).catch(() => {});
+    } catch (e) {}
+
+    return completeRes;
   });
 }
 

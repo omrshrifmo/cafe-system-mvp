@@ -75,7 +75,7 @@ async function publishNewPolicy(venueId, policyPayload, userId, pin) {
     VALUES (?, ?, ?, datetime('now', 'localtime'), ?, ?)
   `, [policyId, venueId, nextVersion, JSON.stringify(policyPayload), userId]);
 
-  await logAudit(venueId, userId, 'CREATE', 'POLICY', policyId, { version: nextVersion, payload: policyPayload }, null);
+  await logAudit(venueId, userId, 'CREATE', 'POLICY', policyId, { version: nextVersion, payload: policyPayload, new_data: { version: nextVersion, payload: policyPayload } }, null);
 
   return { id: policyId, version: nextVersion };
 }

@@ -25,17 +25,31 @@ async function verifyPin(pin, hash) {
   return bcrypt.compare(String(pin).trim(), hash);
 }
 
-async function logAudit(venueId, userId, action, targetType, targetId, details, ip) {
+async function logAudit(venueId, userId, action, targetType, targetId, details, ip, outcome = 'SUCCESS', reason = null) {
   try {
     const payload = details || {};
     payload.ip_address = ip;
     const detailsJson = JSON.stringify({ old_data: payload.old_data || null, new_data: payload.new_data || payload });
     
+    // Write to legacy v3_audit_logs
     await runQuery(
       `INSERT INTO v3_audit_logs (id, venue_id, user_id, action, target_type, target_id, details)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [crypto.randomUUID(), venueId || 'V_DEFAULT', userId, action, targetType, targetId, detailsJson]
     );
+
+    // Write to universal v3_audit_ledger with cryptographic hash chain
+    const { recordAuditEvent } = require('../audit/auditLedgerService');
+    await recordAuditEvent({
+      event_type: action,
+      actor_user_id: userId,
+      venue_id: venueId || 'V_DEFAULT',
+      target_entity_type: targetType,
+      target_entity_id: targetId,
+      details: payload,
+      outcome,
+      reason
+    });
   } catch (e) {
     logger.error('Failed to write audit log', e);
   }
@@ -71,16 +85,17 @@ async function authenticateWithPin(pin, ip = null, userAgent = null, deviceId = 
   }
 
   if (isDisabled) {
-    await logAudit(matchedUser.venue_id, matchedUser.id, 'LOGIN_FAILED', 'USER', matchedUser.id, { reason: 'ACCOUNT_DISABLED' }, ip);
+    await logAudit(matchedUser.venue_id, matchedUser.id, 'LOGIN_FAILED', 'USER', matchedUser.id, { reason: 'ACCOUNT_DISABLED' }, ip, 'REJECTED', 'ACCOUNT_DISABLED');
     throw new Error('ACCOUNT_DISABLED: هذا الحساب معطل حالياً، يرجى مراجعة إدارة النظام');
   }
 
   if (isLockedOut) {
-    await logAudit(matchedUser.venue_id, matchedUser.id, 'LOGIN_FAILED', 'USER', matchedUser.id, { reason: 'ACCOUNT_LOCKED' }, ip);
+    await logAudit(matchedUser.venue_id, matchedUser.id, 'LOGIN_FAILED', 'USER', matchedUser.id, { reason: 'ACCOUNT_LOCKED' }, ip, 'REJECTED', 'ACCOUNT_LOCKED');
     throw new Error('ACCOUNT_LOCKED: الحساب مقفول مؤقتاً لمدة 15 دقيقة بسبب تكرار المحاولات الخاطئة');
   }
 
   if (!matchedUser) {
+    await logAudit('V_DEFAULT', null, 'PIN_ATTEMPT', 'AUTH', null, { deviceId, userAgent, ip }, ip, 'FAILURE', 'INVALID_CREDENTIALS');
     logger.warn('Failed login attempt with invalid PIN', { ip });
     throw new Error('INVALID_CREDENTIALS: رمز الدخول السري غير صحيح أو الحساب غير موجود');
   }

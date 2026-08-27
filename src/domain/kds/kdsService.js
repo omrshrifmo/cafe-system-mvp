@@ -389,7 +389,7 @@ async function updateKdsLineState(kdsLineId, newState, actorId, expectedVersion,
       [eventId, line.kds_order_id, JSON.stringify(payload), nextSeq, newVersion, line.venue_id, line.station_id]
     );
 
-    return {
+    const result = {
       status: 'SUCCESS',
       kds_line_id: kdsLineId,
       kds_order_id: line.kds_order_id,
@@ -398,6 +398,32 @@ async function updateKdsLineState(kdsLineId, newState, actorId, expectedVersion,
       version: newVersion,
       runner_task_id: runnerTaskId
     };
+
+    try {
+      const { recordAuditEvent } = require('../audit/auditLedgerService');
+      recordAuditEvent({
+        event_type: `KDS_${targetNorm}`,
+        actor_user_id: actorId,
+        actor_role: normRole || null,
+        session_id: line.order_session_id,
+        shift_id: line.order_shift_id || null,
+        device_id: deviceId,
+        target_entity_type: 'KDS_LINE',
+        target_entity_id: kdsLineId,
+        before_state: { state: currentNorm },
+        after_state: { state: targetNorm },
+        details: {
+          station_id: line.station_id,
+          kds_order_id: line.kds_order_id,
+          item_name: line.item_name,
+          runner_task_id: runnerTaskId
+        },
+        request_id: requestId,
+        outcome: 'SUCCESS'
+      }).catch(() => {});
+    } catch (e) {}
+
+    return result;
   });
 }
 
