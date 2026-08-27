@@ -1,7 +1,7 @@
 # Deterministic Full-Day Simulation: Expected vs Actual Audit Report
 
 **Simulation Fixture**: `/home/omrshrifmo/cafe-system-mvp/artifacts/full-day/full_day_sim.sqlite`  
-**Execution Timestamp**: 2026-08-27T08:56:36.586Z  
+**Execution Timestamp**: 2026-08-27T10:54:03.279Z  
 **Overall Gate Status**: **PASS ✅**
 
 ---

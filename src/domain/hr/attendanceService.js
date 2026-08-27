@@ -123,7 +123,7 @@ async function rejectAttendance(attendanceId, managerId, reason = 'REJECTED_BY_M
 
 async function getAttendanceList(filter = {}) {
   let query = `
-    SELECT a.*, u.name as user_name, u.role as user_role, m.name as approved_by_name
+    SELECT a.*, u.name as user_name, COALESCE(u.role_id, 'R_STAFF') as user_role, m.name as approved_by_name
     FROM hr_attendance a
     JOIN v3_users u ON a.user_id = u.id
     LEFT JOIN v3_users m ON a.approved_by = m.id

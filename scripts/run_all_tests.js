@@ -73,7 +73,7 @@ async function main() {
     const testStart = Date.now();
     const result = spawnSync('npx', ['mocha', testFile, '--timeout', '120000', '--exit'], {
       cwd: rootDir,
-      env: { ...process.env, NODE_ENV: 'test' },
+      env: { ...process.env, NODE_ENV: 'test', BCRYPT_WORK_FACTOR: '4' },
       encoding: 'utf8'
     });
     const testDuration = Date.now() - testStart;
