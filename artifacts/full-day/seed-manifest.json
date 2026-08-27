@@ -1,6 +1,6 @@
 {
   "simulation_fixture": "/home/omrshrifmo/cafe-system-mvp/artifacts/full-day/full_day_sim.sqlite",
-  "generated_at": "2026-08-26T11:59:51.882Z",
+  "generated_at": "2026-08-26T18:56:01.685Z",
   "venue_id": "V_DEFAULT",
   "branch_id": "B_DEFAULT",
   "shifts_configured": [

@@ -135,14 +135,46 @@ async function createPurchaseDraft(data, actorId = null) {
 
     const validActorId = (actorId && !isNaN(Number(actorId))) ? Number(actorId) : 1;
 
-    // 2. Insert Purchase Draft (Drafts DO NOT affect inventory stock or ledger)
-    const pRes = await tx.run(
-      `INSERT INTO purchases (
-         supplier_id, venue_id, invoice_number, grn_number, document_ref, currency,
+    let hasInvoiceNumber = true;
+    let hasInvoiceRef = false;
+    try {
+      const cols = await tx.all(`PRAGMA table_info(purchases)`);
+      const colNames = cols.map(c => c.name);
+      hasInvoiceNumber = colNames.includes('invoice_number');
+      hasInvoiceRef = colNames.includes('invoice_ref');
+    } catch (e) {}
+
+    let insertSql = '';
+    let insertParams = [];
+    if (hasInvoiceNumber && hasInvoiceRef) {
+      insertSql = `INSERT INTO purchases (
+         supplier_id, venue_id, invoice_number, invoice_ref, grn_number, document_ref, currency,
          subtotal_minor, tax_minor, total_cost_minor, status, notes, attachment_ref,
          idempotency_key, request_id, receipt_date
-       ) VALUES (?, 'V_DEFAULT', ?, ?, ?, ?, ?, ?, ?, 'DRAFT', ?, ?, ?, ?, ?)`,
-      [
+       ) VALUES (?, 'V_DEFAULT', ?, ?, ?, ?, ?, ?, ?, ?, 'DRAFT', ?, ?, ?, ?, ?)`;
+      insertParams = [
+        supplier_id,
+        invoice_number || null,
+        invoice_number || null,
+        grn_number || null,
+        document_ref || null,
+        currency,
+        subtotalMinor,
+        tax_minor,
+        totalCostMinor,
+        notes || null,
+        attachment_ref || null,
+        idempotency_key || null,
+        request_id || null,
+        receipt_date
+      ];
+    } else if (hasInvoiceRef) {
+      insertSql = `INSERT INTO purchases (
+         supplier_id, venue_id, invoice_ref, grn_number, document_ref, currency,
+         subtotal_minor, tax_minor, total_cost_minor, status, notes, attachment_ref,
+         idempotency_key, request_id, receipt_date
+       ) VALUES (?, 'V_DEFAULT', ?, ?, ?, ?, ?, ?, ?, 'DRAFT', ?, ?, ?, ?, ?)`;
+      insertParams = [
         supplier_id,
         invoice_number || null,
         grn_number || null,
@@ -156,8 +188,32 @@ async function createPurchaseDraft(data, actorId = null) {
         idempotency_key || null,
         request_id || null,
         receipt_date
-      ]
-    );
+      ];
+    } else {
+      insertSql = `INSERT INTO purchases (
+         supplier_id, venue_id, invoice_number, grn_number, document_ref, currency,
+         subtotal_minor, tax_minor, total_cost_minor, status, notes, attachment_ref,
+         idempotency_key, request_id, receipt_date
+       ) VALUES (?, 'V_DEFAULT', ?, ?, ?, ?, ?, ?, ?, 'DRAFT', ?, ?, ?, ?, ?)`;
+      insertParams = [
+        supplier_id,
+        invoice_number || null,
+        grn_number || null,
+        document_ref || null,
+        currency,
+        subtotalMinor,
+        tax_minor,
+        totalCostMinor,
+        notes || null,
+        attachment_ref || null,
+        idempotency_key || null,
+        request_id || null,
+        receipt_date
+      ];
+    }
+
+    // 2. Insert Purchase Draft (Drafts DO NOT affect inventory stock or ledger)
+    const pRes = await tx.run(insertSql, insertParams);
 
     const purchaseId = pRes.lastID;
 
@@ -411,8 +467,21 @@ async function getSupplierMaster(supplierId) {
   const supplier = await getQuery(`SELECT * FROM suppliers WHERE id = ?`, [supplierId]);
   if (!supplier) throw new Error('NOT_FOUND: المورد غير موجود');
 
+  let invoiceCol = 'p.invoice_number';
+  try {
+    const cols = await allQuery(`PRAGMA table_info(purchases)`);
+    const colNames = cols.map(c => c.name);
+    if (colNames.includes('invoice_number') && colNames.includes('invoice_ref')) {
+      invoiceCol = "COALESCE(p.invoice_number, p.invoice_ref, '') as invoice_number";
+    } else if (colNames.includes('invoice_ref')) {
+      invoiceCol = "p.invoice_ref as invoice_number";
+    } else {
+      invoiceCol = "p.invoice_number";
+    }
+  } catch (e) {}
+
   const history = await allQuery(
-    `SELECT p.id as purchase_id, p.invoice_number, p.status,
+    `SELECT p.id as purchase_id, ${invoiceCol}, p.status,
             (COALESCE(p.total_cost_minor, p.subtotal_minor + p.tax_minor, 0) / 100.0) as total_cost,
             p.created_at, pi.inventory_item_id, pi.quantity_microunits / 1000000.0 as quantity,
             pi.unit, pi.unit_cost_minor / 100.0 as unit_cost, i.name as item_name

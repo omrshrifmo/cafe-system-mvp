@@ -20,6 +20,11 @@ class RealtimeClient {
     this.pingInterval = null;
     this.pongTimeout = null;
     this.deviceId = this.getOrCreateDeviceId();
+    this.pollingTimer = null;
+    this.staleTimer = null;
+    this.lastEventId = null;
+    this.cursorKey = `cafe_rt_cursor_${this.venueId}_${this.stationId}`;
+    this.restoreCursor();
 
     // Auto-initiate network listener
     if (typeof window !== 'undefined') {
@@ -36,6 +41,27 @@ class RealtimeClient {
       localStorage.setItem('cafe_device_id', id);
     }
     return id;
+  }
+
+  /**
+   * Restore persisted event cursor so reconnect replays from where we left off,
+   * without requiring a manual refresh or losing accepted events.
+   */
+  restoreCursor() {
+    if (typeof localStorage === 'undefined') return;
+    try {
+      const saved = parseInt(localStorage.getItem(this.cursorKey), 10);
+      if (!isNaN(saved) && saved > 0) {
+        this.lastSequence = saved;
+      }
+    } catch (e) { /* private mode */ }
+  }
+
+  persistCursor() {
+    if (typeof localStorage === 'undefined') return;
+    try {
+      localStorage.setItem(this.cursorKey, String(this.lastSequence));
+    } catch (e) { /* private mode */ }
   }
 
   setState(newState) {
@@ -90,8 +116,14 @@ class RealtimeClient {
   setupSocketHandlers() {
     this.ws.onopen = () => {
       this.reconnectAttempts = 0;
+      this.stopPollingFallback();
       this.setState('CONNECTED');
       this.startHeartbeat();
+      this.markFresh();
+      // Replay any events missed while disconnected — no manual refresh needed
+      if (this.lastSequence > 0) {
+        setTimeout(() => this.requestReplay(this.lastSequence), 300);
+      }
       console.log('✅ [RealtimeClient] WebSocket connected successfully');
     };
 
@@ -110,6 +142,7 @@ class RealtimeClient {
         this.setState('OFFLINE');
       } else {
         this.setState('DEGRADED');
+        this.startPollingFallback();
         this.scheduleReconnect();
       }
     };
@@ -135,7 +168,7 @@ class RealtimeClient {
     // Process sequenced event
     if (msg.sequence) {
       const seq = parseInt(msg.sequence, 10);
-      
+
       // Gap Detection: If we received seq > lastSequence + 1, request replay
       if (this.lastSequence > 0 && seq > this.lastSequence + 1) {
         console.warn(`[RealtimeClient] Sequence gap detected: Expected ${this.lastSequence + 1}, received ${seq}. Requesting replay.`);
@@ -144,13 +177,16 @@ class RealtimeClient {
 
       if (seq > this.lastSequence) {
         this.lastSequence = seq;
+        this.persistCursor();
       }
 
       // Send ACK back to server
       this.sendAck(seq);
     }
 
+    if (msg.event_id) this.lastEventId = msg.event_id;
     this.lastEventTime = msg.timestamp || new Date().toISOString();
+    this.markFresh();
 
     // Dispatch to topic handlers
     const topic = msg.topic;
@@ -179,7 +215,91 @@ class RealtimeClient {
   requestReplay(fromSequence) {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify({ type: 'REQUEST_REPLAY', from_sequence: fromSequence }));
+    } else {
+      // Socket down: HTTP replay path so no manual refresh is required
+      this.httpReplay(fromSequence);
     }
+  }
+
+  /**
+   * HTTP-based replay/snapshot recovery. Used on reconnect when the socket is
+   * unavailable, guaranteeing accepted events arrive without manual refresh.
+   */
+  async httpReplay(fromSequence) {
+    try {
+      const res = await fetch(`/api/realtime/events?venueId=${encodeURIComponent(this.venueId)}&since=${fromSequence}`, {
+        credentials: 'include'
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const body = await res.json();
+      const events = (body && body.data && body.data.events) || [];
+      for (const ev of events) {
+        this.handleIncomingMessage(ev);
+      }
+      // If server says our cursor is too old for replay, load snapshot instead
+      if (body && body.data && body.data.snapshot_required) {
+        await this.loadSnapshot();
+      }
+    } catch (err) {
+      console.warn('[RealtimeClient] HTTP replay failed:', err.message);
+      this.startPollingFallback();
+    }
+  }
+
+  async loadSnapshot() {
+    try {
+      const res = await fetch(`/api/realtime/snapshot?venueId=${encodeURIComponent(this.venueId)}&stationId=${encodeURIComponent(this.stationId)}`, {
+        credentials: 'include'
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const body = await res.json();
+      const snap = body && body.data;
+      if (snap) {
+        if (snap.sequence) {
+          this.lastSequence = snap.sequence;
+          this.persistCursor();
+        }
+        if (this.listeners.has('SNAPSHOT')) {
+          this.listeners.get('SNAPSHOT').forEach(h => { try { h(snap); } catch (e) { } });
+        }
+      }
+    } catch (err) {
+      console.warn('[RealtimeClient] Snapshot load failed:', err.message);
+    }
+  }
+
+  /**
+   * Visible degraded mode: poll events over HTTP while realtime is down.
+   * Never claims payment/stock/payroll/EOD success offline — read-only polling only.
+   */
+  startPollingFallback() {
+    if (this.pollingTimer) return;
+    this.setState('DEGRADED');
+    this.pollingTimer = setInterval(() => {
+      if (navigator.onLine && (!this.ws || this.ws.readyState !== WebSocket.OPEN)) {
+        this.httpReplay(this.lastSequence);
+      } else if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+        this.stopPollingFallback();
+      }
+    }, 10000);
+  }
+
+  stopPollingFallback() {
+    if (this.pollingTimer) {
+      clearInterval(this.pollingTimer);
+      this.pollingTimer = null;
+    }
+  }
+
+  markStale() {
+    if (this.state === 'CONNECTED' || this.state === 'DEGRADED') {
+      this.setState('STALE');
+    }
+  }
+
+  markFresh() {
+    if (this.staleTimer) clearTimeout(this.staleTimer);
+    this.staleTimer = setTimeout(() => this.markStale(), 60000);
   }
 
   startHeartbeat() {
@@ -235,8 +355,17 @@ class RealtimeClient {
     console.warn('[RealtimeClient] Network is OFFLINE');
     this.setState('OFFLINE');
     if (this.ws) {
-      try { this.ws.close(); } catch (e) {}
+      try { this.ws.close(); } catch (e) { }
     }
+  }
+
+  getLastCursorInfo() {
+    return {
+      state: this.state,
+      last_sequence: this.lastSequence,
+      last_event_id: this.lastEventId,
+      last_event_time: this.lastEventTime
+    };
   }
 
   updateHealthBadge(elementId) {
@@ -253,8 +382,10 @@ class RealtimeClient {
     };
 
     const cfg = badges[this.state] || badges['OFFLINE'];
+    const cursorInfo = this.lastSequence > 0 ? ` · آخر حدث #${this.lastSequence}` : '';
     el.className = `flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-bold ${cfg.bg}`;
-    el.innerHTML = `<span class="w-2 h-2 rounded-full ${cfg.dot}"></span><span>${cfg.text}</span>`;
+    el.innerHTML = `<span class="w-2 h-2 rounded-full ${cfg.dot}"></span><span>${cfg.text}${cursorInfo}</span>`;
+    el.title = `State: ${this.state} | Cursor: ${this.lastSequence} | Last event: ${this.lastEventTime || 'none'}`;
   }
 }
 

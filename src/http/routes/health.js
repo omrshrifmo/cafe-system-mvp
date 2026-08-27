@@ -78,7 +78,7 @@ router.get('/health/readiness', async (req, res) => {
     const migrationsDir = path.join(__dirname, '../../db/migrations');
     const availableMigrations = fs.readdirSync(migrationsDir).filter(f => f.endsWith('.sql'));
     let appliedCount = 0;
-    
+
     try {
       const appliedRows = await allQuery('SELECT version FROM schema_migrations WHERE status = \'SUCCESS\';');
       appliedCount = appliedRows ? appliedRows.length : 0;
@@ -101,7 +101,7 @@ router.get('/health/readiness', async (req, res) => {
     try {
       const outboxRow = await getQuery("SELECT COUNT(*) as count FROM outbox_events WHERE status = 'PENDING';");
       pendingOutbox = outboxRow ? outboxRow.count : 0;
-    } catch (e) {}
+    } catch (e) { }
 
     readiness.checks.outbox_queue = {
       status: pendingOutbox < 500 ? 'PASS' : 'WARN',
@@ -222,6 +222,118 @@ router.get('/health/realtime', async (req, res) => {
   req.url = '/realtime/health';
   return router.handle(req, res);
 });
+
+/**
+ * GET /api/realtime/events?venueId=&since=
+ * HTTP replay of outbox events from a cursor. Used by clients on reconnect
+ * so accepted events arrive without a manual refresh.
+ */
+router.get('/realtime/events', async (req, res) => {
+  try {
+    const venueId = req.query.venueId || 'V_DEFAULT';
+    const since = parseInt(req.query.since, 10) || 0;
+    const events = await allQuery(
+      `SELECT event_id, id, topic, aggregate_type, aggregate_id, aggregate_version, sequence, schema_version, venue_id, station_id, payload_json, created_at
+       FROM outbox_events
+       WHERE venue_id = ? AND sequence > ?
+       ORDER BY sequence ASC LIMIT 500`,
+      [venueId, since]
+    );
+    const mapped = (events || []).map(e => ({
+      event_id: e.event_id || e.id,
+      topic: e.topic,
+      aggregate_type: e.aggregate_type,
+      aggregate_id: e.aggregate_id,
+      aggregate_version: e.aggregate_version || 1,
+      sequence: e.sequence || 0,
+      schema_version: e.schema_version || 'v1',
+      venue_id: e.venue_id,
+      station_id: e.station_id,
+      payload: safeParse(e.payload_json),
+      timestamp: e.created_at,
+      is_replay: true
+    }));
+    // If the cursor is older than retained history, tell client to snapshot instead
+    let oldestSeq = null;
+    try {
+      const oldestRow = await getQuery(`SELECT MIN(sequence) as min_seq FROM outbox_events WHERE venue_id = ?`, [venueId]);
+      oldestSeq = oldestRow ? oldestRow.min_seq : null;
+    } catch (e) { }
+    const snapshotRequired = since > 0 && oldestSeq !== null && since < oldestSeq - 1;
+    res.json({
+      success: true,
+      data: {
+        events: mapped,
+        count: mapped.length,
+        snapshot_required: snapshotRequired,
+        last_sequence: mapped.length ? mapped[mapped.length - 1].sequence : since
+      },
+      request_id: req.requestId || null,
+      timestamp: new Date().toISOString()
+    });
+  } catch (err) {
+    logger.error('Realtime replay failed', { error: err.message });
+    res.status(500).json({
+      success: false,
+      error: 'REPLAY_FAILED',
+      message: 'تعذر إعادة تشغيل الأحداث',
+      request_id: req.requestId || null
+    });
+  }
+});
+
+/**
+ * GET /api/realtime/snapshot?venueId=&stationId=
+ * Snapshot fallback when cursor replay is impossible (history pruned).
+ */
+router.get('/realtime/snapshot', async (req, res) => {
+  try {
+    const venueId = req.query.venueId || 'V_DEFAULT';
+    const stationId = req.query.stationId || 'HALL';
+    const snap = { venue_id: venueId, station_id: stationId };
+    try {
+      const seqRow = await getQuery(`SELECT COALESCE(MAX(sequence), 0) as max_seq FROM outbox_events WHERE venue_id = ?`, [venueId]);
+      snap.sequence = seqRow ? seqRow.max_seq : 0;
+    } catch (e) {
+      snap.sequence = 0;
+    }
+    try {
+      snap.kds_orders = await allQuery(
+        `SELECT o.*, s.table_id FROM kds_orders o LEFT JOIN v3_order_sessions s ON o.order_session_id = s.id
+         WHERE o.venue_id = ? AND o.state NOT IN ('SERVED', 'DELIVERED', 'CANCELLED')`,
+        [venueId]
+      );
+    } catch (e) { snap.kds_orders = []; }
+    try {
+      snap.runner_tasks = await allQuery(
+        `SELECT * FROM runner_tasks WHERE venue_id = ? AND status NOT IN ('COMPLETED', 'CANCELLED')`,
+        [venueId]
+      );
+    } catch (e) { snap.runner_tasks = []; }
+    try {
+      snap.tables = await allQuery(`SELECT id, table_number, status FROM v3_tables`);
+    } catch (e) { snap.tables = []; }
+
+    res.json({
+      success: true,
+      data: snap,
+      request_id: req.requestId || null,
+      timestamp: new Date().toISOString()
+    });
+  } catch (err) {
+    logger.error('Realtime snapshot failed', { error: err.message });
+    res.status(500).json({
+      success: false,
+      error: 'SNAPSHOT_FAILED',
+      message: 'تعذر تحميل لقطة الحالة',
+      request_id: req.requestId || null
+    });
+  }
+});
+
+function safeParse(jsonStr) {
+  try { return JSON.parse(jsonStr); } catch (e) { return {}; }
+}
 
 module.exports = {
   router,

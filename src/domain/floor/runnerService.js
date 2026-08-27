@@ -4,22 +4,25 @@ const { getQuery, allQuery } = require('../../db/connection');
 
 async function getNextSequence(tx, venueId) {
   const row = await (tx ? tx.get(`SELECT COALESCE(MAX(sequence), 0) + 1 as seq FROM outbox_events WHERE venue_id = ?`, [venueId])
-                        : getQuery(`SELECT COALESCE(MAX(sequence), 0) + 1 as seq FROM outbox_events WHERE venue_id = ?`, [venueId]));
+    : getQuery(`SELECT COALESCE(MAX(sequence), 0) + 1 as seq FROM outbox_events WHERE venue_id = ?`, [venueId]));
   return row ? row.seq : 1;
 }
 
 /**
- * Creates a new runner task (e.g. DELIVERY, TABLE_ASSISTANCE, WAITER_CALL)
+ * Creates a new runner task (e.g. DELIVERY, TABLE_ASSISTANCE, WAITER_CALL).
+ * Binds the task to the active shift scope and capturing device.
  */
-async function createTask(venueId, taskType, priority = 0, contextJson = '{}', externalTx = null) {
+async function createTask(venueId, taskType, priority = 0, contextJson = '{}', externalTx = null, options = {}) {
+  const shiftId = options.shiftId || null;
+  const deviceId = options.deviceId || null;
   const execute = async (tx) => {
     const taskId = `TSK-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
     const nowIso = new Date().toISOString();
 
     await tx.run(
-      `INSERT INTO runner_tasks (id, venue_id, task_type, priority, context_json, status, version, created_at, updated_at) 
-       VALUES (?, ?, ?, ?, ?, 'PENDING', 1, datetime('now', 'localtime'), datetime('now', 'localtime'))`,
-      [taskId, venueId, taskType, priority, typeof contextJson === 'string' ? contextJson : JSON.stringify(contextJson)]
+      `INSERT INTO runner_tasks (id, venue_id, task_type, priority, context_json, status, version, shift_id, device_id, created_at, updated_at) 
+       VALUES (?, ?, ?, ?, ?, 'PENDING', 1, ?, ?, datetime('now', 'localtime'), datetime('now', 'localtime'))`,
+      [taskId, venueId, taskType, priority, typeof contextJson === 'string' ? contextJson : JSON.stringify(contextJson), shiftId, deviceId]
     );
 
     const nextSeq = await getNextSequence(tx, venueId);
@@ -35,9 +38,9 @@ async function createTask(venueId, taskType, priority = 0, contextJson = '{}', e
     };
 
     await tx.run(
-      `INSERT INTO outbox_events (event_id, topic, aggregate_type, aggregate_id, payload_json, sequence, aggregate_version, schema_version, venue_id, station_id, status) 
-       VALUES (?, 'RUNNER_TASK_CREATED', 'RUNNER_TASK', ?, ?, ?, 1, 'v1', ?, 'HALL', 'PENDING')`,
-      [eventId, taskId, JSON.stringify(payload), nextSeq, venueId]
+      `INSERT INTO outbox_events (event_id, topic, aggregate_type, aggregate_id, payload_json, sequence, aggregate_version, schema_version, venue_id, station_id, source_device_id, status) 
+       VALUES (?, 'RUNNER_TASK_CREATED', 'RUNNER_TASK', ?, ?, ?, 1, 'v1', ?, 'HALL', ?, 'PENDING')`,
+      [eventId, taskId, JSON.stringify(payload), nextSeq, venueId, deviceId]
     );
 
     return taskId;
@@ -50,9 +53,11 @@ async function createTask(venueId, taskType, priority = 0, contextJson = '{}', e
 }
 
 /**
- * Claims a task for a specific runner/waiter with optimistic concurrency check
+ * Claims a task for a specific runner/waiter with optimistic concurrency check.
+ * Two devices cannot claim the same task: only one PENDING->CLAIMED transition wins,
+ * all others receive ALREADY_CLAIMED (409).
  */
-async function claimTask(taskId, runnerId, expectedVersion = 1) {
+async function claimTask(taskId, runnerId, expectedVersion = 1, context = {}) {
   return runTransaction(async (tx) => {
     const task = await tx.get(`SELECT * FROM runner_tasks WHERE id = ?`, [taskId]);
     if (!task) {
@@ -90,15 +95,17 @@ async function claimTask(taskId, runnerId, expectedVersion = 1) {
     const payload = {
       task_id: taskId,
       runner_id: runnerId,
+      device_id: context.deviceId || null,
+      request_id: context.requestId || null,
       status: 'CLAIMED',
       version: newVersion,
       claimed_at: nowIso
     };
 
     await tx.run(
-      `INSERT INTO outbox_events (event_id, topic, aggregate_type, aggregate_id, payload_json, sequence, aggregate_version, schema_version, venue_id, station_id, status) 
-       VALUES (?, 'RUNNER_TASK_CLAIMED', 'RUNNER_TASK', ?, ?, ?, ?, 'v1', ?, 'HALL', 'PENDING')`,
-      [eventId, taskId, JSON.stringify(payload), nextSeq, newVersion, task.venue_id]
+      `INSERT INTO outbox_events (event_id, topic, aggregate_type, aggregate_id, payload_json, sequence, aggregate_version, schema_version, venue_id, station_id, source_device_id, status) 
+       VALUES (?, 'RUNNER_TASK_CLAIMED', 'RUNNER_TASK', ?, ?, ?, ?, 'v1', ?, 'HALL', ?, 'PENDING')`,
+      [eventId, taskId, JSON.stringify(payload), nextSeq, newVersion, task.venue_id, context.deviceId || null]
     );
 
     return {
@@ -112,9 +119,10 @@ async function claimTask(taskId, runnerId, expectedVersion = 1) {
 }
 
 /**
- * Completes a delivery or assistance task
+ * Completes a delivery or assistance task exactly once.
+ * Duplicate completion requests are idempotent and return the original result.
  */
-async function completeTask(taskId, runnerId, expectedVersion = null) {
+async function completeTask(taskId, runnerId, expectedVersion = null, context = {}) {
   return runTransaction(async (tx) => {
     const task = await tx.get(`SELECT * FROM runner_tasks WHERE id = ?`, [taskId]);
     if (!task) {
@@ -124,11 +132,13 @@ async function completeTask(taskId, runnerId, expectedVersion = null) {
     }
 
     if (task.status === 'COMPLETED') {
+      // Idempotent duplicate completion: same result, no second event
       return {
         status: 'SUCCESS',
         task_id: taskId,
         task_status: 'COMPLETED',
-        version: task.version
+        version: task.version,
+        idempotent: true
       };
     }
 
@@ -161,15 +171,17 @@ async function completeTask(taskId, runnerId, expectedVersion = null) {
     const payload = {
       task_id: taskId,
       runner_id: runnerId,
+      device_id: context.deviceId || null,
+      request_id: context.requestId || null,
       status: 'COMPLETED',
       version: newVersion,
       completed_at: nowIso
     };
 
     await tx.run(
-      `INSERT INTO outbox_events (event_id, topic, aggregate_type, aggregate_id, payload_json, sequence, aggregate_version, schema_version, venue_id, station_id, status) 
-       VALUES (?, 'RUNNER_TASK_COMPLETED', 'RUNNER_TASK', ?, ?, ?, ?, 'v1', ?, 'HALL', 'PENDING')`,
-      [eventId, taskId, JSON.stringify(payload), nextSeq, newVersion, task.venue_id]
+      `INSERT INTO outbox_events (event_id, topic, aggregate_type, aggregate_id, payload_json, sequence, aggregate_version, schema_version, venue_id, station_id, source_device_id, status) 
+       VALUES (?, 'RUNNER_TASK_COMPLETED', 'RUNNER_TASK', ?, ?, ?, ?, 'v1', ?, 'HALL', ?, 'PENDING')`,
+      [eventId, taskId, JSON.stringify(payload), nextSeq, newVersion, task.venue_id, context.deviceId || null]
     );
 
     return {
@@ -206,7 +218,7 @@ async function getRunnerTasks(venueId, statusFilter = null) {
   const tasks = await allQuery(query, params);
   return tasks.map(t => {
     let context = {};
-    try { context = JSON.parse(t.context_json || '{}'); } catch (e) {}
+    try { context = JSON.parse(t.context_json || '{}'); } catch (e) { }
     return {
       ...t,
       context

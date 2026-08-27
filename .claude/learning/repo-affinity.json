@@ -1,5 +1,5 @@
 {
-  "computedAt": "2026-08-17T21:42:03.667Z",
+  "computedAt": "2026-08-27T04:50:10.972Z",
   "signals": [
     {
       "signal": "vscode_package_dep",
@@ -11,7 +11,7 @@
     },
     {
       "signal": "github_workflows",
-      "detected": false
+      "detected": true
     },
     {
       "signal": "terraform_files",
@@ -43,6 +43,9 @@
     }
   ],
   "skillBoosts": {
+    "github-actions-ci": 15,
+    "ci-pipeline-debug": 15,
+    "ci-preflight": 15,
     "cursor-kiro-extension-publishing": 15,
     "vscode-extension-publishing": 15
   }

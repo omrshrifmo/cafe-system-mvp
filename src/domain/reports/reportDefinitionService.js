@@ -1129,10 +1129,15 @@ async function generateReport(reportType, rawParams = {}) {
     });
 
     const isValidationError = err.code === 'VALIDATION_ERROR' || err.message.includes('Scope mismatch') || err.message.includes('Invariant Violation');
+    // Scrub raw SQL/stack internals from client-visible messages; full detail stays server-side
+    const isSqlError = /SQLITE|no such column|no such table/i.test(err.message);
+    const safeMessage = isSqlError
+      ? 'خطأ في قاعدة البيانات أثناء توليد التقرير - تم تسجيل التفاصيل للفريق التقني'
+      : err.message;
     return {
       success: false,
-      error: err.message,
-      code: isValidationError ? 'VALIDATION_ERROR' : 'QUERY_FAILED',
+      error: safeMessage,
+      code: isValidationError ? 'VALIDATION_ERROR' : (isSqlError ? 'REPORT_DATA_UNAVAILABLE' : 'QUERY_FAILED'),
       requestId: err.requestId || rawParams.requestId || crypto.randomUUID(),
       retry_state: {
         retryable: !isValidationError,

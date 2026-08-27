@@ -7,7 +7,7 @@ async function saveIdempotencyKey(tx, key, actorId, hash, response) {
   if (!key) return;
   const jsonStr = JSON.stringify(response);
   const numericActor = actorId && !isNaN(parseInt(actorId, 10)) ? parseInt(actorId, 10) : null;
-  
+
   try {
     await tx.run(
       `INSERT OR REPLACE INTO idempotency_keys (key, actor_id, operation, request_hash, response_status, response_json, created_at, expires_at)
@@ -28,7 +28,7 @@ async function saveIdempotencyKey(tx, key, actorId, hash, response) {
            VALUES (?, ?, ?, datetime('now', 'localtime'))`,
           [key, hash, jsonStr]
         );
-      } catch (e3) {}
+      } catch (e3) { }
     }
   }
 }
@@ -42,7 +42,7 @@ async function settleOrder(sessionId, intent = {}, expectedVersion = 1) {
       let existing = null;
       try {
         existing = await tx.get(`SELECT * FROM idempotency_keys WHERE key = ?`, [intent.idempotency_key]);
-      } catch (e) {}
+      } catch (e) { }
 
       if (existing) {
         const storedHash = existing.payload_hash || existing.request_hash || existing.request_params;
@@ -81,7 +81,7 @@ async function settleOrder(sessionId, intent = {}, expectedVersion = 1) {
         throw err;
       }
     }
-    
+
     // Validate order status
     const validStatuses = ['OPEN', 'SUBMITTED', 'IN_PREPARATION', 'PARTIALLY_READY', 'READY', 'SERVED', 'PAYMENT_PENDING'];
     if (!validStatuses.includes(order.status)) {
@@ -166,9 +166,21 @@ async function settleOrder(sessionId, intent = {}, expectedVersion = 1) {
     }
 
     const changeOwedMinor = Math.max(0, totalProvidedMinor - totalDueMinor);
-    const venueId = intent.venue_id || order.venue_id || order.branch_id || 'V_DEFAULT';
 
-    // 6. Record Payment Rows
+    // 6. Record Payment Rows bound to the immutable shift scope
+    const venueId = intent.venue_id || order.venue_id || order.branch_id || 'V_DEFAULT';
+    let shiftId = intent.shift_id || null;
+    if (!shiftId && isV3) {
+      try {
+        const shiftRow = await tx.get(
+          `SELECT id FROM v3_shifts WHERE venue_id = ? AND status IN ('OPEN', 'HANDOVER_PENDING', 'REOPENED_BY_APPROVAL') ORDER BY created_at DESC LIMIT 1`,
+          [venueId]
+        );
+        shiftId = shiftRow ? shiftRow.id : null;
+      } catch (e) { /* shifts table may not exist in legacy fixtures */ }
+    }
+    const deviceId = intent.device_id || null;
+
     let paymentIds = [];
     for (let i = 0; i < paymentAllocations.length; i++) {
       const p = paymentAllocations[i];
@@ -177,9 +189,9 @@ async function settleOrder(sessionId, intent = {}, expectedVersion = 1) {
 
       if (isV3) {
         await tx.run(
-          `INSERT INTO v3_payments (id, order_session_id, amount_minor, tip_minor, currency, payment_method, external_reference, idempotency_key, status, created_by)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'COMPLETED', ?)`,
-          [paymentId, order.id, p.amount_minor, i === 0 ? quote.tip_minor : 0, quote.currency, p.method, p.external_reference, intent.idempotency_key || null, intent.actor_id || null]
+          `INSERT INTO v3_payments (id, order_session_id, amount_minor, tip_minor, currency, payment_method, external_reference, idempotency_key, status, created_by, shift_id, device_id)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'COMPLETED', ?, ?, ?)`,
+          [paymentId, order.id, p.amount_minor, i === 0 ? quote.tip_minor : 0, quote.currency, p.method, p.external_reference, intent.idempotency_key || null, intent.actor_id || null, shiftId, deviceId]
         );
       } else {
         await tx.run(
@@ -194,9 +206,10 @@ async function settleOrder(sessionId, intent = {}, expectedVersion = 1) {
     if (isV3) {
       await tx.run(
         `UPDATE v3_order_sessions 
-         SET status = 'PAID', subtotal_minor = ?, tax_minor = ?, service_minor = ?, discount_minor = ?, tip_minor = ?, total_minor = ?, version = version + 1, updated_at = datetime('now', 'localtime')
+         SET status = 'PAID', subtotal_minor = ?, tax_minor = ?, service_minor = ?, discount_minor = ?, tip_minor = ?, total_minor = ?, version = version + 1, updated_at = datetime('now', 'localtime'),
+             shift_id = COALESCE(shift_id, ?), device_id = COALESCE(device_id, ?)
          WHERE id = ?`,
-        [quote.subtotal_minor, quote.tax_minor, quote.service_minor, quote.discount_minor, quote.tip_minor, totalDueMinor, order.id]
+        [quote.subtotal_minor, quote.tax_minor, quote.service_minor, quote.discount_minor, quote.tip_minor, totalDueMinor, shiftId, deviceId, order.id]
       );
       if (order.table_id) {
         await tx.run(`UPDATE v3_tables SET status = 'PAID_PENDING_CLEAR', version = version + 1 WHERE id = ?`, [order.table_id]);
@@ -232,7 +245,7 @@ async function settleOrder(sessionId, intent = {}, expectedVersion = 1) {
          VALUES (?, ?, 'DEFAULT_CASHIER', ?, ?, 'PENDING')`,
         [`PRN-${Date.now()}`, venueId, payloadHash, payloadJson]
       );
-    } catch (e) {}
+    } catch (e) { }
 
     try {
       await tx.run(
@@ -240,7 +253,7 @@ async function settleOrder(sessionId, intent = {}, expectedVersion = 1) {
          VALUES (?, 'RECEIPT', ?, 'PENDING')`,
         [`PJ-${Date.now()}`, payloadJson]
       );
-    } catch (e) {}
+    } catch (e) { }
 
     // 9. Realtime Outbox Event
     try {
@@ -249,19 +262,81 @@ async function settleOrder(sessionId, intent = {}, expectedVersion = 1) {
          VALUES (?, 'ORDER_SETTLED', 'ORDER', ?, ?)`,
         [crypto.randomUUID(), String(order.id), JSON.stringify({ order_id: order.id, total_minor: totalDueMinor, status: 'PAID' })]
       );
-    } catch (e) {}
+    } catch (e) { }
 
-    // 10. Award Loyalty Points
+    // 10. Exactly-once BOM consumption set: one accepted order consumes one logical
+    //     recipe expansion batch into the authoritative inventory ledger.
+    try {
+      const consumptionSetId = `BOM:${order.id}`;
+      const existingSet = await tx.get(`SELECT id FROM bom_consumption_sets WHERE consumption_set_id = ?`, [consumptionSetId]);
+      if (!existingSet) {
+        const bomLines = [];
+        let totalBomCostMinor = 0;
+        for (const line of quoteLines) {
+          const menuItemId = line.item_id || line.menu_item_id;
+          if (!menuItemId) continue;
+          const qty = line.quantity || 1;
+          const bomRows = await tx.all(
+            `SELECT ri.inventory_item_id, ri.quantity_microunits, ri.unit, ii.current_stock_microunits
+             FROM v3_recipe_versions r
+             JOIN v3_recipe_ingredients ri ON ri.recipe_version_id = r.id
+             JOIN v3_inventory_items ii ON ii.id = ri.inventory_item_id
+             WHERE r.menu_item_id = ?
+             ORDER BY r.version DESC LIMIT 1`,
+            [menuItemId]
+          );
+          for (const bom of bomRows) {
+            const deltaMicrounits = -Math.round(bom.quantity_microunits * qty);
+            bomLines.push({
+              inventory_item_id: bom.inventory_item_id,
+              quantity_delta_microunits: deltaMicrounits,
+              unit: bom.unit,
+              unit_cost_minor: 0
+            });
+          }
+        }
+        for (const bl of bomLines) {
+          await tx.run(
+            `INSERT INTO inventory_ledger (inventory_item_id, event_type, quantity_delta_microunits, unit, unit_cost_minor, source_type, source_id, idempotency_key, reason, actor_id)
+             VALUES (?, 'BOM_CONSUMPTION', ?, ?, ?, 'SETTLEMENT', ?, ?, ?, ?)`,
+            [bl.inventory_item_id, bl.quantity_delta_microunits, bl.unit, bl.unit_cost_minor, order.id,
+            `${consumptionSetId}:${bl.inventory_item_id}`, 'Automatic BOM consumption on settlement', intent.actor_id || null]
+          );
+          await tx.run(
+            `UPDATE inventory_items SET current_stock_microunits = current_stock_microunits + ?, updated_at = datetime('now', 'localtime') WHERE id = ?`,
+            [bl.quantity_delta_microunits, bl.inventory_item_id]
+          );
+        }
+        await tx.run(
+          `INSERT INTO bom_consumption_sets (id, consumption_set_id, order_session_id, shift_id, line_count, total_cost_minor, actor_id, device_id, request_id, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))`,
+          [`BCS-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`, consumptionSetId, order.id, shiftId,
+          bomLines.length, totalBomCostMinor, intent.actor_id || null, deviceId, intent.request_id || null]
+        );
+      }
+    } catch (bomErr) {
+      // BOM failure must never silently pass: rethrow so the settlement rolls back atomically
+      throw new Error(`BOM_CONSUMPTION_FAILED: فشل خصم مكونات الوصفة أثناء التسوية [${bomErr.message}]`);
+    }
+
+    // 11. Exactly-once loyalty award: earns only after authoritative accepted settlement,
+    //     keyed uniquely per order with policy version and audit trail.
     const customerId = order.customer_id;
     if (customerId) {
+      const awardKey = `SETTLE:${order.id}`;
       const points = Math.floor(totalDueMinor / 100);
       try {
+        await tx.run(
+          `INSERT OR IGNORE INTO loyalty_awards (id, award_key, customer_id, order_session_id, points, policy_version, status, actor_id, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, 'v1', 'EARNED', ?, datetime('now', 'localtime'), datetime('now', 'localtime'))`,
+          [`LA-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`, awardKey, customerId, order.id, points, intent.actor_id || null]
+        );
         await tx.run(
           `INSERT OR IGNORE INTO loyalty_ledger (id, customer_id, change_points, balance_points, reference_type, reference_id)
            VALUES (?, ?, ?, (SELECT COALESCE(loyalty_balance, points, 0) FROM v3_customers WHERE id = ?) + ?, 'SETTLEMENT', ?)`,
           [`LL-${Date.now()}`, customerId, points, customerId, points, order.id]
         );
-      } catch (e) {}
+      } catch (e) { /* loyalty must not block settlement; award row uniqueness guards duplicates */ }
     }
 
     const response = {

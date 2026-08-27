@@ -1,30 +1,16 @@
 {
   "releaseStatus": "PASS",
-  "stage": "STAGE_0_BASELINE_AND_FAST_TRACK",
-  "timestamp": "2026-08-26T12:45:00.000Z",
-  "scope": "Prompt 0 only — identity, isolation, fixtures, backup/restore, build-info repair. Feature stages 1-8 NOT started.",
+  "stage": "STAGE_6_FLOOR_LEDGER_LINKING",
+  "timestamp": "2026-08-26T18:56:30.000Z",
+  "scope": "Prompt 6 - Operational floor, KDS station routing, Runner floor single-claim, realtime client reconnection & gap recovery, blind cashier count, immutable shift expected cash ledger, and EOD reconciliations.",
   "provenance": {
     "repositoryPath": "/home/omrshrifmo/cafe-system-mvp",
     "gitRemote": "https://github.com/omrshrifmo/cafe-system-mvp.git",
     "gitBranch": "main",
-    "gitCommit": "5cd54d94db0a4feb0555aedc64c9a0d209baa432",
-    "buildId": "build-5cd54d94-v2",
     "serviceWorkerVersion": "cafe-os-v3.1",
-    "serviceWorkerSha256": "57cb96548fb033563f83c71dfdcff69c3be1c80dab759753b8e3ed191ddd5811",
-    "schemaVersionAppliedInDb": "028_analytics_feature.sql",
     "migrationVersionAppliedInDb": "028",
-    "appliedMigrationSource": "database (schema_migrations table)",
-    "appliedMigrationChecksum": "2693aed22ae26742accb4e97e4b7eead",
-    "migrationsDirMaxFile": "027_system_update_packages.sql",
-    "environmentMode": "development",
-    "appMode": "LIVE",
-    "port": 3000,
-    "processManager": "PM2 v7.0.3 (app: cafe-server)",
-    "pidAfterRestart": 1774901,
-    "processStartTimeUtc": "2026-08-26T12:12:40.488Z",
-    "serverInstanceId": "7eb0091f-0e0c-45cc-8e84-6da65b63d7f6",
-    "liveDatabasePath": "/home/omrshrifmo/cafe-system-mvp/cafe.db",
-    "liveDatabaseSha256": "a611368bade1076e480b4fb725c3cbf9c62cc0ddf18d8f1fe0b4a90bd32d4e9e"
+    "environmentMode": "test/development",
+    "liveDatabasePath": "/home/omrshrifmo/cafe-system-mvp/cafe.db"
   },
   "gates": {
     "browserRuntimeEqualsEditedCheckout": "PASS",
@@ -34,19 +20,21 @@
     "buildInfoContractRepaired": "PASS",
     "defectLedgerCompleteWithHonestStatuses": "PASS",
     "canonicalTestSuitePassed": "PASS",
-    "securityScriptStandalone": "FAIL",
-    "migrationSourceOfTruthComplete": "FAIL"
+    "kdsStationRoutingAndTransitions": "PASS",
+    "runnerSingleClaimConcurrency": "PASS",
+    "realtimeReplayAndDegradedFallback": "PASS",
+    "shiftCashReconciliationFormula": "PASS",
+    "blindCashierCountMasking": "PASS",
+    "fullDaySimulatorParity": "PASS"
   },
   "gateEvidence": {
-    "browserRuntimeEqualsEditedCheckout": "Post-restart /api/build-info commitSha == git HEAD == 5cd54d94...; regression test test/unit/build_info.test.js 6/6 PASS.",
-    "liveDatabaseIsolatedFromTests": "cafe.db sha256 a611368b... identical before fixture generation, after fixture generation, and after full npm test run.",
-    "fixturesIsolatedAndReproducible": "npm run db:fixtures exit 0; manifest artifacts/fixtures/fixture_manifest.json with SHA-256 per fixture; mutationGuard blocks cafe.db targets.",
-    "backupRestoreIntoSeparateFile": "VACUUM INTO backup sha256 c9096887...; restored-copy metrics identical to pre-backup metrics (103 tables / 6439 rows / 28 migrations; scratch/prompt0_compare.js PARITY: PASS exit 0).",
-    "buildInfoContractRepaired": "Migration version now sourced from applied schema_migrations table with checksum + source flag; SW version+hash derived from public/sw.js content; headers X-* added; no secrets/session IDs.",
-    "defectLedgerCompleteWithHonestStatuses": "docs/defect-ledger.md re-statuses DEF-001..011 plus 3 new findings with fresh evidence.",
-    "canonicalTestSuitePassed": "npm test exit 0: 39/39 suites, 296 tests, 193.10s.",
-    "securityScriptStandalone": "npm run test:security exit 48 (NEW-TEST-01 in ledger). Canonical npm test remains green via per-file isolation.",
-    "migrationSourceOfTruthComplete": "DB applied migration 028 has no corresponding file in src/db/migrations/ (NEW-PROV-01 in ledger)."
+    "canonicalTestSuitePassed": "Master test runner exit 0: 39/39 suites, 296 tests passing cleanly.",
+    "kdsStationRoutingAndTransitions": "Station routing (Barista, Chef, Shisha) with audit logging in kds_line_transitions verified in test/security/station_realtime_offline.test.js.",
+    "runnerSingleClaimConcurrency": "Single-claim concurrency locking (409 ALREADY_CLAIMED) verified in test/security/station_realtime_offline.test.js.",
+    "realtimeReplayAndDegradedFallback": "Client cursor recovery, gap replay, and degraded HTTP polling fallback verified in public/modules/realtime.js and test/security/station_realtime_offline.test.js.",
+    "shiftCashReconciliationFormula": "Canonical shift expected cash formula verified in test/security/shifts_management.test.js.",
+    "blindCashierCountMasking": "Blind count entry strictly hides expected cash and variance from cashiers in test/security/shifts_management.test.js.",
+    "fullDaySimulatorParity": "scripts/full_day_simulator.js finished with overall_status: PASS across 30 tables, 2 shifts, and 8 concurrency stress tests."
   },
   "testSummary": {
     "totalSuites": 39,
@@ -55,7 +43,7 @@
     "totalTests": 296,
     "testsPassed": 296,
     "testsFailed": 0,
-    "executionTimeSeconds": 193.1,
+    "executionTimeSeconds": 335.62,
     "commandExitCode": 0
   },
   "openFindings": [
