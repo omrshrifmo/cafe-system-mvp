@@ -5,10 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>كافيه مزاج - تسجيل الدخول</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
   <style>
     body {
-      font-family: system-ui, -apple-system, sans-serif;
-      background-color: #0f172a;
+      font-family: 'Cairo', system-ui, -apple-system, sans-serif;
+      background-color: #0b1120;
       color: #f8fafc;
       user-select: none;
     }
@@ -18,55 +21,96 @@
     .pin-btn:active {
       background-color: #334155;
     }
+    .glass {
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(51, 65, 85, 0.6);
+    }
   </style>
 </head>
 <body class="min-h-screen flex flex-col items-center justify-center p-4">
-  <div class="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-2xl">
-    <!-- Header -->
-    <div id="demo-banner" class="hidden w-full bg-rose-600 text-white text-xs font-bold text-center py-1 rounded-t-xl mb-4">
-      وضع التجربة (DEMO MODE) - البيانات وهمية
+  <div class="w-full max-w-sm glass border border-slate-800 rounded-2xl p-6 shadow-2xl relative">
+    <!-- Mode Banner (Dynamically synced with server appMode) -->
+    <div id="demo-banner" class="hidden w-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-bold text-center py-1.5 rounded-xl mb-4">
+      🧪 وضع التجربة (DEMO MODE) — البيانات وهمية للاختبار
     </div>
+    <div id="live-banner" class="hidden w-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-bold text-center py-1.5 rounded-xl mb-4">
+      🚀 وضع التشغيل الفعلي (LIVE PRODUCTION)
+    </div>
+
+    <!-- Header -->
     <div class="text-center mb-6">
-      <div class="w-16 h-16 bg-amber-600 rounded-full flex items-center justify-center text-3xl font-bold text-slate-950 mx-auto mb-3">
+      <div class="w-16 h-16 bg-amber-500/20 border border-amber-500/40 rounded-2xl flex items-center justify-center text-3xl font-bold text-amber-400 mx-auto mb-3 shadow-lg">
         ☕
       </div>
-      <h1 class="text-2xl font-bold text-slate-100">كافيه مزاج</h1>
-      <p class="text-sm text-slate-400 mt-1">نظام إدارة الكافيه - تسجيل الدخول</p>
+      <h1 class="text-2xl font-black text-slate-100" id="cafeNameDisplay">كافيه مزاج</h1>
+      <p class="text-xs text-slate-400 mt-1">نظام إدارة المقاهي والمطاعم — تسجيل الدخول</p>
+    </div>
+
+    <!-- Module Health Alert Banner (Hidden when OK) -->
+    <div id="moduleAlert" class="hidden mb-4 p-3 bg-red-950/80 border border-red-800 text-red-200 text-xs text-center rounded-xl font-semibold leading-relaxed">
+      <div class="flex items-center justify-center gap-1 mb-1 font-bold text-red-300">
+        <span>⚠️</span>
+        <span>تعذر تحميل وحدة تسجيل الدخول</span>
+      </div>
+      <p id="moduleAlertText" class="text-[11px] text-red-300/90 mb-2">أعد المحاولة أو تواصل مع مسؤول النظام.</p>
+      <div class="flex items-center justify-center gap-2">
+        <button onclick="window.location.reload()" class="px-3 py-1 bg-red-800 hover:bg-red-700 text-white rounded-lg text-xs font-bold cursor-pointer">
+          إعادة المحاولة 🔄
+        </button>
+      </div>
+      <div id="moduleBuildId" class="mt-2 text-[10px] text-slate-400 font-mono"></div>
     </div>
 
     <!-- PIN Display -->
-    <div class="mb-6">
-      <div id="pinDisplay" class="w-full bg-slate-950 border border-slate-700 rounded-lg py-3 px-4 text-center text-3xl tracking-widest font-mono text-amber-400 min-h-[58px] flex items-center justify-center">
-        <span id="pinDots" class="text-slate-600 text-sm">أدخل رمز PIN الخاص بك</span>
+    <div class="mb-5">
+      <div id="pinDisplay" class="w-full bg-slate-950/80 border border-slate-700 rounded-xl py-3 px-4 text-center text-3xl tracking-widest font-mono text-amber-400 min-h-[58px] flex items-center justify-center shadow-inner">
+        <span id="pinDots" class="text-slate-500 text-xs">أدخل رمز PIN الخاص بك</span>
       </div>
-      <div id="errorMsg" class="hidden mt-2 p-2 bg-red-950 border border-red-800 text-red-300 text-xs text-center rounded font-semibold"></div>
+      <div id="errorMsg" class="hidden mt-2 p-2.5 bg-red-950/80 border border-red-800 text-red-300 text-xs text-center rounded-xl font-semibold leading-relaxed"></div>
     </div>
 
     <!-- Keypad -->
-    <div class="grid grid-cols-3 gap-3 mb-6">
-      <button onclick="pressNum('1')" class="pin-btn bg-slate-800 hover:bg-slate-700 text-2xl font-bold py-4 rounded-lg border border-slate-700">1</button>
-      <button onclick="pressNum('2')" class="pin-btn bg-slate-800 hover:bg-slate-700 text-2xl font-bold py-4 rounded-lg border border-slate-700">2</button>
-      <button onclick="pressNum('3')" class="pin-btn bg-slate-800 hover:bg-slate-700 text-2xl font-bold py-4 rounded-lg border border-slate-700">3</button>
-      <button onclick="pressNum('4')" class="pin-btn bg-slate-800 hover:bg-slate-700 text-2xl font-bold py-4 rounded-lg border border-slate-700">4</button>
-      <button onclick="pressNum('5')" class="pin-btn bg-slate-800 hover:bg-slate-700 text-2xl font-bold py-4 rounded-lg border border-slate-700">5</button>
-      <button onclick="pressNum('6')" class="pin-btn bg-slate-800 hover:bg-slate-700 text-2xl font-bold py-4 rounded-lg border border-slate-700">6</button>
-      <button onclick="pressNum('7')" class="pin-btn bg-slate-800 hover:bg-slate-700 text-2xl font-bold py-4 rounded-lg border border-slate-700">7</button>
-      <button onclick="pressNum('8')" class="pin-btn bg-slate-800 hover:bg-slate-700 text-2xl font-bold py-4 rounded-lg border border-slate-700">8</button>
-      <button onclick="pressNum('9')" class="pin-btn bg-slate-800 hover:bg-slate-700 text-2xl font-bold py-4 rounded-lg border border-slate-700">9</button>
-      <button onclick="clearPin()" class="pin-btn bg-rose-950 hover:bg-rose-900 text-rose-300 text-sm font-bold py-4 rounded-lg border border-rose-800">مسح ✕</button>
-      <button onclick="pressNum('0')" class="pin-btn bg-slate-800 hover:bg-slate-700 text-2xl font-bold py-4 rounded-lg border border-slate-700">0</button>
-      <button onclick="submitLogin()" class="pin-btn bg-amber-600 hover:bg-amber-500 text-slate-950 text-xl font-bold py-4 rounded-lg border border-amber-500 flex items-center justify-center">دخول ↵</button>
+    <div class="grid grid-cols-3 gap-2.5 mb-5">
+      <button onclick="pressNum('1')" class="pin-btn bg-slate-800/80 hover:bg-slate-700 text-2xl font-bold py-3.5 rounded-xl border border-slate-700 text-slate-100 transition-all">1</button>
+      <button onclick="pressNum('2')" class="pin-btn bg-slate-800/80 hover:bg-slate-700 text-2xl font-bold py-3.5 rounded-xl border border-slate-700 text-slate-100 transition-all">2</button>
+      <button onclick="pressNum('3')" class="pin-btn bg-slate-800/80 hover:bg-slate-700 text-2xl font-bold py-3.5 rounded-xl border border-slate-700 text-slate-100 transition-all">3</button>
+      <button onclick="pressNum('4')" class="pin-btn bg-slate-800/80 hover:bg-slate-700 text-2xl font-bold py-3.5 rounded-xl border border-slate-700 text-slate-100 transition-all">4</button>
+      <button onclick="pressNum('5')" class="pin-btn bg-slate-800/80 hover:bg-slate-700 text-2xl font-bold py-3.5 rounded-xl border border-slate-700 text-slate-100 transition-all">5</button>
+      <button onclick="pressNum('6')" class="pin-btn bg-slate-800/80 hover:bg-slate-700 text-2xl font-bold py-3.5 rounded-xl border border-slate-700 text-slate-100 transition-all">6</button>
+      <button onclick="pressNum('7')" class="pin-btn bg-slate-800/80 hover:bg-slate-700 text-2xl font-bold py-3.5 rounded-xl border border-slate-700 text-slate-100 transition-all">7</button>
+      <button onclick="pressNum('8')" class="pin-btn bg-slate-800/80 hover:bg-slate-700 text-2xl font-bold py-3.5 rounded-xl border border-slate-700 text-slate-100 transition-all">8</button>
+      <button onclick="pressNum('9')" class="pin-btn bg-slate-800/80 hover:bg-slate-700 text-2xl font-bold py-3.5 rounded-xl border border-slate-700 text-slate-100 transition-all">9</button>
+      <button onclick="clearPin()" class="pin-btn bg-rose-950/60 hover:bg-rose-900 text-rose-300 text-sm font-bold py-3.5 rounded-xl border border-rose-800 transition-all">مسح ✕</button>
+      <button onclick="pressNum('0')" class="pin-btn bg-slate-800/80 hover:bg-slate-700 text-2xl font-bold py-3.5 rounded-xl border border-slate-700 text-slate-100 transition-all">0</button>
+      <button onclick="submitLogin()" id="btnLogin" class="pin-btn bg-amber-500 hover:bg-amber-400 text-slate-950 text-lg font-black py-3.5 rounded-xl border border-amber-400 flex items-center justify-center transition-all shadow-lg">دخول ↵</button>
     </div>
+
+    <!-- Self-Setup & Help Links -->
+    <div class="pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
+      <a href="/setup.html" class="text-amber-400 hover:text-amber-300 font-semibold transition-colors flex items-center gap-1">
+        <span>⚙️</span>
+        <span>معالج الإعداد والتهيئة</span>
+      </a>
+      <a href="/manual.html" class="text-slate-400 hover:text-slate-200 font-semibold transition-colors flex items-center gap-1">
+        <span>📖</span>
+        <span>دليل الاستخدام والتشغيل</span>
+      </a>
+    </div>
+
+    <!-- Provenance Footer -->
+    <div id="buildFooter" class="mt-3 text-center text-[10px] text-slate-500 font-mono"></div>
   </div>
 
   <script src="/modules/auth.js"></script>
   <script>
     let currentPin = "";
+    let serverBuildInfo = null;
 
     function updateDisplay() {
       const pinDots = document.getElementById("pinDots");
       if (currentPin.length === 0) {
-        pinDots.className = "text-slate-600 text-sm";
+        pinDots.className = "text-slate-500 text-xs";
         pinDots.textContent = "أدخل رمز PIN الخاص بك";
       } else {
         pinDots.className = "text-amber-400 tracking-widest text-3xl font-mono";
@@ -75,7 +119,7 @@
     }
 
     function pressNum(num) {
-      hideError(); // Clear error on new entry
+      hideError();
       if (currentPin.length < 6) {
         currentPin += num;
         updateDisplay();
@@ -98,17 +142,64 @@
       errorMsg.classList.add("hidden");
     }
 
+    function showModuleError(buildId) {
+      const alertEl = document.getElementById("moduleAlert");
+      const buildEl = document.getElementById("moduleBuildId");
+      if (buildId) {
+        buildEl.textContent = `رقم التتبع / الإصدار: ${buildId}`;
+      }
+      alertEl.classList.remove("hidden");
+    }
+
+    async function fetchBuildInfo() {
+      try {
+        const res = await fetch('/api/build-info', { cache: 'no-store' });
+        if (res.ok) {
+          const envelope = await res.json();
+          if (envelope.success && envelope.data) {
+            serverBuildInfo = envelope.data;
+            const demoBanner = document.getElementById('demo-banner');
+            const liveBanner = document.getElementById('live-banner');
+            const buildFooter = document.getElementById('buildFooter');
+
+            if (serverBuildInfo.appMode === 'DEMO') {
+              demoBanner.classList.remove('hidden');
+              liveBanner.classList.add('hidden');
+            } else if (serverBuildInfo.appMode === 'LIVE') {
+              liveBanner.classList.remove('hidden');
+              demoBanner.classList.add('hidden');
+            }
+
+            if (serverBuildInfo.buildId) {
+              buildFooter.textContent = `Build: ${serverBuildInfo.buildId} | Migrations: ${serverBuildInfo.migrationVersion || '031'} | SW: ${serverBuildInfo.serviceWorkerVersion || 'v3.2-prod'}`;
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to fetch build info:', e);
+      }
+    }
+
     async function submitLogin() {
       if (!currentPin || currentPin.length < 4) {
         showError("رمز PIN يجب أن يتكون من 4 أرقام على الأقل");
         return;
       }
 
+      // Check module initialization health
+      if (!window.AuthModule || typeof window.AuthModule.loginWithPin !== 'function') {
+        const traceId = (serverBuildInfo && serverBuildInfo.buildId) || 'BUILD-AUTH-REPAIR';
+        showError(`تعذر تحميل وحدة تسجيل الدخول. أعد المحاولة أو تواصل مع مسؤول النظام. (رقم التتبع: ${traceId})`);
+        showModuleError(traceId);
+        return;
+      }
+
+      const btn = document.getElementById('btnLogin');
+      const originalText = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<span class="animate-pulse">جاري التحقق...</span>';
+
       try {
-        if (!window.AuthModule) {
-           throw new Error('وحدة التحقق غير متوفرة');
-        }
-        
         const loginData = await window.AuthModule.loginWithPin(currentPin);
         
         // Read server-authorized default route or safe returnUrl
@@ -121,6 +212,8 @@
 
         window.location.replace(target);
       } catch (err) {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
         showError(err.message || "رمز الدخول السري غير صحيح");
         currentPin = "";
         updateDisplay();
@@ -142,17 +235,28 @@
     });
 
     window.addEventListener("DOMContentLoaded", async () => {
-      if (!window.AuthModule) return;
-      
-      const user = await window.AuthModule.checkAuthSession();
-      if (user) {
-        const urlParams = new URLSearchParams(window.location.search);
-        const returnUrl = urlParams.get('returnUrl');
-        const defaultRoute = user.defaultRoute || '/portal.html';
-        const target = (returnUrl && returnUrl.startsWith('/') && !returnUrl.startsWith('//') && !returnUrl.includes('index.html'))
-          ? returnUrl
-          : defaultRoute;
-        window.location.replace(target);
+      await fetchBuildInfo();
+
+      // Check module health on load
+      if (!window.AuthModule || typeof window.AuthModule.checkAuthSession !== 'function') {
+        const traceId = (serverBuildInfo && serverBuildInfo.buildId) || 'BUILD-AUTH-REPAIR';
+        showModuleError(traceId);
+        return;
+      }
+
+      try {
+        const user = await window.AuthModule.checkAuthSession();
+        if (user) {
+          const urlParams = new URLSearchParams(window.location.search);
+          const returnUrl = urlParams.get('returnUrl');
+          const defaultRoute = user.defaultRoute || '/portal.html';
+          const target = (returnUrl && returnUrl.startsWith('/') && !returnUrl.startsWith('//') && !returnUrl.includes('index.html'))
+            ? returnUrl
+            : defaultRoute;
+          window.location.replace(target);
+        }
+      } catch (e) {
+        console.warn('Session check error:', e);
       }
     });
   </script>

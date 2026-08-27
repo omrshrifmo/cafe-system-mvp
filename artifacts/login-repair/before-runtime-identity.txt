@@ -1,0 +1,42 @@
+=====================================================
+  BEFORE RUNTIME IDENTITY & PROVENANCE REPORT
+  Timestamp: 2026-08-27T11:54:08Z
+=====================================================
+
+Repository Path: /home/omrshrifmo/cafe-system-mvp
+Remote URL: https://github.com/omrshrifmo/cafe-system-mvp.git
+Branch: main
+Commit SHA: 1d9395990d8085673f2fef7a0ec570a344fcdc07
+Working-Tree Status:
+ M .claude/learning/attribution-collector-state.json
+ M .claude/learning/attribution-trust.json
+ M .claude/learning/cost-attribution.json
+ M .claude/learning/pipeline-cycle.json
+ M .claude/learning/project-profile.json
+ M .claude/learning/remote-repo-probe.json
+ M .claude/learning/today-cost.json
+ M .github/instructions/doc-coauthoring.instructions.md
+ M .github/instructions/extension-value-audit.instructions.md
+ M .github/instructions/file-style-conventions.instructions.md
+ M .github/instructions/github-actions-ci.instructions.md
+ M .github/instructions/self-learning.instructions.md
+ M .github/instructions/skill-creator.instructions.md
+ M .github/instructions/skill-feedback-adaptation.instructions.md
+ M .github/instructions/skill-official-updater.instructions.md
+ M .github/instructions/skill-usage-insights.instructions.md
+
+Node Version: v22.23.1
+Npm Version: 12.0.1
+
+Running Process Info (port 3000):
+PID: 3233475
+Process Command: node /home/omrshrifmo/cafe-system-mvp/server.js
+Port: 3000
+Start Time: 2026-08-27T06:35:49.327Z
+
+GET /api/build-info response (before repair):
+{"success":true,"data":{"status":"OK","buildId":"build-1adc9ed2-v2","commitSha":"1adc9ed21735c213e94e3e499b1ec31c8515aaa3","commit":"1adc9ed21735c213e94e3e499b1ec31c8515aaa3","branch":"main","repository":"omrshrifmo/cafe-system-mvp","schemaVersion":"028_floor_ledger_linking.sql","migrationVersion":"028","appliedMigrationVersion":"028_floor_ledger_linking.sql","appliedMigrationSource":"database","appliedMigrationChecksum":"d791e70d209b2c1af1ddd803295dcc7f","serviceWorkerVersion":"cafe-os-v3.1","serviceWorkerSha256":"57cb96548fb033563f83c71dfdcff69c3be1c80dab759753b8e3ed191ddd5811","environmentMode":"development","environment":"development","databaseIdentity":"cafe.db","databasePath":"/home/omrshrifmo/cafe-system-mvp/cafe.db","fixtureId":null,"processStartTime":"2026-08-27T06:35:49.327Z","serverInstanceId":"f91d3a7c-9644-42d5-84c0-eaa47d8cacb1","appMode":"LIVE","port":3000,"process":{"pid":3233475,"nodeVersion":"v22.23.1","startTime":"2026-08-27T06:35:49.327Z","uptimeSeconds":19099},"timestamp":"2026-08-27T11:54:08.864Z"},"error":null,"code":null,"requestId":"55457d64-d907-4421-937a-20bc20943406"}
+
+Analysis:
+- The server process PID 3233475 was launched on 2026-08-27T06:35:49.327Z under an earlier commit/migration (028_floor_ledger_linking.sql) before migration 031 and SW cafe-os-v3.2-prod were completed.
+- public/modules/auth.js contained a syntax error (unclosed brace at line 287/308) causing the browser script evaluation to abort with SyntaxError and prevent window.AuthModule from initializing.

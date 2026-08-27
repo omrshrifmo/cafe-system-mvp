@@ -305,6 +305,8 @@ if (typeof window !== 'undefined') {
       clearLockKey();
     }
   });
+}
+
 // Caffeine Mode API client
 async function enableCaffeineMode(durationMinutes = 30, reason = 'OPERATIONAL_KEEP_ALIVE', managerPin = null) {
   const res = await fetch('/api/auth/caffeine', {

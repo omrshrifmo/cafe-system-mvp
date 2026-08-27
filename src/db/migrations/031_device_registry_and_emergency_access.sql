@@ -13,7 +13,7 @@ ALTER TABLE devices ADD COLUMN trusted_by TEXT;
 ALTER TABLE devices ADD COLUMN trusted_at TEXT;
 ALTER TABLE devices ADD COLUMN is_kiosk INTEGER DEFAULT 0;
 ALTER TABLE devices ADD COLUMN kiosk_allowed_route TEXT;
-ALTER TABLE devices ADD COLUMN first_seen_at TEXT DEFAULT (datetime('now', 'localtime'));
+ALTER TABLE devices ADD COLUMN first_seen_at TEXT;
 ALTER TABLE devices ADD COLUMN enrolled_by TEXT;
 ALTER TABLE devices ADD COLUMN policy_version INTEGER DEFAULT 1;
 ALTER TABLE devices ADD COLUMN risk_state TEXT DEFAULT 'LOW'; -- LOW, MEDIUM, HIGH, BLOCKED

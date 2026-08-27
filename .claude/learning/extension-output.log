@@ -15319,3 +15319,16 @@
 [2026-08-27T04:50:08.413Z] CLI MCP server: already configured — agents can connect.
 [2026-08-27T04:50:08.421Z] Dir cache guard hook updated.
 [2026-08-27T04:50:12.480Z] Attribution v2 hooks updated (claude/cursor/kiro/copilot as enabled).
+[2026-08-27T14:22:51.509Z] Task proposals refreshed locally (6 skills).
+[2026-08-27T14:22:51.585Z] Task skill focus: 10 active, 0 ignored for this task.
+[2026-08-27T14:22:51.707Z] 
+=== Task proposals auto-apply (local workspace) ===
++1 installed, 0 enabled locally: deployment-practical
+[2026-08-27T14:22:51.714Z] Cost control hook scripts refreshed across Claude, Cursor, Kiro, and Copilot paths.
+[2026-08-27T14:22:51.716Z] SKILL lint: [warning] extension-value-audit: Description is 788 chars (recommended max 500)
+[2026-08-27T14:22:51.748Z] Propagated workspace skills to 30 other agent path(s) (cursor/kiro/copilot).
+[2026-08-27T14:22:51.757Z] SKILL lint: [warning] extension-value-audit (cursor): Description is 788 chars (recommended max 500)
+[2026-08-27T14:22:51.757Z] SKILL lint: [warning] extension-value-audit (kiro): Description is 788 chars (recommended max 500)
+[2026-08-27T14:22:51.758Z] Task proposals auto-applied (1 installed, 0 enabled).
+[2026-08-27T14:22:55.271Z] Mirrored cost-discipline artifacts: cursor:attribution-trust.json, cursor:pipeline-cycle.json, cursor:remote-repo-probe.json, cursor:runs.snapshot.json, cursor:task-active-skills.json, cursor:task-proposals-apply-state.json, cursor:task-skill-proposals.json, cursor:today-cost.json, cursor:workspace-affinity.json, kiro:attribution-trust.json, kiro:pipeline-cycle.json, kiro:remote-repo-probe.json, kiro:runs.snapshot.json, kiro:task-active-skills.json, kiro:task-proposals-apply-state.json, kiro:task-skill-proposals.json, kiro:today-cost.json, kiro:workspace-affinity.json.
+[2026-08-27T14:22:55.271Z] Propagated focused skill set to 30 Cursor/Kiro/Copilot path(s).

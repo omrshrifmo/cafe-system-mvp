@@ -74,9 +74,11 @@ async function setMode(newMode) {
   currentModeCache = newMode;
   fs.writeFileSync(MODE_FILE_PATH, JSON.stringify({ mode: newMode, updatedAt: new Date().toISOString() }, null, 2), 'utf8');
 
-  // Close the database connection dynamically (require here to avoid circular dependencies)
-  const { closeDb } = require('../../db/connection');
-  await closeDb();
+  // Close the database connection dynamically in non-test mode
+  if (env.NODE_ENV !== 'test') {
+    const { closeDb } = require('../../db/connection');
+    await closeDb();
+  }
 
   logger.info('Application mode switched successfully', { mode: newMode });
 }

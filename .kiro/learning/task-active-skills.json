@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "generatedAt": "2026-08-26T14:22:48.050Z",
-  "proposalsGeneratedAt": "2026-08-26T14:22:47.974Z",
+  "generatedAt": "2026-08-27T14:22:51.670Z",
+  "proposalsGeneratedAt": "2026-08-27T14:22:51.506Z",
   "source": "session-apply",
   "activeSkills": [
     "self-learning",
@@ -10,6 +10,7 @@
     "skill-usage-insights",
     "skill-feedback-adaptation",
     "skill-official-updater",
+    "deployment-practical",
     "doc-coauthoring",
     "extension-value-audit",
     "github-actions-ci"

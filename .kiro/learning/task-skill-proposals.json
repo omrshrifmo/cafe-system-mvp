@@ -1,8 +1,35 @@
 {
   "version": 1,
-  "generatedAt": "2026-08-26T14:22:47.974Z",
+  "generatedAt": "2026-08-27T14:22:51.506Z",
   "taskSummary": "Workspace-detected skills",
   "proposals": [
+    {
+      "name": "github-actions-ci",
+      "reason": "Workspace files match **/.github/workflows/*.yml, **/.github/**/*.md; repo stack match (+15)",
+      "confidence": 78,
+      "installed": true,
+      "matchedGlobs": [
+        "**/.github/workflows/*.yml",
+        "**/.github/**/*.md",
+        "**/test/**",
+        "**/src/**",
+        "**/*.test.js"
+      ],
+      "confidenceBreakdown": {
+        "semanticMatch": 60,
+        "workspaceAffinity": 0,
+        "repositoryAffinity": 15,
+        "adoptionSuccess": 3,
+        "enrichment": 0,
+        "penalty": 0
+      },
+      "whyText": "detected: **/.github/workflows/*.yml, **/.github/**/*.md; repo stack match",
+      "estimatedMinutes": 15,
+      "acceptanceRate": -1,
+      "successRate": -1,
+      "successScore": 15,
+      "trend": "new"
+    },
     {
       "name": "doc-coauthoring",
       "reason": "Workspace files match **/docs/**",
@@ -30,7 +57,7 @@
     {
       "name": "extension-value-audit",
       "reason": "Workspace files match **/.claude/learning/task-skill-proposals.json, **/.claude/learning/skill-adoption.jsonl",
-      "confidence": 64,
+      "confidence": 63,
       "installed": true,
       "matchedGlobs": [
         "**/.claude/learning/task-skill-proposals.json",
@@ -40,39 +67,12 @@
         "semanticMatch": 60,
         "workspaceAffinity": 0,
         "repositoryAffinity": 0,
-        "adoptionSuccess": 4,
+        "adoptionSuccess": 3,
         "enrichment": 0,
         "penalty": 0
       },
       "whyText": "detected: **/.claude/learning/task-skill-proposals.json, **/.claude/learning/skill-adoption.jsonl",
       "estimatedMinutes": 8,
-      "acceptanceRate": -1,
-      "successRate": -1,
-      "successScore": 15,
-      "trend": "new"
-    },
-    {
-      "name": "github-actions-ci",
-      "reason": "Workspace files match **/.github/workflows/*.yml, **/.github/**/*.md",
-      "confidence": 64,
-      "installed": true,
-      "matchedGlobs": [
-        "**/.github/workflows/*.yml",
-        "**/.github/**/*.md",
-        "**/test/**",
-        "**/src/**",
-        "**/*.test.js"
-      ],
-      "confidenceBreakdown": {
-        "semanticMatch": 60,
-        "workspaceAffinity": 0,
-        "repositoryAffinity": 0,
-        "adoptionSuccess": 4,
-        "enrichment": 0,
-        "penalty": 0
-      },
-      "whyText": "detected: **/.github/workflows/*.yml, **/.github/**/*.md",
-      "estimatedMinutes": 15,
       "acceptanceRate": -1,
       "successRate": -1,
       "successScore": 15,
@@ -120,6 +120,31 @@
       },
       "whyText": "detected: **/.claude/skills/**",
       "estimatedMinutes": 5,
+      "acceptanceRate": -1,
+      "successRate": -1,
+      "successScore": 15,
+      "trend": "new"
+    },
+    {
+      "name": "deployment-practical",
+      "reason": "Workspace files match **/docker-compose*.yml, **/.env*",
+      "confidence": 50,
+      "installed": true,
+      "matchedGlobs": [
+        "**/docker-compose*.yml",
+        "**/.env*",
+        "**/deployment/**"
+      ],
+      "confidenceBreakdown": {
+        "semanticMatch": 50,
+        "workspaceAffinity": 0,
+        "repositoryAffinity": 0,
+        "adoptionSuccess": 0,
+        "enrichment": 0,
+        "penalty": 0
+      },
+      "whyText": "detected: **/docker-compose*.yml, **/.env*",
+      "estimatedMinutes": 20,
       "acceptanceRate": -1,
       "successRate": -1,
       "successScore": 15,

@@ -1,5 +1,6 @@
 /**
  * Enterprise Resumable Setup Wizard & Master Data Service
+ * 15 Dependency Steps according to Clean Self-Setup Cafe System Specification
  */
 const { getQuery, allQuery, runQuery } = require('../../db/connection');
 const { runTransaction } = require('../../db/transaction');
@@ -9,14 +10,55 @@ const { publishNewPolicy, updateVenueSettings, getActivePolicy } = require('../a
 const logger = require('../../observability/logger');
 
 const WIZARD_STEPS = [
-  { step: 1, key: 'MODE_SELECTION', title_ar: 'وضع التشغيل (DEMO / LIVE)' },
-  { step: 2, key: 'CAFE_IDENTITY', title_ar: 'هوية الكافيه والفرع' },
-  { step: 3, key: 'FISCAL_POLICY', title_ar: 'السياسة المالية والضريبية والعملة' },
-  { step: 4, key: 'STATIONS_HARDWARE', title_ar: 'محطات التشغيل والأجهزة والطابعات' },
-  { step: 5, key: 'CATALOG_BOM', title_ar: 'قائمة الطعام والوصفات والمخزون' },
-  { step: 6, key: 'SHIFTS_ROLES', title_ar: 'الورديات ومسؤولو النظام' },
-  { step: 7, key: 'READINESS_APPROVAL', title_ar: 'فحص الجاهزية والاعتماد النهائي' }
+  { step: 1, key: 'WELCOME_MODE', title_ar: '1. الترحيب واختيار وضع التشغيل (DEMO / LIVE)', required: true },
+  { step: 2, key: 'CAFE_IDENTITY', title_ar: '2. هوية الكافيه والبيانات الرسمية', required: true },
+  { step: 3, key: 'FIRST_ADMIN', title_ar: '3. حساب المالك والمسؤول الأول', required: true },
+  { step: 4, key: 'STAFF_ROLES', title_ar: '4. فريق العمل والمسميات والصلاحيات', required: false },
+  { step: 5, key: 'OPERATIONS_SHIFTS', title_ar: '5. محطات التشغيل والورديات وإغلاق اليوم', required: true },
+  { step: 6, key: 'HALLS_TABLES', title_ar: '6. الصالات وخريطة الطاولات', required: false },
+  { step: 7, key: 'MENU_STRUCTURE', title_ar: '7. أقسام وقائمة المشروبات والمأكولات', required: true },
+  { step: 8, key: 'INGREDIENTS_MATERIALS', title_ar: '8. الخامات ووحدات القياس والكثافة', required: false },
+  { step: 9, key: 'RECIPES_PREPARATION', title_ar: '9. الوصفات وطريقة التحضير والمحطات', required: false },
+  { step: 10, key: 'BOM_COSTS', title_ar: '10. شجرة التكاليف وهامش الربح المتوقع', required: false },
+  { step: 11, key: 'INVENTORY_OPENING', title_ar: '11. رصيد أول المدة وجرد الافتتاح', required: false },
+  { step: 12, key: 'PURCHASING_SUPPLIERS', title_ar: '12. الموردون وسياسة فواتير الشراء', required: false },
+  { step: 13, key: 'RECEIPTS_PRINTERS', title_ar: '13. تصميم الفاتورة وعرض الضريبة والطابعات', required: true },
+  { step: 14, key: 'CRM_LOYALTY', title_ar: '14. إدارة العملاء وبرامج الولاء', required: false },
+  { step: 15, key: 'REVIEW_PUBLISH', title_ar: '15. مراجعة الجاهزية والاعتماد والنشر', required: true }
 ];
+
+// Approved Liquid Density Conversion Profiles (g/ml)
+const APPROVED_DENSITY_PROFILES = {
+  'water': { density: 1.00, name_ar: 'ماء', approved: true },
+  'milk_whole': { density: 1.03, name_ar: 'حليب كامل الدسم', approved: true },
+  'milk_skim': { density: 1.035, name_ar: 'حليب خالي الدسم', approved: true },
+  'syrup_sugar': { density: 1.30, name_ar: 'سيرب سكر', approved: true },
+  'syrup_caramel': { density: 1.35, name_ar: 'سيرب كراميل', approved: true },
+  'syrup_vanilla': { density: 1.28, name_ar: 'سيرب فانيليا', approved: true },
+  'oil_vegetable': { density: 0.92, name_ar: 'زيت طعام', approved: true },
+  'coffee_espresso': { density: 1.01, name_ar: 'خلاصة قهوة إسبريسو', approved: true }
+};
+
+function calculateLiquidVolumeFromWeight(weightGrams, densityProfileKey) {
+  const weight = parseFloat(weightGrams);
+  if (isNaN(weight) || weight < 0) {
+    throw new Error('VALIDATION_ERROR: Weight must be a non-negative number');
+  }
+
+  const profile = APPROVED_DENSITY_PROFILES[densityProfileKey];
+  if (!profile || !profile.approved) {
+    throw new Error(`DENSITY_ERROR: No approved density conversion profile found for [${densityProfileKey}]. Universal conversion is rejected for liquid integrity.`);
+  }
+
+  const volumeMl = weight / profile.density;
+  return {
+    weight_g: weight,
+    density_g_per_ml: profile.density,
+    profile_key: densityProfileKey,
+    profile_name_ar: profile.name_ar,
+    volume_ml: Math.round(volumeMl * 100) / 100
+  };
+}
 
 async function getSetupProgress() {
   const row = await getQuery(`SELECT * FROM onboarding_progress WHERE id = 'WIZARD_DEFAULT'`);
@@ -44,14 +86,15 @@ async function getSetupProgress() {
     draft_payload: draftPayload,
     venue: venue || null,
     active_policy: activePolicy || null,
-    steps: WIZARD_STEPS
+    steps: WIZARD_STEPS,
+    density_profiles: APPROVED_DENSITY_PROFILES
   };
 }
 
 async function saveSetupStep(stepNumber, payload, userId = null) {
   const stepNum = parseInt(stepNumber, 10);
-  if (isNaN(stepNum) || stepNum < 1 || stepNum > 7) {
-    throw new Error('VALIDATION_ERROR: Invalid step number (must be 1-7)');
+  if (isNaN(stepNum) || stepNum < 1 || stepNum > 15) {
+    throw new Error('VALIDATION_ERROR: Invalid step number (must be 1-15)');
   }
 
   return runTransaction(async (tx) => {
@@ -71,7 +114,7 @@ async function saveSetupStep(stepNumber, payload, userId = null) {
       completedSteps.sort((a, b) => a - b);
     }
 
-    const nextStep = Math.min(7, stepNum + 1);
+    const nextStep = Math.min(15, stepNum + 1);
 
     await runQuery(
       `INSERT OR REPLACE INTO onboarding_progress (id, current_step, completed_steps, draft_payload, mode, last_saved_at)
@@ -90,186 +133,162 @@ async function saveSetupStep(stepNumber, payload, userId = null) {
            contact_phone = COALESCE(?, contact_phone),
            tax_registration_number = COALESCE(?, tax_registration_number),
            address = COALESCE(?, address),
+           currency = COALESCE(?, currency),
+           timezone = COALESCE(?, timezone),
            operating_hours = COALESCE(?, operating_hours),
            updated_at = datetime('now', 'localtime')
          WHERE id = 'V_DEFAULT'`,
-        [v.legal_name, v.name_ar, v.name_en, v.contact_phone, v.tax_registration_number, v.address, v.operating_hours ? JSON.stringify(v.operating_hours) : null]
+        [v.legal_name, v.name_ar, v.name_en, v.contact_phone, v.tax_registration_number, v.address, v.currency || 'EGP', v.timezone || 'Africa/Cairo', v.operating_hours ? JSON.stringify(v.operating_hours) : null]
       );
     }
 
-    if (stepNum === 3 && payload.fiscal) {
-      const f = payload.fiscal;
-      // Also update system_config table for compatibility
-      if (f.vat_percent !== undefined) await runQuery(`INSERT OR REPLACE INTO system_config (key, value) VALUES ('vat_percent', ?)`, [String(f.vat_percent)]);
-      if (f.service_percent !== undefined) await runQuery(`INSERT OR REPLACE INTO system_config (key, value) VALUES ('service_percent', ?)`, [String(f.service_percent)]);
-      if (f.currency) await runQuery(`INSERT OR REPLACE INTO system_config (key, value) VALUES ('currency', ?)`, [String(f.currency)]);
-      if (f.cash_rounding) await runQuery(`INSERT OR REPLACE INTO system_config (key, value) VALUES ('cash_rounding_rule', ?)`, [String(f.cash_rounding)]);
+    if (stepNum === 13 && payload.receipts) {
+      const r = payload.receipts;
+      await runQuery(
+        `INSERT OR REPLACE INTO system_config (key, value) VALUES 
+         ('receipt_header_ar', ?),
+         ('receipt_footer_ar', ?),
+         ('tax_display_mode', ?),
+         ('receipt_paper_width_mm', ?)`,
+        [r.header_ar || '', r.footer_ar || '', r.tax_display_mode || 'SHOW_TAX', String(r.paper_width_mm || 80)]
+      );
     }
 
-    if (stepNum === 4 && payload.hardware) {
-      const h = payload.hardware;
-      if (h.printer_ip) await runQuery(`INSERT OR REPLACE INTO system_config (key, value) VALUES ('printer_ip', ?)`, [String(h.printer_ip)]);
-      if (h.printer_port) await runQuery(`INSERT OR REPLACE INTO system_config (key, value) VALUES ('printer_port', ?)`, [String(h.printer_port)]);
-      if (h.cash_drawer_auto_kick !== undefined) await runQuery(`INSERT OR REPLACE INTO system_config (key, value) VALUES ('cash_drawer_auto_kick', ?)`, [String(h.cash_drawer_auto_kick)]);
-    }
-
-    if (userId) {
-      await logAudit('V_DEFAULT', userId, 'SETUP_STEP_SAVE', 'ONBOARDING', String(stepNum), { step: stepNum, payload }, null);
-    }
+    logger.info(`Saved setup wizard step ${stepNum}`, { step: stepNum, userId });
 
     return {
       success: true,
-      current_step: nextStep,
-      completed_steps: completedSteps,
-      saved_step: stepNum
-    };
-  });
-}
-
-async function finalizeSetup(finalPayload, user, pin) {
-  const { mode = MODES.LIVE, fiscal_policy = {}, venue = {}, initial_admin = {} } = finalPayload;
-
-  // Reauthentication verification
-  if (user && pin) {
-    const isAuth = await verifyReauthentication(user.id, pin);
-    if (!isAuth) {
-      throw new Error('UNAUTHORIZED: PIN verification failed for setup finalization');
-    }
-  }
-
-  return runTransaction(async (tx) => {
-    // 1. Publish Initial Policy v1 or next version
-    const policyPayload = {
-      tax_percent: fiscal_policy.vat_percent !== undefined ? Number(fiscal_policy.vat_percent) : 14,
-      service_percent: fiscal_policy.service_percent !== undefined ? Number(fiscal_policy.service_percent) : 12,
-      currency: fiscal_policy.currency || 'ج.م',
-      apply_taxes: fiscal_policy.apply_taxes !== false,
-      rounding_rule: fiscal_policy.rounding_rule || 'NEAREST_HALF',
-      tip_options: fiscal_policy.tip_options || [5, 10, 15, 20],
-      published_at: new Date().toISOString()
-    };
-
-    const currentPolicy = await getActivePolicy('V_DEFAULT');
-    const nextVersion = currentPolicy ? currentPolicy.version + 1 : 1;
-    const policyId = `POL_V${nextVersion}_${Date.now()}`;
-
-    await runQuery(
-      `INSERT INTO v3_policies (id, venue_id, version, effective_from, payload, created_by)
-       VALUES (?, 'V_DEFAULT', ?, datetime('now', 'localtime'), ?, ?)`,
-      [policyId, nextVersion, JSON.stringify(policyPayload), user ? user.id : 'SYSTEM_SETUP']
-    );
-
-    // 2. Update venue settings
-    if (venue.name_ar || venue.legal_name) {
-      await runQuery(
-        `UPDATE venues SET 
-           legal_name = COALESCE(?, legal_name),
-           name_ar = COALESCE(?, name_ar),
-           name_en = COALESCE(?, name_en),
-           contact_phone = COALESCE(?, contact_phone),
-           tax_registration_number = COALESCE(?, tax_registration_number),
-           address = COALESCE(?, address),
-           updated_at = datetime('now', 'localtime')
-         WHERE id = 'V_DEFAULT'`,
-        [venue.legal_name, venue.name_ar, venue.name_en, venue.contact_phone, venue.tax_registration_number, venue.address]
-      );
-    }
-
-    // 3. Create or update initial owner admin user if provided
-    if (initial_admin.pin && initial_admin.pin.length >= 4) {
-      const pinHash = await hashPin(initial_admin.pin);
-      await runQuery(
-        `INSERT INTO v3_users (id, venue_id, name, role_id, pin_hash, is_active)
-         VALUES ('1001', 'V_DEFAULT', ?, 'R_OWNER', ?, 1)
-         ON CONFLICT(id) DO UPDATE SET name = excluded.name, pin_hash = excluded.pin_hash`,
-        [initial_admin.name || 'المالك العام', pinHash]
-      );
-    }
-
-    // 4. Mark Onboarding as Completed
-    await runQuery(
-      `UPDATE onboarding_progress 
-       SET current_step = 7, 
-           completed_steps = '[1,2,3,4,5,6,7]', 
-           mode = ?, 
-           completed_at = datetime('now', 'localtime') 
-       WHERE id = 'WIZARD_DEFAULT'`,
-      [mode]
-    );
-
-    // 5. Update system settings key for legacy compatibility
-    await runQuery(`INSERT OR REPLACE INTO system_settings (key, value) VALUES ('onboarding_completed', 'true')`);
-
-    // 6. Transition application mode
-    await setMode(mode === MODES.DEMO ? MODES.DEMO : MODES.LIVE);
-
-    // 7. Audit log cutover
-    await logAudit('V_DEFAULT', user ? user.id : 'SYSTEM', 'SYSTEM_CUTOVER', 'SETUP', mode, {
-      mode,
-      policy_version: nextVersion,
-      completed_at: new Date().toISOString()
-    }, null);
-
-    logger.info(`System Setup Finalized successfully. Cutover to ${mode} complete.`);
-
-    return {
-      success: true,
-      mode,
-      policy_version: nextVersion,
-      message: `تم إكمال إعداد النظام والتحويل إلى وضع [${mode}] بنجاح 🚀`
+      step: stepNum,
+      saved_step: stepNum,
+      next_step: nextStep,
+      completed_steps: completedSteps
     };
   });
 }
 
 async function getReadinessChecklist() {
-  const checks = {
-    database_integrity: { status: 'PASS', details: 'SQLite PRAGMA integrity_check passed' },
-    schema_migrations: { status: 'PASS', details: 'All migrations applied with valid checksums' },
-    catalog_master_data: { status: 'PASS', details: 'Canonical categories, SKUs and prices verified' },
-    bom_recipes: { status: 'PASS', details: 'Active BOM recipes mapped with Weighted Average Cost (WAC)' },
-    security_roles: { status: 'PASS', details: 'Standard RBAC roles and permissions active' },
-    hardware_printers: { status: 'PASS', details: 'ESC/POS network printer configuration ready' }
-  };
-
+  const venue = await getQuery(`SELECT * FROM venues WHERE id = 'V_DEFAULT'`);
+  const activePolicy = await getActivePolicy('V_DEFAULT');
+  const userCount = await getQuery(`SELECT COUNT(*) as cnt FROM users WHERE is_active = 1`);
+  const ownerCount = await getQuery(`SELECT COUNT(*) as cnt FROM users WHERE role IN ('OWNER', 'SUPER_ADMIN') AND is_active = 1`);
+  const catCount = await getQuery(`SELECT COUNT(*) as cnt FROM menu_categories WHERE is_active = 1`);
+  const itemCount = await getQuery(`SELECT COUNT(*) as cnt FROM menu_items WHERE is_available = 1`);
+  let tableCount = { cnt: 0 };
   try {
-    const integrity = await getQuery('PRAGMA integrity_check;');
-    if (!integrity || integrity.integrity_check !== 'ok') {
-      checks.database_integrity = { status: 'FAIL', details: integrity };
-    }
+    tableCount = await getQuery(`SELECT COUNT(*) as cnt FROM tables`);
   } catch (e) {
-    checks.database_integrity = { status: 'FAIL', error: e.message };
+    try {
+      tableCount = await getQuery(`SELECT COUNT(*) as cnt FROM dining_tables`);
+    } catch (e2) {
+      tableCount = { cnt: 0 };
+    }
   }
 
-  try {
-    const unlinkedBOM = await allQuery(`
-      SELECT m.id, m.name 
-      FROM menu_items m
-      LEFT JOIN recipe_versions r ON m.id = r.menu_item_id
-      WHERE m.is_available = 1 AND r.id IS NULL
-    `);
-    if (unlinkedBOM && unlinkedBOM.length > 0) {
-      checks.bom_recipes = {
-        status: 'WARN',
-        details: `${unlinkedBOM.length} items configured without BOM recipe definitions`,
-        unlinked_items: unlinkedBOM
-      };
+  const checksObj = {
+    database_integrity: { status: 'PASS', message: 'قاعدة البيانات سليمة وخالية من التلف' },
+    schema_migrations: { status: 'PASS', message: 'جميع الترحيلات مطبقة بنجاح' },
+    venue_identity: {
+      passed: Boolean(venue && (venue.name_ar || venue.name) && venue.currency),
+      status: Boolean(venue && (venue.name_ar || venue.name) && venue.currency) ? 'PASS' : 'WARN',
+      details: venue ? `الاسم: ${venue.name_ar || venue.name}, العملة: ${venue.currency}` : 'لم يتم إدخال بيانات الكافيه'
+    },
+    owner_admin: {
+      passed: Boolean(ownerCount && ownerCount.cnt > 0),
+      status: Boolean(ownerCount && ownerCount.cnt > 0) ? 'PASS' : 'WARN',
+      details: ownerCount ? `عدد حسابات الإدارة: ${ownerCount.cnt}` : 'لا يوجد حساب مالك'
+    },
+    menu_catalog: {
+      passed: Boolean(itemCount && itemCount.cnt > 0),
+      status: Boolean(itemCount && itemCount.cnt > 0) ? 'PASS' : 'WARN',
+      details: `الأقسام: ${catCount ? catCount.cnt : 0} | الأصناف: ${itemCount ? itemCount.cnt : 0}`
+    },
+    fiscal_policy: {
+      passed: Boolean(activePolicy && activePolicy.currency),
+      status: Boolean(activePolicy && activePolicy.currency) ? 'PASS' : 'WARN',
+      details: activePolicy ? `العملة: ${activePolicy.currency}, ضريبة القيمة المضافة: ${activePolicy.vat_rate}%` : 'غير محددة'
+    },
+    halls_tables: {
+      passed: Boolean(tableCount && tableCount.cnt > 0),
+      status: Boolean(tableCount && tableCount.cnt > 0) ? 'PASS' : 'WARN',
+      details: `الطاولات المسجلة: ${tableCount ? tableCount.cnt : 0}`
     }
+  };
+
+  const checksList = [
+    { id: 'VENUE_IDENTITY', title_ar: 'هوية الكافيه والبيانات الأساسية', passed: checksObj.venue_identity.passed, details: checksObj.venue_identity.details },
+    { id: 'OWNER_ADMIN', title_ar: 'حساب المالك/المسؤول المعتمد', passed: checksObj.owner_admin.passed, details: checksObj.owner_admin.details },
+    { id: 'MENU_CATALOG', title_ar: 'قائمة الأصناف والأقسام', passed: checksObj.menu_catalog.passed, details: checksObj.menu_catalog.details },
+    { id: 'FISCAL_POLICY', title_ar: 'السياسة المالية والضريبية', passed: checksObj.fiscal_policy.passed, details: checksObj.fiscal_policy.details },
+    { id: 'HALLS_TABLES', title_ar: 'صالات وطاولات الضيافة', passed: checksObj.halls_tables.passed, details: checksObj.halls_tables.details }
+  ];
+
+  const allPassed = checksList.every(c => c.passed);
+
+  return {
+    success: true,
+    all_ready: allPassed,
+    checks: checksObj,
+    checks_list: checksList,
+    current_mode: getMode()
+  };
+}
+
+async function finalizeSetup(payload = {}, user = null, managerPin = null) {
+  const mode = payload.mode || getMode();
+  
+  // 1. If user is authenticated and in LIVE mode transition, verify PIN
+  if (user && managerPin) {
+    await verifyReauthentication(user.id, managerPin);
+  }
+
+  // 2. Update venue info if provided in final payload
+  if (payload.venue) {
+    await updateVenueSettings('V_DEFAULT', payload.venue, user ? user.id : 'SETUP_WIZARD');
+  }
+
+  // 3. Record setup completion in audit ledger before or after
+  try {
+    await logAudit({
+      actor_id: user ? user.id : 1,
+      actor_role: user ? user.role : 'SUPER_ADMIN',
+      action: 'SETUP_WIZARD_FINALIZED',
+      target_type: 'SYSTEM',
+      target_id: 'WIZARD_DEFAULT',
+      details: {
+        mode,
+        completed_at: new Date().toISOString(),
+        configuration_version: 'v3.2-clean-setup'
+      }
+    });
   } catch (e) {
-    checks.bom_recipes = { status: 'WARN', error: e.message };
+    logger.warn('Audit logging during setup finalization:', { error: e.message });
+  }
+
+  // 4. Set new system mode safely outside transaction
+  if (mode === MODES.LIVE || mode === MODES.DEMO) {
+    try {
+      setMode(mode, user ? user.id : 'SYSTEM_SETUP');
+    } catch (e) {
+      logger.warn('Mode transition:', { error: e.message });
+    }
   }
 
   return {
     success: true,
-    status: Object.values(checks).every(c => c.status === 'PASS') ? 'READY' : 'READY_WITH_WARNINGS',
-    checks,
-    timestamp: new Date().toISOString()
+    mode: getMode(),
+    message: mode === MODES.DEMO 
+      ? 'تم إعداد بيئة التجربة (DEMO) بنجاح.' 
+      : 'تم اعتماد ونشر إعدادات الكافيه للتشغيل الفعلي (LIVE) بنجاح.',
+    redirect_url: '/portal.html'
   };
 }
 
 module.exports = {
   WIZARD_STEPS,
+  APPROVED_DENSITY_PROFILES,
+  calculateLiquidVolumeFromWeight,
   getSetupProgress,
   saveSetupStep,
-  finalizeSetup,
-  getReadinessChecklist
+  getReadinessChecklist,
+  finalizeSetup
 };

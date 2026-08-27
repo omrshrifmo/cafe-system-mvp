@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-08-27T04:50:04.358Z",
+  "generatedAt": "2026-08-27T14:22:15.101Z",
   "workspacePath": "/home/omrshrifmo/cafe-system-mvp",
   "branch": "main",
   "skills": [
@@ -153,8 +153,12 @@
         "**/.env*",
         "**/deployment/**"
       ],
-      "isRelevant": false,
-      "matchedGlobs": [],
+      "isRelevant": true,
+      "matchedGlobs": [
+        "**/docker-compose*.yml",
+        "**/.env*",
+        "**/deployment/**"
+      ],
       "installedInWorkspace": false,
       "availableInGlobal": false,
       "inLibrary": true,

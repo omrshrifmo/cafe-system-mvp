@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>كافيه مزاج - دليل الاستخدام والتشغيل الشامل</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Cairo', system-ui, -apple-system, sans-serif;
+      background-color: #0b1120;
+      color: #f8fafc;
+    }
+    .glass {
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(51, 65, 85, 0.6);
+    }
+  </style>
+</head>
+<body class="min-h-screen p-4 md:p-8 flex flex-col items-center">
+  <!-- Header -->
+  <header class="w-full max-w-5xl flex items-center justify-between mb-8 pb-4 border-b border-slate-800">
+    <div class="flex items-center gap-3">
+      <div class="w-12 h-12 bg-amber-500/20 border border-amber-500/40 rounded-xl flex items-center justify-center text-2xl">
+        📚
+      </div>
+      <div>
+        <h1 class="text-xl font-bold text-slate-100">دليل الاستخدام والتشغيل الشامل</h1>
+        <p class="text-xs text-slate-400">كافيه مزاج — دليل المشغلين والمديرين والملاك</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-3">
+      <a href="/portal.html" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 border border-slate-700 transition-colors">
+        العودة للوحة التحكم 🏠
+      </a>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="w-full max-w-5xl grid grid-cols-1 md:grid-cols-4 gap-6">
+    <!-- Sidebar Navigation -->
+    <aside class="md:col-span-1 glass rounded-2xl p-4 h-fit sticky top-6 space-y-2 text-xs">
+      <h2 class="font-bold text-amber-400 mb-3 px-2">فهرس الدليل</h2>
+      <a href="#sec-intro" class="block p-2 rounded-lg hover:bg-slate-800 text-slate-300 font-semibold transition-colors">1. المقدمة وأوضاع التشغيل</a>
+      <a href="#sec-auth" class="block p-2 rounded-lg hover:bg-slate-800 text-slate-300 font-semibold transition-colors">2. الأمان وقفل الخمول</a>
+      <a href="#sec-pos" class="block p-2 rounded-lg hover:bg-slate-800 text-slate-300 font-semibold transition-colors">3. نقطة البيع والطلبات</a>
+      <a href="#sec-kds" class="block p-2 rounded-lg hover:bg-slate-800 text-slate-300 font-semibold transition-colors">4. شاشات المطبخ والبار KDS</a>
+      <a href="#sec-bom" class="block p-2 rounded-lg hover:bg-slate-800 text-slate-300 font-semibold transition-colors">5. المخزون والوصفات والكثافة</a>
+      <a href="#sec-shifts" class="block p-2 rounded-lg hover:bg-slate-800 text-slate-300 font-semibold transition-colors">6. الورديات والجرد الأعمى</a>
+      <a href="#sec-offline" class="block p-2 rounded-lg hover:bg-slate-800 text-slate-300 font-semibold transition-colors">7. العمل دون اتصال والمزامنة</a>
+    </aside>
+
+    <!-- Content Sections -->
+    <div class="md:col-span-3 space-y-6">
+      <!-- Section 1 -->
+      <section id="sec-intro" class="glass rounded-2xl p-6 shadow-xl space-y-3">
+        <h3 class="text-base font-black text-amber-400 flex items-center gap-2">
+          <span>☕</span>
+          <span>1. مقدمة النظام والفصل بين بيئة التجربة والتشغيل الفعلي</span>
+        </h3>
+        <p class="text-xs text-slate-300 leading-relaxed">
+          يوفر نظام كافيه مزاج بيئتين منفصلتين تماماً لحماية السجلات المالية والمحاسبية:
+        </p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+          <div class="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl">
+            <h4 class="font-bold text-amber-300 mb-1">🧪 وضع التجربة (DEMO MODE)</h4>
+            <p class="text-slate-300 text-[11px] leading-relaxed">بيئة معزولة تحتوي على أصناف ووصفات ومبيعات وهمية لتدريب طاقم العمل وتجربة إعدادات القائمة دون أي تأثير على السجلات الحقيقية أو الضرائب.</p>
+          </div>
+          <div class="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl">
+            <h4 class="font-bold text-emerald-300 mb-1">🚀 وضع التشغيل الفعلي (LIVE PRODUCTION)</h4>
+            <p class="text-slate-300 text-[11px] leading-relaxed">بيئة التشغيل النظيفة الخالية من أي بيانات افتراضية، تبدأ بجرد افتتاحي حقيقي لربط المبيعات والمصروفات بالدفاتر المحاسبية الرسمية.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 2 -->
+      <section id="sec-auth" class="glass rounded-2xl p-6 shadow-xl space-y-3">
+        <h3 class="text-base font-black text-amber-400 flex items-center gap-2">
+          <span>🔒</span>
+          <span>2. الأمان وتسجيل الدخول المشترك وقفل الخمول</span>
+        </h3>
+        <ul class="space-y-2 text-xs text-slate-300 list-disc list-inside leading-relaxed">
+          <li><strong>رمز الدخول PIN:</strong> يدخل كل موظف رمزه السري المكون من 4 أرقام عبر لوحة الأرقام.</li>
+          <li><strong>قفل الخمول بعد 15 ثانية:</strong> لحماية الكاشير على الأجهزة المشتركة، يتم قفل الشاشة تلقائياً عند ترك الجهاز دون لمس أو نقر.</li>
+          <li><strong>وضع النشاط المستمر (Caffeine Mode):</strong> يمكن للمشرف تفعيل وضع الكافيين لإبقاء الشاشة مفعلة أثناء ضغط العمل بحد أقصى ساعتين (120 دقيقة) مع التوثيق في سجل الرقابة.</li>
+          <li><strong>تسجيل الخروج الفوري:</strong> عند النقر على "خروج"، يتم إبطال الجلسة فوراً في السيرفر ومسح ذاكرة التخزين المؤقتة.</li>
+        </ul>
+      </section>
+
+      <!-- Section 3 -->
+      <section id="sec-pos" class="glass rounded-2xl p-6 shadow-xl space-y-3">
+        <h3 class="text-base font-black text-amber-400 flex items-center gap-2">
+          <span>💳</span>
+          <span>3. نقطة البيع (POS) وإدارة الفواتير</span>
+        </h3>
+        <p class="text-xs text-slate-300 leading-relaxed">
+          تتميز شاشة POS بسرعة الاستجابة ودعم الطلبات السريعة وطلبات الصالة:
+        </p>
+        <ul class="space-y-2 text-xs text-slate-300 list-disc list-inside leading-relaxed">
+          <li><strong>طرق الدفع المتعددة:</strong> نقدي (Cash)، بطاقات بنكية (Visa/MasterCard)، دفع مقسم (Split Payment).</li>
+          <li><strong>عرض الضريبة:</strong> يمكن تهيئة الفاتورة لإظهار سطر الضريبة منفصلاً أو تضمينه في السعر حسب السياسة المعتمدة، مع بقاء الحسابات المحاسبية دقيقة.</li>
+        </ul>
+      </section>
+
+      <!-- Section 4 -->
+      <section id="sec-bom" class="glass rounded-2xl p-6 shadow-xl space-y-3">
+        <h3 class="text-base font-black text-amber-400 flex items-center gap-2">
+          <span>⚖️</span>
+          <span>4. إدارة المخزون وتحويل كثافة السوائل</span>
+        </h3>
+        <p class="text-xs text-slate-300 leading-relaxed">
+          عند وزن السوائل بميزان الجرامات، يمنع النظام التحويل العشوائي (1 جرام = 1 مل) للسوائل المختلفة، ويشترط ملف كثافة معتمد:
+        </p>
+        <div class="p-3 bg-slate-950/80 rounded-xl font-mono text-[11px] text-amber-300 text-center">
+          الحجم (مل) = الوزن (جرام) ÷ الكثافة (جرام/مل)
+        </div>
+        <p class="text-[11px] text-slate-400">
+          أمثلة الكثافة المعتمدة: الحليب كامل الدسم = 1.03 جم/مل | سيرب السكر = 1.30 جم/مل | الزيت = 0.92 جم/مل | الماء = 1.00 جم/مل.
+        </p>
+      </section>
+    </div>
+  </main>
+</body>
+</html>
