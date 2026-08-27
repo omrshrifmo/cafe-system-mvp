@@ -1,12 +1,12 @@
 --- AFTER RUNTIME IDENTITY REPORT ---
-Captured At: 2026-08-27T12:15:14.234Z
-Git Commit SHA: 1d9395990d8085673f2fef7a0ec570a344fcdc07
+Captured At: 2026-08-27T15:36:50.046Z
+Git Commit SHA: fca3bf8b25492673928f56a5d52d96b2b1b4c6be
 Node Version: v22.23.1
 Process List:
-omrshri+ 3079407  0.0  0.2 1459575340 38096 ?    SNl  07:49   0:18 /opt/antigravity-ide/antigravity-ide --max-old-space-size=3072 /opt/antigravity-ide/resources/app/extensions/node_modules/typescript/lib/tsserver.js --serverMode partialSemantic --useInferredProjectPerProjectRoot --disableAutomaticTypingAcquisition --cancellationPipeName /tmp/vscode-typescript1000/72851d26445bc8bb2a49/tscancellation-c8191e896a3da8d32d50.tmp* --locale en --noGetErrOnBackgroundUpdate --canUseWatchEvents --validateDefaultNpmLocation --useNodeIpc
-omrshri+ 3079408  0.7  0.5 1459575340 91848 ?    SNl  07:49   3:19 /opt/antigravity-ide/antigravity-ide --max-old-space-size=3072 /opt/antigravity-ide/resources/app/extensions/node_modules/typescript/lib/tsserver.js --useInferredProjectPerProjectRoot --enableTelemetry --cancellationPipeName /tmp/vscode-typescript1000/72851d26445bc8bb2a49/tscancellation-21ac8e737510ce7d3709.tmp* --locale en --noGetErrOnBackgroundUpdate --canUseWatchEvents --validateDefaultNpmLocation --useNodeIpc
-omrshri+ 3423462  0.0  0.1 1459575400 24168 ?    SNl  11:45   0:00 /opt/antigravity-ide/antigravity-ide /home/omrshrifmo/.antigravity-ide/extensions/ms-azuretools.vscode-containers-2.4.5-universal/dist/dockerfile-language-server-nodejs/lib/server.js --node-ipc --node-ipc --clientProcessId=3078978
-omrshri+ 3688297  0.5  0.5 1340156 84436 ?       SNsl 14:56   0:06 node /home/omrshrifmo/cafe-system-mvp/server.js
+omrshri+ 3079407  0.0  0.2 1459575340 33688 ?    SNl  07:49   0:18 /opt/antigravity-ide/antigravity-ide --max-old-space-size=3072 /opt/antigravity-ide/resources/app/extensions/node_modules/typescript/lib/tsserver.js --serverMode partialSemantic --useInferredProjectPerProjectRoot --disableAutomaticTypingAcquisition --cancellationPipeName /tmp/vscode-typescript1000/72851d26445bc8bb2a49/tscancellation-c8191e896a3da8d32d50.tmp* --locale en --noGetErrOnBackgroundUpdate --canUseWatchEvents --validateDefaultNpmLocation --useNodeIpc
+omrshri+ 3079408  0.5  1.1 1459575340 188500 ?   SNl  07:49   3:25 /opt/antigravity-ide/antigravity-ide --max-old-space-size=3072 /opt/antigravity-ide/resources/app/extensions/node_modules/typescript/lib/tsserver.js --useInferredProjectPerProjectRoot --enableTelemetry --cancellationPipeName /tmp/vscode-typescript1000/72851d26445bc8bb2a49/tscancellation-21ac8e737510ce7d3709.tmp* --locale en --noGetErrOnBackgroundUpdate --canUseWatchEvents --validateDefaultNpmLocation --useNodeIpc
+omrshri+ 3423462  0.0  0.1 1459575400 23708 ?    SNl  11:45   0:01 /opt/antigravity-ide/antigravity-ide /home/omrshrifmo/.antigravity-ide/extensions/ms-azuretools.vscode-containers-2.4.5-universal/dist/dockerfile-language-server-nodejs/lib/server.js --node-ipc --node-ipc --clientProcessId=3078978
+omrshri+ 3688297  0.2  0.4 1344188 72280 ?       SNsl 14:56   0:26 node /home/omrshrifmo/cafe-system-mvp/server.js
 
 Git Status:
 M .app_mode.json
@@ -15,8 +15,8 @@ M .app_mode.json
  M .claude/learning/cost-attribution.json
  M .claude/learning/pipeline-cycle.json
  M .claude/learning/project-profile.json
- M .claude/learning/remote-repo-probe.json
  M .claude/learning/today-cost.json
+ M .github/instructions/deployment-practical.instructions.md
  M .github/instructions/doc-coauthoring.instructions.md
  M .github/instructions/extension-value-audit.instructions.md
  M .github/instructions/file-style-conventions.instructions.md
@@ -35,6 +35,7 @@ M .app_mode.json
  M artifacts/full-day/reconciliation.json
  M artifacts/full-day/seed-manifest.json
  M artifacts/full-day/table-results.json
+ M artifacts/login-repair/browser-network-evidence.json
  M docs/release-gate.json
  M fixtures/gate-auth-role.sqlite
  M fixtures/gate-auth-role.sqlite-shm
@@ -49,56 +50,23 @@ M .app_mode.json
  M fixtures/gate-shared-context.sqlite-wal
  M fixtures/gate-shared-threat.sqlite-shm
  M fixtures/gate-shared-threat.sqlite-wal
- M public/index.html
- M public/modules/auth.js
- M public/sw.js
- M src/db/migrations/031_device_registry_and_emergency_access.sql
- M src/domain/auth/permissions.js
- M src/domain/system/modeService.js
- M src/domain/system/setupService.js
- M test/integration/ui_state_contract.test.js
-?? artifacts/full-day/cafe-backup-2026-08-27T12-06-28-730Z.sqlite
-?? artifacts/full-day/cafe-backup-2026-08-27T12-06-28-730Z.sqlite.enc
-?? artifacts/full-day/cafe-backup-2026-08-27T12-12-11-055Z.sqlite
-?? artifacts/full-day/cafe-backup-2026-08-27T12-12-11-055Z.sqlite.enc
-?? artifacts/full-day/cafe-backup-2026-08-27T12-14-29-959Z.sqlite
-?? artifacts/full-day/cafe-backup-2026-08-27T12-14-29-959Z.sqlite.enc
-?? artifacts/full-day/manifest-2026-08-27T12-06-28-730Z.json
-?? artifacts/full-day/manifest-2026-08-27T12-12-11-055Z.json
-?? artifacts/full-day/manifest-2026-08-27T12-14-29-959Z.json
-?? artifacts/login-repair/
-?? backups/cafe-backup-2026-08-27T12-06-59-619Z.sqlite
-?? backups/cafe-backup-2026-08-27T12-06-59-705Z.sqlite
-?? backups/cafe-backup-2026-08-27T12-06-59-705Z.sqlite.enc
-?? backups/cafe-backup-2026-08-27T12-06-59-890Z.sqlite
-?? backups/cafe-backup-2026-08-27T12-06-59-890Z.sqlite.enc
-?? backups/cafe-backup-2026-08-27T12-07-00-124Z.sqlite
-?? backups/cafe-backup-2026-08-27T12-07-00-124Z.sqlite.enc
-?? backups/cafe-backup-2026-08-27T12-07-01-566Z.sqlite
-?? backups/cafe-backup-2026-08-27T12-08-07-093Z.sqlite
-?? backups/cafe-backup-2026-08-27T12-12-49-236Z.sqlite
-?? backups/cafe-backup-2026-08-27T12-12-49-299Z.sqlite
-?? backups/cafe-backup-2026-08-27T12-12-49-299Z.sqlite.enc
-?? backups/cafe-backup-2026-08-27T12-12-49-441Z.sqlite
-?? backups/cafe-backup-2026-08-27T12-12-49-441Z.sqlite.enc
-?? backups/cafe-backup-2026-08-27T12-12-49-687Z.sqlite
-?? backups/cafe-backup-2026-08-27T12-12-49-687Z.sqlite.enc
-?? backups/cafe-backup-2026-08-27T12-12-52-323Z.sqlite
-?? backups/cafe-backup-2026-08-27T12-14-16-497Z.sqlite
-?? backups/manifest-2026-08-27T12-06-59-619Z.json
-?? backups/manifest-2026-08-27T12-06-59-705Z.json
-?? backups/manifest-2026-08-27T12-06-59-890Z.json
-?? backups/manifest-2026-08-27T12-07-00-124Z.json
-?? backups/manifest-2026-08-27T12-07-01-566Z.json
-?? backups/manifest-2026-08-27T12-08-07-093Z.json
-?? backups/manifest-2026-08-27T12-12-49-236Z.json
-?? backups/manifest-2026-08-27T12-12-49-299Z.json
-?? backups/manifest-2026-08-27T12-12-49-441Z.json
-?? backups/manifest-2026-08-27T12-12-49-687Z.json
-?? backups/manifest-2026-08-27T12-12-52-323Z.json
-?? backups/manifest-2026-08-27T12-14-16-497Z.json
-?? public/manual.html
-?? public/modules/help.js
-?? test/integration/login_browser_contract.test.js
-?? test/security/clean_setup_config_center.test.js
-?? test/security/login_module_delivery.test.js
+ D test/fixtures/full_day_fixture.db-shm
+ D test/fixtures/full_day_fixture.db-wal
+?? artifacts/full-day/cafe-backup-2026-08-27T15-34-20-344Z.sqlite
+?? artifacts/full-day/cafe-backup-2026-08-27T15-34-20-344Z.sqlite.enc
+?? artifacts/full-day/manifest-2026-08-27T15-34-20-344Z.json
+?? backups/cafe-backup-2026-08-27T15-35-01-810Z.sqlite
+?? backups/cafe-backup-2026-08-27T15-35-01-877Z.sqlite
+?? backups/cafe-backup-2026-08-27T15-35-01-877Z.sqlite.enc
+?? backups/cafe-backup-2026-08-27T15-35-02-045Z.sqlite
+?? backups/cafe-backup-2026-08-27T15-35-02-045Z.sqlite.enc
+?? backups/cafe-backup-2026-08-27T15-35-02-355Z.sqlite
+?? backups/cafe-backup-2026-08-27T15-35-02-355Z.sqlite.enc
+?? backups/cafe-backup-2026-08-27T15-35-06-523Z.sqlite
+?? backups/cafe-backup-2026-08-27T15-36-27-428Z.sqlite
+?? backups/manifest-2026-08-27T15-35-01-810Z.json
+?? backups/manifest-2026-08-27T15-35-01-877Z.json
+?? backups/manifest-2026-08-27T15-35-02-045Z.json
+?? backups/manifest-2026-08-27T15-35-02-355Z.json
+?? backups/manifest-2026-08-27T15-35-06-523Z.json
+?? backups/manifest-2026-08-27T15-36-27-428Z.json
