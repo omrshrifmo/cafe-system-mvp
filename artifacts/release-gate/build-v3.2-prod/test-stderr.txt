@@ -1,0 +1,38 @@
+
+--- FAILURE DETAILS ---
+
+>>> test/unit/build_info.test.js (Exit: 1)
+Build Info Provenance Contract
+    1) exposes a build id tied to the current git HEAD
+    ✔ exposes branch, repository, environment mode and port
+    ✔ sources schema/migration version from the applied database migrations
+    ✔ derives service worker identity from the served sw.js content
+    ✔ exposes database identity, process start time and server instance id
+    ✔ does not disclose secrets, PINs or raw session identifiers
+
+
+  5 passing (121ms)
+  1 failing
+
+  1) Build Info Provenance Contract
+       exposes a build id tied to the current git HEAD:
+
+      AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
++ actual - expected
+
++ 'build-v3.2-prod'
+- 'build-16731b4e-v2'
+         ^
+
+      + expected - actual
+
+      -build-v3.2-prod
+      +build-16731b4e-v2
+      
+      at Context.<anonymous> (test/unit/build_info.test.js:34:16)
+      at process.processImmediate (node:internal/timers:484:21)
+
+
+
+npm notice run cafe-system-mvp@2.0.0 npx
+npm notice run 'mocha' /home/omrshrifmo/cafe-system-mvp/test/unit/build_info.test.js --timeout 120000 --exit

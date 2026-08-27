@@ -1,0 +1,79 @@
+Commit: 16731b4eb20ebabc97599663e4a1d1fb20fa6b23
+
+Status:
+M .app_mode.json
+ M .claude/learning/attribution-collector-state.json
+ M .claude/learning/attribution-trust.json
+ M .claude/learning/cost-attribution.json
+ M .claude/learning/pipeline-cycle.json
+ M .claude/learning/project-profile.json
+ M .claude/learning/remote-repo-probe.json
+ M .claude/learning/today-cost.json
+ M .github/instructions/deployment-practical.instructions.md
+ M .github/instructions/doc-coauthoring.instructions.md
+ M .github/instructions/extension-value-audit.instructions.md
+ M .github/instructions/file-style-conventions.instructions.md
+ M .github/instructions/github-actions-ci.instructions.md
+ M .github/instructions/self-learning.instructions.md
+ M .github/instructions/skill-creator.instructions.md
+ M .github/instructions/skill-feedback-adaptation.instructions.md
+ M .github/instructions/skill-official-updater.instructions.md
+ M .github/instructions/skill-usage-insights.instructions.md
+ M artifacts/full-day/concurrency.json
+ M artifacts/full-day/event-trace.json
+ M artifacts/full-day/expected-vs-actual.md
+ M artifacts/full-day/full_day_sim.sqlite
+ M artifacts/full-day/full_day_sim.sqlite-shm
+ M artifacts/full-day/full_day_sim.sqlite-wal
+ M artifacts/full-day/reconciliation.json
+ M artifacts/full-day/seed-manifest.json
+ M artifacts/full-day/table-results.json
+ M docs/release-gate.json
+ M fixtures/gate-auth-role.sqlite
+ M fixtures/gate-auth-role.sqlite-shm
+ M fixtures/gate-auth-role.sqlite-wal
+ M fixtures/gate-device-session.sqlite
+ M fixtures/gate-device-session.sqlite-shm
+ M fixtures/gate-device-session.sqlite-wal
+ M fixtures/gate-floor-ledger.sqlite
+ M fixtures/gate-inactivity-caffeine.sqlite-shm
+ M fixtures/gate-inactivity-caffeine.sqlite-wal
+ M fixtures/gate-shared-context.sqlite-shm
+ M fixtures/gate-shared-context.sqlite-wal
+ M fixtures/gate-shared-threat.sqlite-shm
+ M fixtures/gate-shared-threat.sqlite-wal
+ M public/index.html
+ M public/nav.js
+ M public/portal.html
+ M public/setup.html
+ M public/sw.js
+ M src/app.js
+ M src/domain/auth/service.js
+ M src/domain/system/setupService.js
+ M src/http/middleware/security.js
+ M src/http/routes/auth.js
+?? artifacts/full-day/cafe-backup-2026-08-27T16-14-37-992Z.sqlite
+?? artifacts/full-day/cafe-backup-2026-08-27T16-14-37-992Z.sqlite.enc
+?? artifacts/full-day/manifest-2026-08-27T16-14-37-992Z.json
+?? artifacts/release-gate/
+?? backups/cafe-backup-2026-08-27T16-15-20-589Z.sqlite
+?? backups/cafe-backup-2026-08-27T16-15-20-643Z.sqlite
+?? backups/cafe-backup-2026-08-27T16-15-20-643Z.sqlite.enc
+?? backups/cafe-backup-2026-08-27T16-15-20-763Z.sqlite
+?? backups/cafe-backup-2026-08-27T16-15-20-763Z.sqlite.enc
+?? backups/cafe-backup-2026-08-27T16-15-20-968Z.sqlite
+?? backups/cafe-backup-2026-08-27T16-15-20-968Z.sqlite.enc
+?? backups/cafe-backup-2026-08-27T16-15-22-614Z.sqlite
+?? backups/cafe-backup-2026-08-27T16-16-48-009Z.sqlite
+?? backups/manifest-2026-08-27T16-15-20-589Z.json
+?? backups/manifest-2026-08-27T16-15-20-643Z.json
+?? backups/manifest-2026-08-27T16-15-20-763Z.json
+?? backups/manifest-2026-08-27T16-15-20-968Z.json
+?? backups/manifest-2026-08-27T16-15-22-614Z.json
+?? backups/manifest-2026-08-27T16-16-48-009Z.json
+?? fixtures/qa-auth.sqlite
+?? fixtures/qa-clean-live.sqlite
+?? fixtures/qa-demo.sqlite
+?? fixtures/qa-fixture-manifest.json
+?? scripts/generate_release_gate_fixtures.js
+?? scripts/run_release_gate.js

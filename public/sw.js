@@ -34,7 +34,7 @@ const STATIC_ASSETS = [
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('⚡ [ServiceWorker v3.1] Pre-caching offline shell assets');
+      console.log('⚡ [ServiceWorker v3.2-prod] Pre-caching offline shell assets');
       return cache.addAll(STATIC_ASSETS).catch((err) => {
         console.warn('⚠️ [ServiceWorker] Non-critical precache skip:', err);
       });

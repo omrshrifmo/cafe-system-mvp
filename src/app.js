@@ -260,7 +260,7 @@ function createApp() {
     // Redact full database path in production — only expose basename
     const exposePath = env.EXPOSE_DATABASE_PATH;
 
-    res.json({
+    const infoPayload = {
       status: 'OK',
       buildId: BUILD_ID,
       commitSha: COMMIT_SHA,
@@ -290,6 +290,12 @@ function createApp() {
         uptimeSeconds: Math.floor(process.uptime())
       },
       timestamp: new Date().toISOString()
+    };
+
+    res.json({
+      ...infoPayload,
+      success: true,
+      data: infoPayload
     });
   });
 

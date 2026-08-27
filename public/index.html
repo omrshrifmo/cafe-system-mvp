@@ -156,8 +156,8 @@
         const res = await fetch('/api/build-info', { cache: 'no-store' });
         if (res.ok) {
           const envelope = await res.json();
-          if (envelope.success && envelope.data) {
-            serverBuildInfo = envelope.data;
+          serverBuildInfo = envelope.data || envelope;
+          if (serverBuildInfo) {
             const demoBanner = document.getElementById('demo-banner');
             const liveBanner = document.getElementById('live-banner');
             const buildFooter = document.getElementById('buildFooter');
@@ -171,7 +171,7 @@
             }
 
             if (serverBuildInfo.buildId) {
-              buildFooter.textContent = `Build: ${serverBuildInfo.buildId} | Migrations: ${serverBuildInfo.migrationVersion || '031'} | SW: ${serverBuildInfo.serviceWorkerVersion || 'v3.2-prod'}`;
+              buildFooter.textContent = `Build: ${serverBuildInfo.buildId} | Migrations: ${serverBuildInfo.migrationVersion || '031'} | SW: ${serverBuildInfo.serviceWorkerVersion || 'cafe-os-v3.2-prod'}`;
             }
           }
         }

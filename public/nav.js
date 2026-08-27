@@ -55,11 +55,16 @@
     }
   ];
 
-  // Dynamically load UIState script if missing
+  // Dynamically load UIState and AuthModule scripts if missing
   if (typeof window !== 'undefined') {
     if (!window.UIState) {
       const script = document.createElement('script');
       script.src = '/modules/ui-state.js';
+      document.head.appendChild(script);
+    }
+    if (!window.AuthModule) {
+      const script = document.createElement('script');
+      script.src = '/modules/auth.js';
       document.head.appendChild(script);
     }
 
@@ -301,7 +306,11 @@
       return;
     }
     try {
-      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+      await fetch('/api/auth/logout', { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include' 
+      });
     } catch (e) {}
     localStorage.removeItem('user');
     localStorage.removeItem('currentUser');
@@ -617,12 +626,12 @@
             <span id="nav-notifications-badge" class="hidden bg-rose-500 text-white rounded-full px-1.5 py-0.2 text-[9px] font-black animate-pulse">0</span>
           </button>
 
-          <button onclick="window.AuthModule ? window.AuthModule.lockScreen() : null" title="قفل الشاشة مؤقتاً" class="px-2 md:px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 rounded-lg text-[11px] font-bold cursor-pointer transition-colors flex items-center gap-1">
+          <button onclick="window.MazajNav.lockScreen()" id="nav-lock-btn" title="قفل الشاشة مؤقتاً" class="px-2 md:px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 rounded-lg text-[11px] font-bold cursor-pointer transition-colors flex items-center gap-1">
             <span>🔒</span>
             <span class="hidden xs:inline">قفل</span>
           </button>
 
-          <button onclick="window.MazajNav.logout()" title="تسجيل الخروج" class="px-2 md:px-2.5 py-1 bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 border border-rose-500/30 rounded-lg text-[11px] font-bold cursor-pointer transition-colors flex items-center gap-1">
+          <button onclick="window.MazajNav.logout()" id="nav-logout-btn" title="تسجيل الخروج" class="px-2 md:px-2.5 py-1 bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 border border-rose-500/30 rounded-lg text-[11px] font-bold cursor-pointer transition-colors flex items-center gap-1">
             <span>🚪</span>
             <span class="hidden xs:inline">خروج</span>
           </button>
@@ -833,6 +842,21 @@
     }
   }
 
+  function lockScreen() {
+    if (window.AuthModule && typeof window.AuthModule.lockScreen === 'function') {
+      window.AuthModule.lockScreen();
+    } else {
+      const script = document.createElement('script');
+      script.src = '/modules/auth.js';
+      script.onload = () => {
+        if (window.AuthModule && typeof window.AuthModule.lockScreen === 'function') {
+          window.AuthModule.lockScreen();
+        }
+      };
+      document.head.appendChild(script);
+    }
+  }
+
   // Export functions globally
   window.MazajNav = {
     toggleSidebar,
@@ -843,6 +867,7 @@
     submitDisableCaffeine,
     showNotificationsModal,
     checkNotificationsBadge,
+    lockScreen,
     logout,
     initNav: validateSessionAndRender
   };

@@ -46,17 +46,21 @@ router.post('/login', authLimiter, async (req, res) => {
 });
 
 const handleLogout = async (req, res) => {
-  const token = (req.cookies && req.cookies.session_token) || req.headers['x-session-token'];
+  const token = (req.cookies && req.cookies.session_token) ||
+                (req.headers.authorization && req.headers.authorization.startsWith('Bearer ') ? req.headers.authorization.substring(7) : null) ||
+                req.headers['x-session-token'];
   const ip = req.ip || req.connection.remoteAddress;
 
   if (token) {
     await revokeSession(token);
-    if (req.user) {
-      await logAudit(req.user.venueId, req.user.id, 'LOGOUT', 'SESSION', null, {}, ip);
-    }
+  }
+  if (req.user && req.user.id) {
+    await revokeSession(req.user.sessionId || req.user.id);
+    await logAudit(req.user.venueId, req.user.id, 'LOGOUT', 'SESSION', null, {}, ip).catch(() => {});
   }
 
   res.clearCookie('session_token', {
+    path: '/',
     httpOnly: true,
     secure: env.NODE_ENV === 'production',
     sameSite: 'lax'
@@ -66,6 +70,7 @@ const handleLogout = async (req, res) => {
 };
 
 router.post('/logout', handleLogout);
+router.get('/logout', handleLogout);
 
 router.get('/me', requireAuth, (req, res) => {
   // Return strictly least identity needed: never expose raw session tokens or wildcard '*'

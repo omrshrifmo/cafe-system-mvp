@@ -101,23 +101,23 @@
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label class="block text-xs font-bold text-slate-300 mb-1">اسم الكافيه بالعربية *</label>
-          <input type="text" id="venueNameAr" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-slate-100 focus:border-amber-500 focus:outline-none" value="كافيه مزاج">
+          <input type="text" id="venueNameAr" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-slate-100 focus:border-amber-500 focus:outline-none" placeholder="مثال: كافيه مزاج" value="">
         </div>
         <div>
           <label class="block text-xs font-bold text-slate-300 mb-1">الاسم بالإنجليزية (Name in English)</label>
-          <input type="text" id="venueNameEn" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-slate-100 focus:border-amber-500 focus:outline-none" value="Mazag Cafe">
+          <input type="text" id="venueNameEn" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-slate-100 focus:border-amber-500 focus:outline-none" placeholder="e.g. Mazag Cafe" value="">
         </div>
         <div>
           <label class="block text-xs font-bold text-slate-300 mb-1">رقم التسجيل الضريبي / السجل التجاري</label>
-          <input type="text" id="venueTaxId" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-slate-100 focus:border-amber-500 focus:outline-none" value="300-123-456">
+          <input type="text" id="venueTaxId" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-slate-100 focus:border-amber-500 focus:outline-none" placeholder="300-xxx-xxx" value="">
         </div>
         <div>
           <label class="block text-xs font-bold text-slate-300 mb-1">رقم الهاتف للتواصل</label>
-          <input type="text" id="venuePhone" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-slate-100 focus:border-amber-500 focus:outline-none" value="01012345678">
+          <input type="text" id="venuePhone" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-slate-100 focus:border-amber-500 focus:outline-none" placeholder="010xxxxxxxx" value="">
         </div>
         <div class="md:col-span-2">
           <label class="block text-xs font-bold text-slate-300 mb-1">العنوان بالتفصيل</label>
-          <input type="text" id="venueAddress" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-slate-100 focus:border-amber-500 focus:outline-none" value="القاهرة - المعادي - شارع 9">
+          <input type="text" id="venueAddress" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-slate-100 focus:border-amber-500 focus:outline-none" placeholder="مثال: القاهرة - المعادي - شارع 9" value="">
         </div>
       </div>
     </section>
@@ -539,7 +539,18 @@
     }
 
     window.addEventListener('DOMContentLoaded', async () => {
-      selectMode('DEMO');
+      try {
+        const statusRes = await fetch('/api/setup/status');
+        const statusData = statusRes.ok ? await statusRes.json() : {};
+        if (statusData.mode === 'DEMO') {
+          selectMode('DEMO');
+        } else {
+          selectMode('LIVE');
+        }
+      } catch (e) {
+        selectMode('LIVE');
+      }
+
       try {
         const res = await fetch('/api/setup/progress');
         const data = await res.json();

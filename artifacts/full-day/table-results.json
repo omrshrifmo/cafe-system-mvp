@@ -3,7 +3,7 @@
     "tableIndex": 1,
     "tableId": "T-2",
     "tableNumber": 2,
-    "sessionId": "OS-DAY-01-T-2-mtboo2hj",
+    "sessionId": "OS-DAY-01-T-2-mtbq3vhx",
     "shiftId": "SHF-MORN-20260825",
     "guestCount": 2,
     "internalName": "طاولة 2",
@@ -19,15 +19,15 @@
     "orderLinesCount": 2,
     "paymentsCount": 1,
     "assistTaskGenerated": false,
-    "printJobId": "PRINT-MTBOO2I6-9BA1C7",
+    "printJobId": "PRINT-MTBQ3VID-C954B0",
     "reconciled": true,
-    "completedAt": "2026-08-27T15:34:19.570Z"
+    "completedAt": "2026-08-27T16:14:36.619Z"
   },
   {
     "tableIndex": 2,
     "tableId": "T-3",
     "tableNumber": 3,
-    "sessionId": "OS-DAY-02-T-3-mtboo2ia",
+    "sessionId": "OS-DAY-02-T-3-mtbq3vij",
     "shiftId": "SHF-MORN-20260825",
     "guestCount": 3,
     "internalName": "فطور عمل",
@@ -43,15 +43,15 @@
     "orderLinesCount": 3,
     "paymentsCount": 1,
     "assistTaskGenerated": false,
-    "printJobId": "PRINT-MTBOO2IN-D325A4",
+    "printJobId": "PRINT-MTBQ3VJ3-675CB2",
     "reconciled": true,
-    "completedAt": "2026-08-27T15:34:19.587Z"
+    "completedAt": "2026-08-27T16:14:36.642Z"
   },
   {
     "tableIndex": 3,
     "tableId": "T-4",
     "tableNumber": 4,
-    "sessionId": "OS-DAY-03-T-4-mtboo2ir",
+    "sessionId": "OS-DAY-03-T-4-mtbq3vj6",
     "shiftId": "SHF-MORN-20260825",
     "guestCount": 4,
     "internalName": "جلسة أبو فهد",
@@ -67,15 +67,15 @@
     "orderLinesCount": 3,
     "paymentsCount": 1,
     "assistTaskGenerated": false,
-    "printJobId": "PRINT-MTBOO2J7-374D26",
+    "printJobId": "PRINT-MTBQ3VJN-6CD5ED",
     "reconciled": true,
-    "completedAt": "2026-08-27T15:34:19.605Z"
+    "completedAt": "2026-08-27T16:14:36.661Z"
   },
   {
     "tableIndex": 4,
     "tableId": "T-5",
     "tableNumber": 5,
-    "sessionId": "OS-DAY-04-T-5-mtboo2j9",
+    "sessionId": "OS-DAY-04-T-5-mtbq3vjp",
     "shiftId": "SHF-MORN-20260825",
     "guestCount": 5,
     "internalName": "طاولة 5",
@@ -91,15 +91,15 @@
     "orderLinesCount": 3,
     "paymentsCount": 2,
     "assistTaskGenerated": true,
-    "printJobId": "PRINT-MTBOO2JS-F1F64E",
+    "printJobId": "PRINT-MTBQ3VKD-C19D1D",
     "reconciled": true,
-    "completedAt": "2026-08-27T15:34:19.626Z"
+    "completedAt": "2026-08-27T16:14:36.690Z"
   },
   {
     "tableIndex": 5,
     "tableId": "T-6",
     "tableNumber": 6,
-    "sessionId": "OS-DAY-05-T-6-mtboo2ju",
+    "sessionId": "OS-DAY-05-T-6-mtbq3vki",
     "shiftId": "SHF-MORN-20260825",
     "guestCount": 1,
     "internalName": "طاولة 6",
@@ -115,15 +115,15 @@
     "orderLinesCount": 2,
     "paymentsCount": 1,
     "assistTaskGenerated": false,
-    "printJobId": "PRINT-MTBOO2K7-F415C5",
+    "printJobId": "PRINT-MTBQ3VKT-0EFDF3",
     "reconciled": true,
-    "completedAt": "2026-08-27T15:34:19.641Z"
+    "completedAt": "2026-08-27T16:14:36.705Z"
   },
   {
     "tableIndex": 6,
     "tableId": "T-7",
     "tableNumber": 7,
-    "sessionId": "OS-DAY-06-T-7-mtboo2k9",
+    "sessionId": "OS-DAY-06-T-7-mtbq3vkx",
     "shiftId": "SHF-MORN-20260825",
     "guestCount": 2,
     "internalName": "طاولة 7",
@@ -139,15 +139,15 @@
     "orderLinesCount": 3,
     "paymentsCount": 1,
     "assistTaskGenerated": false,
-    "printJobId": "PRINT-MTBOO2L8-593AF0",
+    "printJobId": "PRINT-MTBQ3VLU-DE0F5D",
     "reconciled": true,
-    "completedAt": "2026-08-27T15:34:19.679Z"
+    "completedAt": "2026-08-27T16:14:36.742Z"
   },
   {
     "tableIndex": 7,
     "tableId": "T-8",
     "tableNumber": 8,
-    "sessionId": "OS-DAY-07-T-8-mtboo2lc",
+    "sessionId": "OS-DAY-07-T-8-mtbq3vly",
     "shiftId": "SHF-MORN-20260825",
     "guestCount": 3,
     "internalName": "طاولة 8",
@@ -163,15 +163,15 @@
     "orderLinesCount": 2,
     "paymentsCount": 1,
     "assistTaskGenerated": false,
-    "printJobId": "PRINT-MTBOO2LR-8DFA75",
+    "printJobId": "PRINT-MTBQ3VMF-8478B8",
     "reconciled": true,
-    "completedAt": "2026-08-27T15:34:19.700Z"
+    "completedAt": "2026-08-27T16:14:36.773Z"
   },
   {
     "tableIndex": 8,
     "tableId": "T-9",
     "tableNumber": 9,
-    "sessionId": "OS-DAY-08-T-9-mtboo2lw",
+    "sessionId": "OS-DAY-08-T-9-mtbq3vmt",
     "shiftId": "SHF-MORN-20260825",
     "guestCount": 4,
     "internalName": "طاولة 9",
@@ -187,15 +187,15 @@
     "orderLinesCount": 3,
     "paymentsCount": 1,
     "assistTaskGenerated": false,
-    "printJobId": "PRINT-MTBOO2MV-178FE8",
+    "printJobId": "PRINT-MTBQ3VO3-F3E485",
     "reconciled": true,
-    "completedAt": "2026-08-27T15:34:19.740Z"
+    "completedAt": "2026-08-27T16:14:36.825Z"
   },
   {
     "tableIndex": 9,
     "tableId": "T-10",
     "tableNumber": 10,
-    "sessionId": "OS-DAY-09-T-10-mtboo2n0",
+    "sessionId": "OS-DAY-09-T-10-mtbq3vo9",
     "shiftId": "SHF-MORN-20260825",
     "guestCount": 5,
     "internalName": "طاولة 10",
@@ -211,15 +211,15 @@
     "orderLinesCount": 3,
     "paymentsCount": 1,
     "assistTaskGenerated": false,
-    "printJobId": "PRINT-MTBOO2NL-A629BC",
+    "printJobId": "PRINT-MTBQ3VP6-5E2C59",
     "reconciled": true,
-    "completedAt": "2026-08-27T15:34:19.766Z"
+    "completedAt": "2026-08-27T16:14:36.860Z"
   },
   {
     "tableIndex": 10,
     "tableId": "T-11",
     "tableNumber": 11,
-    "sessionId": "OS-DAY-10-T-11-mtboo2nq",
+    "sessionId": "OS-DAY-10-T-11-mtbq3vp8",
     "shiftId": "SHF-MORN-20260825",
     "guestCount": 1,
     "internalName": "طاولة 11",
@@ -235,15 +235,15 @@
     "orderLinesCount": 3,
     "paymentsCount": 1,
     "assistTaskGenerated": false,
-    "printJobId": "PRINT-MTBOO2OB-5C20F9",
+    "printJobId": "PRINT-MTBQ3VPU-CAC741",
     "reconciled": true,
-    "completedAt": "2026-08-27T15:34:19.790Z"
+    "completedAt": "2026-08-27T16:14:36.890Z"
   },
   {
     "tableIndex": 11,
     "tableId": "T-12",
     "tableNumber": 12,
-    "sessionId": "OS-DAY-11-T-12-mtboo2oe",
+    "sessionId": "OS-DAY-11-T-12-mtbq3vq3",
     "shiftId": "SHF-MORN-20260825",
     "guestCount": 2,
     "internalName": "طاولة 12",
@@ -259,15 +259,15 @@
     "orderLinesCount": 2,
     "paymentsCount": 1,
     "assistTaskGenerated": false,
-    "printJobId": "PRINT-MTBOO2OP-EC35C1",
+    "printJobId": "PRINT-MTBQ3VQJ-64C877",
     "reconciled": true,
-    "completedAt": "2026-08-27T15:34:19.805Z"
+    "completedAt": "2026-08-27T16:14:36.910Z"
   },
   {
     "tableIndex": 12,
     "tableId": "T-13",
     "tableNumber": 13,
-    "sessionId": "OS-DAY-12-T-13-mtboo2ot",
+    "sessionId": "OS-DAY-12-T-13-mtbq3vqm",
     "shiftId": "SHF-MORN-20260825",
     "guestCount": 3,
     "internalName": "طاولة 13",
@@ -283,15 +283,15 @@
     "orderLinesCount": 3,
     "paymentsCount": 1,
     "assistTaskGenerated": false,
-    "printJobId": "PRINT-MTBOO2PM-766476",
+    "printJobId": "PRINT-MTBQ3VR7-BC80AB",
     "reconciled": true,
-    "completedAt": "2026-08-27T15:34:19.837Z"
+    "completedAt": "2026-08-27T16:14:36.940Z"
   },
   {
     "tableIndex": 13,
     "tableId": "T-14",
     "tableNumber": 14,
-    "sessionId": "OS-DAY-13-T-14-mtboo2pp",
+    "sessionId": "OS-DAY-13-T-14-mtbq3vrg",
     "shiftId": "SHF-MORN-20260825",
     "guestCount": 4,
     "internalName": "طاولة 14",
@@ -307,15 +307,15 @@
     "orderLinesCount": 2,
     "paymentsCount": 2,
     "assistTaskGenerated": true,
-    "printJobId": "PRINT-MTBOO2QC-556FAF",
+    "printJobId": "PRINT-MTBQ3VS3-CE1D36",
     "reconciled": true,
-    "completedAt": "2026-08-27T15:34:19.863Z"
+    "completedAt": "2026-08-27T16:14:36.973Z"
   },
   {
     "tableIndex": 14,
     "tableId": "T-15",
     "tableNumber": 15,
-    "sessionId": "OS-DAY-14-T-15-mtboo2qf",
+    "sessionId": "OS-DAY-14-T-15-mtbq3vsd",
     "shiftId": "SHF-MORN-20260825",
     "guestCount": 5,
     "internalName": "طاولة 15",
@@ -331,15 +331,15 @@
     "orderLinesCount": 3,
     "paymentsCount": 1,
     "assistTaskGenerated": false,
-    "printJobId": "PRINT-MTBOO2RW-D8AB99",
+    "printJobId": "PRINT-MTBQ3VUE-93AB19",
     "reconciled": true,
-    "completedAt": "2026-08-27T15:34:19.919Z"
+    "completedAt": "2026-08-27T16:14:37.057Z"
   },
   {
     "tableIndex": 15,
     "tableId": "T-16",
     "tableNumber": 16,
-    "sessionId": "OS-DAY-15-T-16-mtboo2rz",
+    "sessionId": "OS-DAY-15-T-16-mtbq3vup",
     "shiftId": "SHF-MORN-20260825",
     "guestCount": 1,
     "internalName": "طاولة 16",
@@ -355,15 +355,15 @@
     "orderLinesCount": 3,
     "paymentsCount": 1,
     "assistTaskGenerated": false,
-    "printJobId": "PRINT-MTBOO2T3-2CEE9C",
+    "printJobId": "PRINT-MTBQ3VW7-837AA1",
     "reconciled": true,
-    "completedAt": "2026-08-27T15:34:19.961Z"
+    "completedAt": "2026-08-27T16:14:37.118Z"
   },
   {
     "tableIndex": 16,
     "tableId": "T-1",
     "tableNumber": 1,
-    "sessionId": "OS-DAY-16-T-1-mtboo2t9",
+    "sessionId": "OS-DAY-16-T-1-mtbq3vwi",
     "shiftId": "SHF-NIGHT-20260825",
     "guestCount": 6,
     "internalName": "طاولة 1",
@@ -379,15 +379,15 @@
     "orderLinesCount": 3,
     "paymentsCount": 1,
     "assistTaskGenerated": false,
-    "printJobId": "PRINT-MTBOO2TX-DCC1AA",
+    "printJobId": "PRINT-MTBQ3VX5-78BA32",
     "reconciled": true,
-    "completedAt": "2026-08-27T15:34:19.992Z"
+    "completedAt": "2026-08-27T16:14:37.154Z"
   },
   {
     "tableIndex": 17,
     "tableId": "T-2",
     "tableNumber": 2,
-    "sessionId": "OS-DAY-17-T-2-mtboo2u0",
+    "sessionId": "OS-DAY-17-T-2-mtbq3vxe",
     "shiftId": "SHF-NIGHT-20260825",
     "guestCount": 7,
     "internalName": "طاولة 2",
@@ -403,15 +403,15 @@
     "orderLinesCount": 2,
     "paymentsCount": 1,
     "assistTaskGenerated": false,
-    "printJobId": "PRINT-MTBOO2UF-D37D3B",
+    "printJobId": "PRINT-MTBQ3VY4-A291BC",
     "reconciled": true,
-    "completedAt": "2026-08-27T15:34:20.009Z"
+    "completedAt": "2026-08-27T16:14:37.191Z"
   },
   {
     "tableIndex": 18,
     "tableId": "T-3",
     "tableNumber": 3,
-    "sessionId": "OS-DAY-18-T-3-mtboo2uh",
+    "sessionId": "OS-DAY-18-T-3-mtbq3vyf",
     "shiftId": "SHF-NIGHT-20260825",
     "guestCount": 2,
     "internalName": "عشاء عائلي VIP",
@@ -427,15 +427,15 @@
     "orderLinesCount": 3,
     "paymentsCount": 2,
     "assistTaskGenerated": true,
-    "printJobId": "PRINT-MTBOO2V0-A278B3",
+    "printJobId": "PRINT-MTBQ3VZ1-603DBE",
     "reconciled": false,
-    "completedAt": "2026-08-27T15:34:20.036Z"
+    "completedAt": "2026-08-27T16:14:37.224Z"
   },
   {
     "tableIndex": 19,
     "tableId": "T-4",
     "tableNumber": 4,
-    "sessionId": "OS-DAY-19-T-4-mtboo2v9",
+    "sessionId": "OS-DAY-19-T-4-mtbq3vzc",
     "shiftId": "SHF-NIGHT-20260825",
     "guestCount": 3,
     "internalName": "طاولة 4",
@@ -451,15 +451,15 @@
     "orderLinesCount": 2,
     "paymentsCount": 1,
     "assistTaskGenerated": false,
-    "printJobId": "PRINT-MTBOO2VR-B85AC2",
+    "printJobId": "PRINT-MTBQ3VZU-7D21B5",
     "reconciled": true,
-    "completedAt": "2026-08-27T15:34:20.058Z"
+    "completedAt": "2026-08-27T16:14:37.255Z"
   },
   {
     "tableIndex": 20,
     "tableId": "T-5",
     "tableNumber": 5,
-    "sessionId": "OS-DAY-20-T-5-mtboo2vu",
+    "sessionId": "OS-DAY-20-T-5-mtbq3w07",
     "shiftId": "SHF-NIGHT-20260825",
     "guestCount": 4,
     "internalName": "طاولة 5",
@@ -475,15 +475,15 @@
     "orderLinesCount": 3,
     "paymentsCount": 1,
     "assistTaskGenerated": false,
-    "printJobId": "PRINT-MTBOO2WB-BACA46",
+    "printJobId": "PRINT-MTBQ3W1Q-799388",
     "reconciled": true,
-    "completedAt": "2026-08-27T15:34:20.077Z"
+    "completedAt": "2026-08-27T16:14:37.312Z"
   },
   {
     "tableIndex": 21,
     "tableId": "T-6",
     "tableNumber": 6,
-    "sessionId": "OS-DAY-21-T-6-mtboo2wd",
+    "sessionId": "OS-DAY-21-T-6-mtbq3w1s",
     "shiftId": "SHF-NIGHT-20260825",
     "guestCount": 5,
     "internalName": "طاولة 6",
@@ -499,15 +499,15 @@
     "orderLinesCount": 2,
     "paymentsCount": 1,
     "assistTaskGenerated": false,
-    "printJobId": "PRINT-MTBOO2WV-051A2F",
+    "printJobId": "PRINT-MTBQ3W33-8E1A7F",
     "reconciled": true,
-    "completedAt": "2026-08-27T15:34:20.104Z"
+    "completedAt": "2026-08-27T16:14:37.364Z"
   },
   {
     "tableIndex": 22,
     "tableId": "T-7",
     "tableNumber": 7,
-    "sessionId": "OS-DAY-22-T-7-mtboo2x4",
+    "sessionId": "OS-DAY-22-T-7-mtbq3w38",
     "shiftId": "SHF-NIGHT-20260825",
     "guestCount": 6,
     "internalName": "سهرة شباب",
@@ -523,15 +523,15 @@
     "orderLinesCount": 3,
     "paymentsCount": 1,
     "assistTaskGenerated": false,
-    "printJobId": "PRINT-MTBOO2YM-FA4366",
+    "printJobId": "PRINT-MTBQ3W7R-D27382",
     "reconciled": true,
-    "completedAt": "2026-08-27T15:34:20.163Z"
+    "completedAt": "2026-08-27T16:14:37.537Z"
   },
   {
     "tableIndex": 23,
     "tableId": "T-8",
     "tableNumber": 8,
-    "sessionId": "OS-DAY-23-T-8-mtboo2ys",
+    "sessionId": "OS-DAY-23-T-8-mtbq3w81",
     "shiftId": "SHF-NIGHT-20260825",
     "guestCount": 7,
     "internalName": "طاولة 8",
@@ -547,15 +547,15 @@
     "orderLinesCount": 2,
     "paymentsCount": 1,
     "assistTaskGenerated": false,
-    "printJobId": "PRINT-MTBOO2ZE-B4EF4C",
+    "printJobId": "PRINT-MTBQ3W8H-AD270E",
     "reconciled": true,
-    "completedAt": "2026-08-27T15:34:20.188Z"
+    "completedAt": "2026-08-27T16:14:37.556Z"
   },
   {
     "tableIndex": 24,
     "tableId": "T-9",
     "tableNumber": 9,
-    "sessionId": "OS-DAY-24-T-9-mtboo2zg",
+    "sessionId": "OS-DAY-24-T-9-mtbq3w8k",
     "shiftId": "SHF-NIGHT-20260825",
     "guestCount": 2,
     "internalName": "طاولة 9",
@@ -571,15 +571,15 @@
     "orderLinesCount": 3,
     "paymentsCount": 1,
     "assistTaskGenerated": false,
-    "printJobId": "PRINT-MTBOO2ZW-3FAD20",
+    "printJobId": "PRINT-MTBQ3W9E-DF67ED",
     "reconciled": true,
-    "completedAt": "2026-08-27T15:34:20.206Z"
+    "completedAt": "2026-08-27T16:14:37.606Z"
   },
   {
     "tableIndex": 25,
     "tableId": "T-10",
     "tableNumber": 10,
-    "sessionId": "OS-DAY-25-T-10-mtboo2zy",
+    "sessionId": "OS-DAY-25-T-10-mtbq3w9y",
     "shiftId": "SHF-NIGHT-20260825",
     "guestCount": 3,
     "internalName": "طاولة 10",
@@ -595,15 +595,15 @@
     "orderLinesCount": 2,
     "paymentsCount": 1,
     "assistTaskGenerated": false,
-    "printJobId": "PRINT-MTBOO30B-9AE474",
+    "printJobId": "PRINT-MTBQ3WCP-2E5F82",
     "reconciled": false,
-    "completedAt": "2026-08-27T15:34:20.221Z"
+    "completedAt": "2026-08-27T16:14:37.720Z"
   },
   {
     "tableIndex": 26,
     "tableId": "T-11",
     "tableNumber": 11,
-    "sessionId": "OS-DAY-26-T-11-mtboo30d",
+    "sessionId": "OS-DAY-26-T-11-mtbq3wd4",
     "shiftId": "SHF-NIGHT-20260825",
     "guestCount": 4,
     "internalName": "طاولة 11",
@@ -619,15 +619,15 @@
     "orderLinesCount": 3,
     "paymentsCount": 1,
     "assistTaskGenerated": false,
-    "printJobId": "PRINT-MTBOO30Q-A14B00",
+    "printJobId": "PRINT-MTBQ3WFM-A1549C",
     "reconciled": true,
-    "completedAt": "2026-08-27T15:34:20.237Z"
+    "completedAt": "2026-08-27T16:14:37.814Z"
   },
   {
     "tableIndex": 27,
     "tableId": "T-12",
     "tableNumber": 12,
-    "sessionId": "OS-DAY-27-T-12-mtboo30t",
+    "sessionId": "OS-DAY-27-T-12-mtbq3wfq",
     "shiftId": "SHF-NIGHT-20260825",
     "guestCount": 5,
     "internalName": "طاولة 12",
@@ -643,15 +643,15 @@
     "orderLinesCount": 2,
     "paymentsCount": 1,
     "assistTaskGenerated": false,
-    "printJobId": "PRINT-MTBOO30Z-87EC20",
+    "printJobId": "PRINT-MTBQ3WGD-7F4F70",
     "reconciled": true,
-    "completedAt": "2026-08-27T15:34:20.245Z"
+    "completedAt": "2026-08-27T16:14:37.842Z"
   },
   {
     "tableIndex": 28,
     "tableId": "T-13",
     "tableNumber": 13,
-    "sessionId": "OS-DAY-28-T-13-mtboo311",
+    "sessionId": "OS-DAY-28-T-13-mtbq3wgi",
     "shiftId": "SHF-NIGHT-20260825",
     "guestCount": 6,
     "internalName": "طاولة 13",
@@ -667,15 +667,15 @@
     "orderLinesCount": 3,
     "paymentsCount": 2,
     "assistTaskGenerated": true,
-    "printJobId": "PRINT-MTBOO31G-0B2AE3",
+    "printJobId": "PRINT-MTBQ3WHL-904BC9",
     "reconciled": true,
-    "completedAt": "2026-08-27T15:34:20.261Z"
+    "completedAt": "2026-08-27T16:14:37.888Z"
   },
   {
     "tableIndex": 29,
     "tableId": "T-14",
     "tableNumber": 14,
-    "sessionId": "OS-DAY-29-T-14-mtboo31h",
+    "sessionId": "OS-DAY-29-T-14-mtbq3whs",
     "shiftId": "SHF-NIGHT-20260825",
     "guestCount": 7,
     "internalName": "طاولة 14",
@@ -691,15 +691,15 @@
     "orderLinesCount": 2,
     "paymentsCount": 1,
     "assistTaskGenerated": false,
-    "printJobId": "PRINT-MTBOO321-1B5B2E",
+    "printJobId": "PRINT-MTBQ3WIH-3BA09A",
     "reconciled": true,
-    "completedAt": "2026-08-27T15:34:20.288Z"
+    "completedAt": "2026-08-27T16:14:37.918Z"
   },
   {
     "tableIndex": 30,
     "tableId": "T-15",
     "tableNumber": 15,
-    "sessionId": "OS-DAY-30-T-15-mtboo328",
+    "sessionId": "OS-DAY-30-T-15-mtbq3wim",
     "shiftId": "SHF-NIGHT-20260825",
     "guestCount": 2,
     "internalName": "طاولة 15",
@@ -715,8 +715,8 @@
     "orderLinesCount": 3,
     "paymentsCount": 1,
     "assistTaskGenerated": false,
-    "printJobId": "PRINT-MTBOO32R-B29DCB",
+    "printJobId": "PRINT-MTBQ3WJG-548A90",
     "reconciled": true,
-    "completedAt": "2026-08-27T15:34:20.309Z"
+    "completedAt": "2026-08-27T16:14:37.955Z"
   }
 ]

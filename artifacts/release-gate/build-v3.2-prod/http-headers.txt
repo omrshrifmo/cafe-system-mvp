@@ -1,0 +1,29 @@
+content-security-policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' ws: wss:; frame-ancestors 'none'; base-uri 'self'; form-action 'self';
+x-frame-options: DENY
+x-content-type-options: nosniff
+referrer-policy: strict-origin-when-cross-origin
+permissions-policy: geolocation=(), camera=(), microphone=(), payment=()
+x-request-id: 942a5757-c40e-4137-be64-210049c97770
+x-app-mode: LIVE
+x-build-id: build-16731b4e-v2
+x-commit-sha: 16731b4eb20ebabc97599663e4a1d1fb20fa6b23
+x-branch: main
+x-repository: omrshrifmo/cafe-system-mvp
+x-schema-version: 031_device_registry_and_emergency_access.sql
+x-migration-version: 031
+x-service-worker-version: cafe-os-v3.2-prod
+x-service-worker-sha256: a30829b395f0c74ba84db045c27a321bc50b593000a8965145015f1a606f4dda
+x-applied-migration-source: database
+x-environment-mode: development
+x-database-identity: cafe.db
+x-process-start-time: 2026-08-27T16:17:35.105Z
+x-server-instance-id: 62b5c6a6-67cd-41f9-9946-cd126ee60018
+x-fixture-id: NONE
+x-port: 3000
+x-process-id: 4048550
+content-type: application/json; charset=utf-8
+content-length: 2179
+etag: W/"883-CIkrcsCu1Ug35287qK8HwkTUJlI"
+date: Thu, 27 Aug 2026 16:17:45 GMT
+connection: keep-alive
+keep-alive: timeout=5

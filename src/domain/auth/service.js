@@ -229,10 +229,10 @@ async function revokeSessionByHash(sessionHash) {
 async function revokeSession(rawSessionToken) {
   if (!rawSessionToken) return false;
   const sessionHash = hashToken(rawSessionToken);
-  const session = await getQuery(`SELECT id, user_id FROM v3_user_sessions WHERE session_hash = ?`, [sessionHash]);
+  const session = await getQuery(`SELECT id, user_id FROM v3_user_sessions WHERE session_hash = ? OR id = ?`, [sessionHash, rawSessionToken]);
   const res = await runQuery(
-    `UPDATE v3_user_sessions SET revoked_at = datetime('now', 'localtime') WHERE session_hash = ? AND revoked_at IS NULL`,
-    [sessionHash]
+    `UPDATE v3_user_sessions SET revoked_at = datetime('now', 'localtime') WHERE (session_hash = ? OR id = ?) AND revoked_at IS NULL`,
+    [sessionHash, rawSessionToken]
   );
   if (session) {
     try {
