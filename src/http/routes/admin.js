@@ -157,9 +157,107 @@ router.get('/audit', requireAuth, requirePermission('system:settings'), async (r
   }
 });
 
-router.get('/audit/logs', requireAuth, requirePermission('system:settings'), async (req, res, next) => {
-  req.url = '/audit';
-  return router.handle(req, res, next);
+// ==========================================
+// Active Session Administration & Forced Logout
+// ==========================================
+const sessionAdminService = require('../../domain/admin/sessionAdminService');
+const emergencyAccessService = require('../../domain/admin/emergencyAccessService');
+
+router.get('/sessions', requireAuth, requirePermission('system:settings'), async (req, res, next) => {
+  try {
+    const venueId = req.user.venueId || 'V_DEFAULT';
+    const sessions = await sessionAdminService.listActiveSessions(venueId, req.query);
+    res.json({ success: true, count: sessions.length, sessions });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/sessions/:id/revoke', requireAuth, requirePermission('system:settings'), async (req, res, next) => {
+  try {
+    const venueId = req.user.venueId || 'V_DEFAULT';
+    const reason = req.body.reason || 'إبطال فردي للجلسة من قبل الإدارة';
+    const result = await sessionAdminService.revokeSessionById(req.params.id, req.user.id, venueId, reason);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/sessions/user/:userId/revoke', requireAuth, requirePermission('system:settings'), async (req, res, next) => {
+  try {
+    const venueId = req.user.venueId || 'V_DEFAULT';
+    const reason = req.body.reason || 'إبطال جميع جلسات المستخدم من قبل الإدارة';
+    const count = await sessionAdminService.revokeSessionsByUser(req.params.userId, req.user.id, venueId, reason);
+    res.json({ success: true, count, message: `تم إبطال ${count} جلسة للمستخدم بنجاح.` });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/sessions/device/:deviceId/revoke', requireAuth, requirePermission('system:settings'), async (req, res, next) => {
+  try {
+    const reason = req.body.reason || 'إبطال جميع جلسات الجهاز من قبل الإدارة';
+    const count = await sessionAdminService.revokeSessionsByDevice(req.params.deviceId, req.user.id, reason);
+    res.json({ success: true, count, message: `تم إبطال ${count} جلسة للجهاز بنجاح.` });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/sessions/revoke-global', requireAuth, requirePermission('system:settings'), async (req, res, next) => {
+  try {
+    const venueId = req.user.venueId || 'V_DEFAULT';
+    const { pin, manager_pin, reason } = req.body;
+    const effectivePin = pin || manager_pin;
+    const result = await sessionAdminService.revokeAllSessionsGlobal(venueId, req.user, effectivePin, reason);
+    res.json(result);
+  } catch (err) {
+    if (err.message.includes('FORBIDDEN') || err.message.includes('PIN_REQUIRED') || err.message.includes('INVALID_PIN')) {
+      return res.status(403).json({ success: false, error: err.message });
+    }
+    next(err);
+  }
+});
+
+// ==========================================
+// Emergency Access (Break-Glass) Administration
+// ==========================================
+
+router.post('/emergency/request', requireAuth, async (req, res, next) => {
+  try {
+    const ip = req.ip || req.connection.remoteAddress;
+    const result = await emergencyAccessService.requestEmergencyAccess(req.user, req.body, ip);
+    res.json(result);
+  } catch (err) {
+    if (err.message.includes('FORBIDDEN') || err.message.includes('PIN_REQUIRED') || err.message.includes('INVALID_PIN') || err.message.includes('VALIDATION_ERROR')) {
+      return res.status(400).json({ success: false, error: err.message });
+    }
+    next(err);
+  }
+});
+
+router.get('/emergency/status', requireAuth, requirePermission('system:settings'), async (req, res, next) => {
+  try {
+    const venueId = req.user.venueId || 'V_DEFAULT';
+    const sessions = await emergencyAccessService.getActiveEmergencySessions(venueId);
+    res.json({ success: true, count: sessions.length, sessions });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/emergency/terminate', requireAuth, async (req, res, next) => {
+  try {
+    const { emergency_id, reason } = req.body;
+    const result = await emergencyAccessService.terminateEmergencyAccess(emergency_id, req.user, reason);
+    res.json(result);
+  } catch (err) {
+    if (err.message.includes('FORBIDDEN') || err.message.includes('NOT_FOUND')) {
+      return res.status(400).json({ success: false, error: err.message });
+    }
+    next(err);
+  }
 });
 
 module.exports = router;

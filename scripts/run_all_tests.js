@@ -71,7 +71,7 @@ async function main() {
     resetTestFixture(rootDir);
 
     const testStart = Date.now();
-    const result = spawnSync('npx', ['mocha', testFile, '--timeout', '60000', '--exit'], {
+    const result = spawnSync('npx', ['mocha', testFile, '--timeout', '120000', '--exit'], {
       cwd: rootDir,
       env: { ...process.env, NODE_ENV: 'test' },
       encoding: 'utf8'

@@ -1,13 +1,17 @@
 /**
  * Enterprise Health & Observability Routes
- * Endpoints: /api/health/liveness, /api/health/readiness, /api/metrics
+ * Endpoints: /api/health/liveness, /api/health/readiness, /api/health/full,
+ *            /api/health/alerts/acknowledge, /api/metrics
  */
 const express = require('express');
 const router = express.Router();
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const { getQuery, allQuery } = require('../../db/connection');
-const { getBackupStatus } = require('../../domain/system/backupService');
+const { getBackupStatusDetailed } = require('../../domain/system/backupService');
+const { requireAuth } = require('../middleware/auth');
+const { requirePermission } = require('../middleware/permissions');
 const logger = require('../../observability/logger');
 
 // Simple In-Memory Metrics Collector
@@ -113,7 +117,7 @@ router.get('/health/readiness', async (req, res) => {
 
   // 4. Backup Freshness & Age
   try {
-    const backupStatus = await getBackupStatus();
+    const backupStatus = await getBackupStatusDetailed();
     readiness.checks.backup_age = {
       status: backupStatus.is_stale ? 'WARN' : 'PASS',
       last_backup: backupStatus.last_backup_time,
@@ -334,6 +338,237 @@ router.get('/realtime/snapshot', async (req, res) => {
 function safeParse(jsonStr) {
   try { return JSON.parse(jsonStr); } catch (e) { return {}; }
 }
+
+/**
+ * Computes disk usage statistics for the filesystem containing the given path
+ */
+function getDiskStats(targetPath) {
+  try {
+    const { execSync } = require('child_process');
+    const df = execSync(`df -k "${targetPath}" 2>/dev/null | tail -1`, { encoding: 'utf8' }).trim();
+    const parts = df.split(/\s+/);
+    if (parts.length >= 5) {
+      const totalKb = parseInt(parts[1], 10);
+      const usedKb = parseInt(parts[2], 10);
+      const availKb = parseInt(parts[3], 10);
+      return {
+        total_gb: (totalKb / 1024 / 1024).toFixed(2),
+        used_gb: (usedKb / 1024 / 1024).toFixed(2),
+        free_gb: (availKb / 1024 / 1024).toFixed(2),
+        used_pct: Math.round((usedKb / totalKb) * 100)
+      };
+    }
+  } catch (e) { /* fall through */ }
+  // Fallback: use os.freemem as rough estimate
+  const freeBytes = os.freemem();
+  const totalBytes = os.totalmem();
+  return {
+    total_gb: (totalBytes / 1024 / 1024 / 1024).toFixed(2),
+    used_gb: ((totalBytes - freeBytes) / 1024 / 1024 / 1024).toFixed(2),
+    free_gb: (freeBytes / 1024 / 1024 / 1024).toFixed(2),
+    used_pct: Math.round(((totalBytes - freeBytes) / totalBytes) * 100)
+  };
+}
+
+/**
+ * GET /api/health/full
+ * Comprehensive health dashboard endpoint with zero-false-green guarantee.
+ * Overall = GREEN only when ALL checks are PASS.
+ * Overall = AMBER when any check is WARN and none FAIL.
+ * Overall = RED when any check is FAIL.
+ * Requires authentication + system:view permission.
+ */
+router.get('/health/full', requireAuth, requirePermission('system:view'), async (req, res) => {
+  const checks = {};
+  const t0 = Date.now();
+
+  // 1. API latency (self-response time)
+  checks.api = { status: 'PASS', latency_ms: 0 }; // filled at end
+
+  // 2. Database integrity (live PRAGMA, not cached)
+  try {
+    const integrityRow = await getQuery('PRAGMA integrity_check;');
+    const ok = integrityRow && (integrityRow.integrity_check === 'ok');
+    const fkRow = await getQuery('PRAGMA foreign_keys;');
+    checks.database = {
+      status: ok ? 'PASS' : 'FAIL',
+      integrity: ok ? 'ok' : (integrityRow ? integrityRow.integrity_check : 'error'),
+      pragma_foreign_keys: fkRow ? fkRow.foreign_keys : null
+    };
+  } catch (e) {
+    checks.database = { status: 'FAIL', error: e.message };
+  }
+
+  // 3. Migrations
+  try {
+    const migrationsDir = path.join(__dirname, '../../db/migrations');
+    const available = fs.readdirSync(migrationsDir).filter(f => f.endsWith('.sql')).length;
+    let applied = 0;
+    try {
+      const rows = await allQuery("SELECT version FROM schema_migrations WHERE status = 'SUCCESS';");
+      applied = rows ? rows.length : 0;
+    } catch (e) { applied = 0; }
+    checks.migrations = {
+      status: applied >= available ? 'PASS' : (applied > 0 ? 'WARN' : 'FAIL'),
+      applied,
+      available
+    };
+  } catch (e) {
+    checks.migrations = { status: 'FAIL', error: e.message };
+  }
+
+  // 4. Disk space
+  try {
+    const dbDir = path.join(__dirname, '../../../');
+    const disk = getDiskStats(dbDir);
+    const freeLow = parseFloat(disk.free_gb) < 0.5; // < 500 MB free is FAIL
+    const freeWarn = parseFloat(disk.free_gb) < 2.0; // < 2 GB free is WARN
+    checks.disk = {
+      status: freeLow ? 'FAIL' : (freeWarn ? 'WARN' : 'PASS'),
+      ...disk
+    };
+  } catch (e) {
+    checks.disk = { status: 'WARN', error: e.message };
+  }
+
+  // 5. Backup status (with live checksum)
+  try {
+    const backup = await getBackupStatusDetailed();
+    const ageStatus = !backup.has_backup ? 'FAIL' : (backup.is_stale ? 'WARN' : 'PASS');
+    checks.backup = {
+      status: ageStatus,
+      age_hours: backup.age_hours,
+      checksum: backup.latest_checksum,
+      count: backup.backup_count,
+      encrypted_count: backup.encrypted_count,
+      last_backup_time: backup.last_backup_time,
+      alert: backup.alert
+    };
+  } catch (e) {
+    checks.backup = { status: 'WARN', error: e.message };
+  }
+
+  // 6. Outbox queue lag
+  try {
+    const row = await getQuery("SELECT COUNT(*) as count FROM outbox_events WHERE status = 'PENDING';");
+    const pending = row ? row.count : 0;
+    checks.outbox_queue = {
+      status: pending < 500 ? 'PASS' : 'WARN',
+      pending,
+      threshold: 500
+    };
+  } catch (e) {
+    checks.outbox_queue = { status: 'FAIL', error: e.message };
+  }
+
+  // 7. Active sessions
+  try {
+    const row = await getQuery("SELECT COUNT(*) as count FROM v3_sessions WHERE is_active = 1;");
+    const count = row ? row.count : 0;
+    checks.active_sessions = { status: 'PASS', count };
+  } catch (e) {
+    checks.active_sessions = { status: 'WARN', error: e.message, count: 0 };
+  }
+
+  // 8. WebSocket (check outbox pipeline health as proxy)
+  try {
+    const row = await getQuery("SELECT COUNT(*) as count FROM outbox_events WHERE status = 'FAILED' AND created_at > datetime('now', '-5 minutes');");
+    const failedRecent = row ? row.count : 0;
+    checks.websocket = {
+      status: failedRecent < 10 ? 'PASS' : 'WARN',
+      recently_failed_outbox: failedRecent
+    };
+  } catch (e) {
+    checks.websocket = { status: 'WARN', error: e.message };
+  }
+
+  // 9. Last deployment / update record
+  try {
+    const upd = await getQuery("SELECT version, status, applied_at FROM system_updates WHERE status = 'ACTIVE' ORDER BY applied_at DESC LIMIT 1;");
+    checks.last_deployment = {
+      status: 'PASS',
+      version: upd ? upd.version : 'base-2.0.0',
+      applied_at: upd ? upd.applied_at : null
+    };
+  } catch (e) {
+    checks.last_deployment = { status: 'WARN', error: e.message };
+  }
+
+  // 10. Error rate from in-memory metrics
+  const totalReq = metrics.requests_total || 1;
+  const errorRate = parseFloat(((metrics.requests_5xx / totalReq) * 100).toFixed(2));
+  checks.error_rate = {
+    status: errorRate < 5 ? 'PASS' : (errorRate < 15 ? 'WARN' : 'FAIL'),
+    rate_pct: errorRate,
+    total_requests: metrics.requests_total,
+    total_5xx: metrics.requests_5xx
+  };
+
+  // 11. Process health
+  const memUsage = process.memoryUsage();
+  const heapMb = parseFloat((memUsage.heapUsed / 1024 / 1024).toFixed(2));
+  checks.process = {
+    status: heapMb < 450 ? 'PASS' : 'WARN',
+    uptime_hours: parseFloat((process.uptime() / 3600).toFixed(2)),
+    heap_used_mb: heapMb,
+    rss_mb: parseFloat((memUsage.rss / 1024 / 1024).toFixed(2)),
+    node_version: process.version
+  };
+
+  // Fill API latency
+  checks.api.latency_ms = Date.now() - t0;
+
+  // Aggregate overall status — strict, no false green
+  const statuses = Object.values(checks).map(c => c.status);
+  let overall;
+  if (statuses.some(s => s === 'FAIL')) {
+    overall = 'RED';
+  } else if (statuses.some(s => s === 'WARN')) {
+    overall = 'AMBER';
+  } else {
+    overall = 'GREEN';
+  }
+
+  res.status(overall === 'RED' ? 503 : 200).json({
+    success: overall !== 'RED',
+    overall,
+    checks,
+    timestamp: new Date().toISOString()
+  });
+});
+
+/**
+ * POST /api/health/alerts/acknowledge
+ * Marks a security or health alert as acknowledged.
+ * Requires authentication + system:settings permission.
+ */
+router.post('/health/alerts/acknowledge', requireAuth, requirePermission('system:settings'), async (req, res) => {
+  try {
+    const { alertId } = req.body;
+    if (!alertId) {
+      return res.status(400).json({ success: false, error: 'MISSING_ALERT_ID', message: 'alertId is required' });
+    }
+
+    const alert = await getQuery('SELECT id, is_acknowledged FROM v3_security_alerts WHERE id = ?', [alertId]);
+    if (!alert) {
+      return res.status(404).json({ success: false, error: 'ALERT_NOT_FOUND' });
+    }
+    if (alert.is_acknowledged) {
+      return res.status(400).json({ success: false, error: 'ALREADY_ACKNOWLEDGED' });
+    }
+
+    await getQuery(
+      'UPDATE v3_security_alerts SET is_acknowledged = 1, acknowledged_by = ?, acknowledged_at = datetime(\'now\', \'localtime\') WHERE id = ?',
+      [req.user.id, alertId]
+    );
+
+    logger.info('Health alert acknowledged', { alertId, actorId: req.user.id });
+    res.json({ success: true, alertId, acknowledged_by: req.user.id, acknowledged_at: new Date().toISOString() });
+  } catch (err) {
+    logger.error('Alert acknowledgement failed', { error: err.message });
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
 
 module.exports = {
   router,

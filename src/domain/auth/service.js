@@ -122,6 +122,14 @@ async function authenticateWithPin(pin, ip = null, userAgent = null, deviceId = 
   const absoluteExpiry = new Date(now + ABSOLUTE_EXPIRY_HOURS * 3600 * 1000).toISOString();
   const inactivityExpiry = new Date(now + INACTIVITY_EXPIRY_MINUTES * 60 * 1000).toISOString();
 
+  if (deviceId) {
+    const dev = await getQuery(`SELECT id, status, is_trusted FROM devices WHERE id = ?`, [deviceId]);
+    if (dev && dev.status === 'REVOKED') {
+      await logAudit(matchedUser.venue_id, matchedUser.id, 'LOGIN_FAILED', 'DEVICE', deviceId, { reason: 'DEVICE_REVOKED' }, ip, 'REJECTED', 'DEVICE_REVOKED');
+      throw new Error('DEVICE_REVOKED: تم إبطال صلاحية هذا الجهاز من قبل الإدارة.');
+    }
+  }
+
   await runQuery(
     `INSERT INTO v3_user_sessions (id, user_id, venue_id, device_id, session_hash, absolute_expiry_at, inactivity_expiry_at, ip_address, user_agent)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -151,17 +159,24 @@ async function validateSession(rawSessionToken, touch = true) {
 
   const sessionHash = hashToken(rawSessionToken);
   const session = await getQuery(
-    `SELECT s.id as session_id, s.user_id, s.venue_id, s.absolute_expiry_at, s.inactivity_expiry_at, s.revoked_at,
-            u.name, u.role_id, u.is_active, 
+    `SELECT s.id as session_id, s.user_id, s.venue_id, s.device_id, s.absolute_expiry_at, s.inactivity_expiry_at, s.revoked_at,
+            u.name, u.role_id, u.is_active, d.status as device_status,
             COALESCE(r.name, u.role_id, (SELECT 'R_' || UPPER(legacy.role) FROM users legacy WHERE legacy.id = u.id)) as role_name
      FROM v3_user_sessions s
      JOIN v3_users u ON s.user_id = u.id
      LEFT JOIN roles r ON u.role_id = r.id
+     LEFT JOIN devices d ON s.device_id = d.id
      WHERE s.session_hash = ? AND s.revoked_at IS NULL AND u.is_active = 1`,
     [sessionHash]
   );
 
   if (!session) return null;
+
+  // Check if device was revoked while session was active
+  if (session.device_status === 'REVOKED') {
+    await revokeSessionByHash(sessionHash);
+    return null;
+  }
 
   const now = Date.now();
   // Check absolute expiration

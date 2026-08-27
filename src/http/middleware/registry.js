@@ -13,6 +13,7 @@ const routeRegistry = [
   { method: 'ALL', pathRegex: /^\/api\/setup/, permission: 'public' },
   { method: 'GET', pathRegex: /^\/api\/build-info$/, permission: 'public' },
   { method: 'GET', pathRegex: /^\/api\/health\//, permission: 'public' },
+  { method: 'POST', pathRegex: /^\/api\/health\/alerts\/acknowledge$/, permission: 'system:settings' },
   { method: 'GET', pathRegex: /^\/api\/metrics$/, permission: 'public' },
   { method: 'ALL', pathRegex: /^\/api\/public\//, permission: 'public' },
 
@@ -78,7 +79,11 @@ const routeRegistry = [
   { method: 'ALL', pathRegex: /^\/api\/sync/, permission: 'authenticated' },
   { method: 'ALL', pathRegex: /^\/api\/(kds|runner|floor)/, permission: 'authenticated' },
   
-  // Settings & Admin & Hardware
+  // Settings & Admin & Hardware & Devices & Emergency
+  { method: 'POST', pathRegex: /^\/api\/devices\/register$/, permission: 'public' },
+  { method: 'ALL', pathRegex: /^\/api\/devices(\/.*)?$/, permission: 'system:settings' },
+  { method: 'POST', pathRegex: /^\/api\/admin\/emergency\/request$/, permission: 'authenticated' },
+  { method: 'POST', pathRegex: /^\/api\/admin\/emergency\/terminate$/, permission: 'authenticated' },
   { method: 'ALL', pathRegex: /^\/api\/config/, permission: 'system:settings' },
   { method: 'ALL', pathRegex: /^\/api\/admin/, permission: 'system:settings' },
   { method: 'ALL', pathRegex: /^\/api\/print/, permission: 'authenticated' }

@@ -1,6 +1,7 @@
 /**
  * Enterprise Security Hardening Middleware
- * Enforces CSP, HSTS, Strict CORS, CSRF Guards, CSV Sanitization, and Path Traversal Protection
+ * Enforces CSP, HSTS, Strict CORS, CSRF Guards, CSV Sanitization,
+ * Path Traversal Protection, Debug Endpoint Blocking, and Production HTTPS enforcement.
  */
 const crypto = require('crypto');
 
@@ -34,10 +35,13 @@ function securityHeaders(req, res, next) {
   // Restrict Powerful Web Features
   res.setHeader('Permissions-Policy', 'geolocation=(), camera=(), microphone=(), payment=()');
 
-  // HTTP Strict Transport Security (HSTS) - Enabled for secure contexts
+  // HTTP Strict Transport Security (HSTS) - Enabled for secure contexts only
   if (req.secure || req.headers['x-forwarded-proto'] === 'https') {
-    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+    res.setHeader('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
   }
+
+  // Remove server fingerprinting header
+  res.removeHeader('X-Powered-By');
 
   next();
 }
@@ -47,8 +51,8 @@ function securityHeaders(req, res, next) {
  */
 function strictCors(req, res, next) {
   const origin = req.headers.origin;
-  const allowedOrigins = process.env.ALLOWED_ORIGINS 
-    ? process.env.ALLOWED_ORIGINS.split(',').map(s => s.trim()) 
+  const allowedOrigins = process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(',').map(s => s.trim())
     : ['http://localhost:3000', 'http://127.0.0.1:3000'];
 
   if (origin) {
@@ -60,7 +64,7 @@ function strictCors(req, res, next) {
     } else {
       // Reject unauthorized cross-origin request
       if (req.method === 'OPTIONS') {
-        return res.status(403).json({ success: false, error: 'CORS policy violation' });
+        return res.status(403).json({ success: false, error: 'CORS_VIOLATION: Origin not allowed by policy' });
       }
     }
   }
@@ -89,8 +93,6 @@ function csrfProtection(req, res, next) {
   // If request uses cookie session auth, require custom header or token to prove non-simple request
   const hasSessionCookie = req.cookies && (req.cookies.session_token || req.cookies.mazaj_session);
   if (hasSessionCookie) {
-    const customHeader = req.headers['x-requested-with'] || req.headers['x-csrf-token'] || req.headers['content-type'];
-    
     // A pure cross-site HTML form cannot send custom JSON content-type without preflight
     const isJson = req.is('application/json');
     const isCustomHeader = req.headers['x-csrf-token'] || req.headers['x-requested-with'];
@@ -102,6 +104,69 @@ function csrfProtection(req, res, next) {
         code: 'CSRF_VIOLATION'
       });
     }
+  }
+
+  next();
+}
+
+/**
+ * Block Debug Endpoints, Source Maps, Raw Logs, and Sensitive Paths
+ * Should be mounted BEFORE static file serving.
+ */
+function blockDebugEndpoints(req, res, next) {
+  const blockedPatterns = [
+    /^\/__debug/i,
+    /^\/api\/health\/internal/i,
+    /\.map$/i,                           // JS/CSS source maps
+    /\.log$/i,                           // Raw log files
+    /^\/server\.log/i,                   // Explicit server log
+    /^\/backups\//i,                     // Backup directory
+    /\.(sqlite|db|sqlite3|db-wal|db-shm)$/i, // SQLite files
+    /^\/uploads\/.*\.(sql|sh|py|exe|bin)$/i,  // Dangerous upload file types
+    /^\/src\//i,                         // Source code directory
+    /^\/node_modules\//i,                // Node modules
+    /^\/\.git\//i,                       // Git directory
+    /^\/fixtures\//i,                    // Test fixtures
+    /^\/test\//i,                        // Test directory
+    /^\/scripts\//i,                     // Scripts directory
+    /^\/debug_auth/i,                    // Debug auth file
+    /^\/data\.db/i,                      // Alternative db name
+    /^\/database\.js/i                   // Root-level DB dump
+  ];
+
+  const { pathname } = require('url').parse(req.url);
+
+  for (const pattern of blockedPatterns) {
+    if (pattern.test(pathname)) {
+      return res.status(404).json({
+        success: false,
+        error: 'NOT_FOUND',
+        code: 'NOT_FOUND'
+      });
+    }
+  }
+
+  next();
+}
+
+/**
+ * Enforce HTTPS in production contexts.
+ * When behind a reverse proxy, checks X-Forwarded-Proto.
+ */
+function requireHttps(req, res, next) {
+  if (process.env.NODE_ENV !== 'production') {
+    return next();
+  }
+
+  // Exempt health checks that load balancers call over HTTP
+  if (req.path === '/healthz' || req.path === '/api/health/liveness') {
+    return next();
+  }
+
+  const isHttps = req.secure || req.headers['x-forwarded-proto'] === 'https';
+  if (!isHttps) {
+    const httpsUrl = `https://${req.headers.host}${req.originalUrl}`;
+    return res.redirect(301, httpsUrl);
   }
 
   next();
@@ -126,13 +191,15 @@ function sanitizeCsvValue(val) {
  */
 function sanitizePath(inputPath) {
   if (!inputPath || typeof inputPath !== 'string') return '';
-  return inputPath.replace(/(\.\.[\/\\])+/g, '').replace(/[<>:"|?*]/g, '');
+  return inputPath.replace(/(\.\.[\\/])+/g, '').replace(/[<>:"|?*]/g, '');
 }
 
 module.exports = {
   securityHeaders,
   strictCors,
   csrfProtection,
+  blockDebugEndpoints,
+  requireHttps,
   sanitizeCsvValue,
   sanitizePath
 };

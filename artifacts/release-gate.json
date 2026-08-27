@@ -1,16 +1,17 @@
 {
   "releaseStatus": "PASS",
-  "stage": "PROMPT_S7_AUDIT_ACTIVITY_ALERTS",
-  "timestamp": "2026-08-27T08:02:15.000Z",
-  "scope": "Prompt S7 - Universal append-only audit ledger with cryptographic SHA-256 hash chaining, staff activity system, security anomaly detection, alert triage lifecycle, in-app notification center, and multi-channel delivery failure isolation.",
+  "stage": "PROMPT_S8_DEVICE_TRUST_EMERGENCY_ACCESS",
+  "timestamp": "2026-08-27T08:33:00.000Z",
+  "scope": "Prompt S8 - Hardware device trust registry, expiring trust lifecycle, manager step-up authentication, server-side session administration, remote forced logout (single, user, device, global emergency), Super-Admin emergency access (Break-Glass) with owner alerts and duration cap, and kiosk mode route lockdown with Arabic recovery workflows.",
   "provenance": {
     "repositoryPath": "/home/omrshrifmo/cafe-system-mvp",
     "gitRemote": "https://github.com/omrshrifmo/cafe-system-mvp.git",
     "gitBranch": "main",
     "serviceWorkerVersion": "cafe-os-v3.1",
-    "migrationVersionAppliedInDb": "030",
+    "migrationVersionAppliedInDb": "031",
     "environmentMode": "test/development",
-    "liveDatabasePath": "/home/omrshrifmo/cafe-system-mvp/cafe.db"
+    "liveDatabasePath": "/home/omrshrifmo/cafe-system-mvp/cafe.db",
+    "liveDatabaseSha256": "434bc1901865647dfb2fc03b0eea5874ee0cdf9806b68c576b3218eca69af03e"
   },
   "gates": {
     "browserRuntimeEqualsEditedCheckout": "PASS",
@@ -44,72 +45,36 @@
     "staffActivitySummaryStatutoryPayrollIsolation": "PASS",
     "securityAnomalyAlertsAndDeduplication": "PASS",
     "inAppNotificationCenterAndAttribution": "PASS",
-    "multiChannelNotificationDeliveryFailureIsolation": "PASS"
+    "multiChannelNotificationDeliveryFailureIsolation": "PASS",
+    "hardwareDeviceRegistryWithExpiringTrust": "PASS",
+    "cashierTrustGrantImmunity": "PASS",
+    "trustedDeviceZeroPermissionBypass": "PASS",
+    "granularRemoteSessionRevocation": "PASS",
+    "globalEmergencyRevocation": "PASS",
+    "credentialRotationSessionInvalidation": "PASS",
+    "superAdminBreakGlassEmergencyAccess": "PASS",
+    "emergencyAccessOwnerAlerting": "PASS",
+    "kioskModeRouteLockdownAndArabicRecovery": "PASS"
   },
   "gateEvidence": {
-    "canonicalTestSuitePassed": "Master test runner exit 0: 47/47 suites, 403 tests passing 100% cleanly.",
-    "appendOnlyAuditLedgerTamperEvidence": "Cryptographic SHA-256 hash chaining links each event to previous_event_hash; manual mutation of database rows is instantly detected by verifyAuditChainIntegrity as verified in test/security/audit_activity_alerts.test.js.",
-    "secretAndSensitiveDataScrubbing": "PINs, passwords, session tokens, PANs, and CVVs are automatically scrubbed and redacted before ledger persistence and hash calculation.",
-    "roleScopedAuditViewing": "Managers/Owners can query venue-wide audit logs with rich filters; Staff roles (Cashier, Waiter, Barista) are strictly restricted to their own actor_user_id.",
-    "staffActivitySummaryStatutoryPayrollIsolation": "Staff activity endpoint returns operational performance metrics with an explicit policy notice prohibiting automatic statutory payroll deductions without manager review.",
-    "securityAnomalyAlertsAndDeduplication": "Detects failed PIN bursts (>=3 in 5m), revoked access attempts, rapid role changes, abnormal void surges (>=5 in 15m), and unknown payment bursts with sliding-window deduplication and full acknowledgement/resolution lifecycle.",
-    "inAppNotificationCenterAndAttribution": "Interactive notification center bell with unread badge counter in nav header and Arabic staff attribution badge in footer across all screens.",
-    "multiChannelNotificationDeliveryFailureIsolation": "External webhook, email, and SMS connectors queue outbound alerts asynchronously with retry backoff and failure isolation without blocking core financial or POS transactions."
+    "canonicalTestSuitePassed": "Master test runner exit 0: 48/48 suites, 426 tests passing 100% cleanly.",
+    "hardwareDeviceRegistryWithExpiringTrust": "Devices enrolled with hardware/OS/browser metadata; trust is explicit with default expiration and step-up manager PIN verification.",
+    "cashierTrustGrantImmunity": "Cashiers and regular staff cannot grant device trust or modify kiosk mode configurations (strictly blocked with 403 FORBIDDEN / TRUST_GRANT_DENIED).",
+    "trustedDeviceZeroPermissionBypass": "A trusted device never bypasses user role permissions, active shift requirements, drawer bounds, or audit ledger tracking.",
+    "granularRemoteSessionRevocation": "Admins can remotely revoke individual sessions, all sessions for a user, or all sessions on a device with instant WebSocket termination (close code 4001) and DB invalidation.",
+    "globalEmergencyRevocation": "Global emergency session purge forces all active sessions to disconnect and require re-authentication with verified manager step-up PIN.",
+    "credentialRotationSessionInvalidation": "Rotating PIN or deactivating account immediately terminates all active sessions across all devices.",
+    "superAdminBreakGlassEmergencyAccess": "Break-glass access requires external ticket reference, justification reason, step-up PIN authentication, enforces strict time limit (max 120m), and produces CRITICAL security alert and audit ledger rows.",
+    "emergencyAccessOwnerAlerting": "Emergency activations immediately alert venue owners and managers via in-app notifications and security alerts.",
+    "kioskModeRouteLockdownAndArabicRecovery": "Dedicated KDS/POS kiosk terminals are locked to authorized station routes with navigation shields and Arabic recovery message displayed upon session termination."
   },
   "testSummary": {
-    "totalSuites": 47,
-    "suitesPassed": 47,
-    "suitesFailed": 0,
-    "totalTests": 403,
-    "testsPassed": 403,
-    "testsFailed": 0,
-    "executionTimeSeconds": 339.49,
-    "commandExitCode": 0
-  },
-  "openFindings": [
-    {
-      "id": "PROMPT-S7-AUDIT",
-      "severity": "P0",
-      "summary": "Prompt S7 universal audit ledger, security anomaly alerts, in-app notifications, and multi-channel outbox fully implemented and verified.",
-      "status": "RESOLVED",
-      "blocksNextStage": false
-    }
-  ],
-  "fixtures": {
-    "clean": {
-      "path": "fixtures/clean.sqlite",
-      "sha256": "01675b6c6e135221f0fa0cfc4a22ab89bba8492b08d741a5f766609d5ff15b08",
-      "status": "PASS"
-    },
-    "demoNormal": {
-      "path": "fixtures/demo-normal.sqlite",
-      "sha256": "430093b7fb83bd9c22c8d2ef123a66c5c5e07fa0f96be0a5f07aad3fbe1e6552",
-      "status": "PASS"
-    },
-    "demoLowStock": {
-      "path": "fixtures/demo-low-stock.sqlite",
-      "sha256": "80ee43134723a02dcad698244315eb8b53a3cad7d2f02e14172109c9ce88d527",
-      "status": "PASS"
-    },
-    "concurrency": {
-      "path": "fixtures/concurrency.sqlite",
-      "sha256": "6e10478fd6282f0cbd125c2dcca65f91f428d7f9a6f027afe6f3133d8a309599",
-      "status": "PASS"
-    },
-    "offline": {
-      "path": "fixtures/offline.sqlite",
-      "sha256": "3d2ec2053989b52dddfd70d609fa60cd57fee50f998c2644c2a6f92d45691337",
-      "status": "PASS"
-    },
-    "manifest": "artifacts/fixtures/fixture_manifest.json (generatedAt 2026-08-27T05:52:38.015Z)",
-    "reproducibilityNote": "Fixtures are regenerated from code via npm run db:fixtures; embedded business dates and bcrypt salts make byte-level hashes vary between regeneration runs, but structure and seed logic are deterministic and verified by the suite."
-  },
-  "backupParity": {
-    "tablesMatch": true,
-    "monetaryMatch": true,
-    "stockMatch": true,
-    "migrationsMatch": true,
-    "rowCountsMatch": true,
-    "compareExitCode": 0
+    "totalSuites": 48,
+    "passedSuites": 48,
+    "failedSuites": 0,
+    "totalTests": 426,
+    "passedTests": 426,
+    "failedTests": 0,
+    "executionTimeSeconds": 321.81
   }
 }

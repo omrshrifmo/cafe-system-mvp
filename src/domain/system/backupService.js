@@ -256,12 +256,207 @@ async function testFullDisasterRecoveryRehearsal(backupDir = DEFAULT_BACKUP_DIR)
   };
 }
 
+/**
+ * Prunes backup files older than the configured retention period.
+ * Deletes both .sqlite and .enc backup files.
+ * @param {string} backupDir - Directory containing backups
+ * @param {number} retentionDays - Number of days to retain (default: 30)
+ * @returns {{ pruned: string[], remaining: number, freed_bytes: number }}
+ */
+async function pruneOldBackups(backupDir = DEFAULT_BACKUP_DIR, retentionDays = 30) {
+  ensureBackupDir(backupDir);
+  const cutoffMs = Date.now() - retentionDays * 24 * 60 * 60 * 1000;
+  const prunedFiles = [];
+  let freedBytes = 0;
+
+  const allFiles = fs.readdirSync(backupDir).filter(f =>
+    (f.startsWith('cafe-backup-') && (f.endsWith('.sqlite') || f.endsWith('.enc'))) ||
+    (f.startsWith('manifest-') && f.endsWith('.json'))
+  );
+
+  for (const file of allFiles) {
+    const fullPath = path.join(backupDir, file);
+    try {
+      const stats = fs.statSync(fullPath);
+      if (stats.mtimeMs < cutoffMs) {
+        freedBytes += stats.size;
+        fs.unlinkSync(fullPath);
+        prunedFiles.push(file);
+        logger.info(`Pruned old backup file: ${file}`, { age_days: ((Date.now() - stats.mtimeMs) / 86400000).toFixed(1) });
+      }
+    } catch (e) {
+      logger.warn(`Failed to prune backup file: ${file}`, { error: e.message });
+    }
+  }
+
+  const remaining = fs.readdirSync(backupDir).filter(f =>
+    f.startsWith('cafe-backup-') && f.endsWith('.sqlite')
+  ).length;
+
+  logger.info(`Backup pruning complete`, { pruned: prunedFiles.length, remaining, freed_bytes: freedBytes });
+  return { pruned: prunedFiles, remaining, freed_bytes: freedBytes };
+}
+
+/**
+ * Returns detailed backup status including checksum, count, total size, and retention info
+ * @param {string} backupDir
+ * @param {number} retentionDays
+ */
+async function getBackupStatusDetailed(backupDir = DEFAULT_BACKUP_DIR, retentionDays = 30) {
+  ensureBackupDir(backupDir);
+  const sqliteFiles = fs.readdirSync(backupDir)
+    .filter(f => f.startsWith('cafe-backup-') && f.endsWith('.sqlite'))
+    .sort()
+    .reverse();
+
+  const encFiles = fs.readdirSync(backupDir)
+    .filter(f => f.startsWith('cafe-backup-') && f.endsWith('.enc'))
+    .sort()
+    .reverse();
+
+  if (sqliteFiles.length === 0) {
+    return {
+      has_backup: false,
+      last_backup_time: null,
+      age_hours: Infinity,
+      latest_file: null,
+      latest_checksum: null,
+      backup_count: 0,
+      encrypted_count: 0,
+      total_size_bytes: 0,
+      retention_days: retentionDays,
+      oldest_backup_time: null,
+      is_stale: true,
+      alert: 'CRITICAL: No database backups found'
+    };
+  }
+
+  const latestFile = sqliteFiles[0];
+  const fullPath = path.join(backupDir, latestFile);
+  const stats = fs.statSync(fullPath);
+  const ageHours = (Date.now() - stats.mtimeMs) / (1000 * 60 * 60);
+
+  // Compute checksum of latest backup (live, not cached)
+  let latestChecksum = null;
+  try {
+    latestChecksum = await calculateFileSha256(fullPath);
+  } catch (e) {
+    logger.warn('Could not compute backup checksum', { error: e.message });
+  }
+
+  // Total size of all backup files
+  let totalSizeBytes = 0;
+  let oldestMtime = null;
+  for (const f of sqliteFiles) {
+    try {
+      const s = fs.statSync(path.join(backupDir, f));
+      totalSizeBytes += s.size;
+      if (!oldestMtime || s.mtimeMs < oldestMtime) {
+        oldestMtime = s.mtimeMs;
+      }
+    } catch (e) { /* skip inaccessible */ }
+  }
+
+  return {
+    has_backup: true,
+    latest_file: latestFile,
+    latest_checksum: latestChecksum,
+    size_bytes: stats.size,
+    last_backup_time: stats.mtime.toISOString(),
+    age_hours: parseFloat(ageHours.toFixed(2)),
+    backup_count: sqliteFiles.length,
+    encrypted_count: encFiles.length,
+    total_size_bytes: totalSizeBytes,
+    retention_days: retentionDays,
+    oldest_backup_time: oldestMtime ? new Date(oldestMtime).toISOString() : null,
+    is_stale: ageHours > 24,
+    alert: ageHours > 24 ? 'WARNING: Last backup is older than 24 hours' : 'OK'
+  };
+}
+
+/**
+ * Schedules daily backup rotation (prune old backups).
+ * Safe to call from server startup — only runs once per day.
+ */
+function scheduleBackupRotation(backupDir = DEFAULT_BACKUP_DIR, retentionDays = 30) {
+  const INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+  async function runRotation() {
+    try {
+      logger.info('Running scheduled backup rotation...');
+      const result = await pruneOldBackups(backupDir, retentionDays);
+      logger.info('Scheduled backup rotation complete', result);
+    } catch (e) {
+      logger.error('Scheduled backup rotation failed', { error: e.message });
+    }
+  }
+
+  // Run immediately on startup (non-blocking), then on interval
+  setImmediate(runRotation);
+  const interval = setInterval(runRotation, INTERVAL_MS);
+  interval.unref(); // Don't block process exit
+
+  logger.info('Backup rotation scheduler started', { retention_days: retentionDays, interval_hours: 24 });
+  return interval;
+}
+
+/**
+ * Returns incident contact information from environment configuration
+ */
+function getIncidentContacts() {
+  const email = process.env.INCIDENT_CONTACT_EMAIL || 'ops@cafe.example.com';
+  const phone = process.env.INCIDENT_CONTACT_PHONE || '';
+
+  return {
+    primary_email: email,
+    primary_phone: phone || null,
+    escalation_email: process.env.INCIDENT_ESCALATION_EMAIL || email,
+    contacts_configured: !!(process.env.INCIDENT_CONTACT_EMAIL)
+  };
+}
+
+/**
+ * Simulates an offsite backup copy (placeholder for S3/rsync integration).
+ * Logs a verifiable SIMULATED_OFFSITE_COPY audit entry.
+ * Replace with real cloud SDK calls in production deployment.
+ * @param {string} backupPath - Full path to the backup file to copy
+ */
+async function simulateOffsiteCopy(backupPath) {
+  if (!fs.existsSync(backupPath)) {
+    throw new Error(`OFFSITE_ERROR: Backup file not found: ${backupPath}`);
+  }
+
+  const checksum = await calculateFileSha256(backupPath);
+  const stats = fs.statSync(backupPath);
+
+  // In production: replace this block with actual S3 upload / rsync call:
+  // await s3.putObject({ Bucket: process.env.BACKUP_S3_BUCKET, Key: path.basename(backupPath), Body: fs.createReadStream(backupPath) }).promise();
+
+  const result = {
+    status: 'SIMULATED_OFFSITE_COPY',
+    source_file: path.basename(backupPath),
+    size_bytes: stats.size,
+    checksum_sha256: checksum,
+    destination: process.env.BACKUP_OFFSITE_DESTINATION || 's3://cafe-backups-offsite/[CONFIGURE_IN_PRODUCTION]',
+    simulated: true,
+    timestamp: new Date().toISOString()
+  };
+
+  logger.info('Offsite backup copy (simulated)', result);
+  return result;
+}
+
 module.exports = {
   createHotBackup,
   createEncryptedBackup,
   restoreEncryptedBackup,
   verifyBackup,
   getBackupStatus,
+  getBackupStatusDetailed,
   calculateFileSha256,
-  testFullDisasterRecoveryRehearsal
+  testFullDisasterRecoveryRehearsal,
+  pruneOldBackups,
+  scheduleBackupRotation,
+  getIncidentContacts,
+  simulateOffsiteCopy
 };

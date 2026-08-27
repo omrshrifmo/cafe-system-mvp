@@ -17,6 +17,7 @@ const env = require('../../config/env');
 
 const PACKAGE_SIGNING_KEY = process.env.PACKAGE_SIGNING_KEY || 'MazajCafeEnterprisePackageTrustSecret2026!';
 const CURRENT_APP_VERSION = '2.0.0';
+const MIN_FREE_DISK_BYTES = 500 * 1024 * 1024; // 500 MB minimum free space before update
 
 /**
  * Computes canonical SHA-256 checksum of the package content (excluding signature)
@@ -418,18 +419,8 @@ async function applyUpdatePackage(pkg, actorId, pin, typedConfirmation, customDb
       db
     );
 
-    // 8. Update Service Worker Version in system_config if applicable
-    if (pkg.serviceWorkerVersion) {
-      try {
-        await runQuery(
-          `INSERT OR REPLACE INTO system_config (key, value, updated_at) VALUES ('service_worker_version', ?, datetime('now', 'localtime'))`,
-          [pkg.serviceWorkerVersion],
-          db
-        );
-      } catch (swErr) {
-        logger.warn('Could not record service worker version:', swErr.message);
-      }
-    }
+    // 8. Write SW invalidation token and version to system_config
+    await invalidateServiceWorkerCache(pkg.serviceWorkerVersion || pkg.version, db);
 
     // Log Audit
     await logAudit(
@@ -628,6 +619,124 @@ function getApprovedCatalog() {
   return [v210Pkg];
 }
 
+/**
+ * Runs comprehensive pre-flight checks before applying an update package.
+ * Blocks if:
+ *  - An open financial shift is active (ACTIVE_FINANCIAL_OPERATION)
+ *  - Disk free space is below minimum threshold (INSUFFICIENT_DISK_SPACE)
+ *  - No recent backup exists (and package requires one) (NO_RECENT_BACKUP)
+ *
+ * @param {object} pkg - The update package (must be validated but not yet applied)
+ * @param {object} [customDb] - Optional DB handle for testing
+ * @returns {{ passed: boolean, warnings: string[], dryRunImpact: object }}
+ */
+async function runUpdatePreflightChecks(pkg, customDb = null) {
+  const db = customDb || getDb();
+  const warnings = [];
+  const errors = [];
+
+  // 1. Check for active financial shifts
+  try {
+    const openShift = await getQuery(
+      `SELECT id, cashier_id, started_at FROM v3_shifts WHERE status = 'OPEN' LIMIT 1`,
+      [],
+      db
+    );
+    if (openShift) {
+      if (pkg.requiredBackup !== false) {
+        errors.push(`ACTIVE_FINANCIAL_OPERATION: يوجد وردية مالية مفتوحة (ID: ${openShift.id}). يجب إغلاق الوردية قبل تطبيق التحديث لضمان سلامة البيانات المالية.`);
+      } else {
+        warnings.push(`OPEN_SHIFT_DETECTED: وردية مفتوحة (ID: ${openShift.id}) ولكن الحزمة لا تتطلب نسخة احتياطية. تابع بحذر.`);
+      }
+    }
+  } catch (e) {
+    warnings.push(`SHIFT_CHECK_FAILED: تعذر التحقق من الوردية المالية - ${e.message}`);
+  }
+
+  // 2. Check disk free space
+  try {
+    const { execSync } = require('child_process');
+    const dfOutput = execSync('df -k . 2>/dev/null | tail -1', { encoding: 'utf8', cwd: path.join(__dirname, '../../../') }).trim();
+    const parts = dfOutput.split(/\s+/);
+    if (parts.length >= 4) {
+      const availKb = parseInt(parts[3], 10);
+      const availBytes = availKb * 1024;
+      if (availBytes < MIN_FREE_DISK_BYTES) {
+        errors.push(`INSUFFICIENT_DISK_SPACE: مساحة القرص المتاحة (${(availBytes / 1024 / 1024).toFixed(0)} MB) أقل من الحد الأدنى المطلوب (${(MIN_FREE_DISK_BYTES / 1024 / 1024).toFixed(0)} MB) للتحديث الآمن.`);
+      }
+    }
+  } catch (e) {
+    warnings.push(`DISK_CHECK_FAILED: تعذر التحقق من مساحة القرص - ${e.message}`);
+  }
+
+  // 3. Check backup freshness (must have a backup < 30 min old if package requires one)
+  if (pkg.requiredBackup !== false) {
+    try {
+      const { getBackupStatus } = require('./backupService');
+      const backupStatus = await getBackupStatus();
+      if (!backupStatus.has_backup) {
+        errors.push('NO_RECENT_BACKUP: لا توجد نسخة احتياطية للقاعدة. يجب إنشاء نسخة احتياطية قبل تطبيق التحديث.');
+      } else if (backupStatus.age_hours > 0.5) {
+        // Backup exists but is > 30 min old — will be created fresh by applyUpdatePackage anyway
+        warnings.push(`BACKUP_WILL_BE_CREATED: آخر نسخة احتياطية عمرها ${backupStatus.age_hours} ساعة. سيتم إنشاء نسخة جديدة قبل التحديث.`);
+      }
+    } catch (e) {
+      warnings.push(`BACKUP_CHECK_FAILED: تعذر التحقق من النسخ الاحتياطية - ${e.message}`);
+    }
+  }
+
+  // 4. Dry-run impact summary
+  const migrationCount = (pkg.migrations || []).length;
+  const configUpdateCount = (pkg.configUpdates || []).length;
+  const assetCount = (pkg.assets || []).length;
+  const dryRunImpact = {
+    migration_statements: migrationCount,
+    config_keys_updated: configUpdateCount,
+    static_assets_updated: assetCount,
+    estimated_downtime_seconds: Math.max(2, migrationCount * 1),
+    requires_backup: pkg.requiredBackup !== false,
+    target_version: pkg.version,
+    affected_modules: pkg.affectedModules || []
+  };
+
+  if (errors.length > 0) {
+    return { passed: false, errors, warnings, dryRunImpact };
+  }
+
+  return { passed: true, errors: [], warnings, dryRunImpact };
+}
+
+/**
+ * Writes a service worker invalidation token to system_config after a successful update.
+ * SW clients check this token on next fetch and force a cache refresh.
+ *
+ * @param {string} packageVersion - The newly applied package version
+ * @param {object} [customDb] - Optional DB handle
+ */
+async function invalidateServiceWorkerCache(packageVersion, customDb = null) {
+  const db = customDb || getDb();
+  const { v4: uuidv4 } = require('uuid');
+  const invalidationToken = uuidv4();
+
+  try {
+    await runQuery(
+      `INSERT OR REPLACE INTO system_config (key, value, updated_at) VALUES ('sw_invalidation_token', ?, datetime('now', 'localtime'))`,
+      [invalidationToken],
+      db
+    );
+    await runQuery(
+      `INSERT OR REPLACE INTO system_config (key, value, updated_at) VALUES ('service_worker_version', ?, datetime('now', 'localtime'))`,
+      [packageVersion],
+      db
+    );
+    logger.info('Service worker cache invalidation token written', { token: invalidationToken, version: packageVersion });
+    return { invalidation_token: invalidationToken, version: packageVersion };
+  } catch (e) {
+    logger.warn('Could not write SW invalidation token', { error: e.message });
+    return null;
+  }
+}
+
 module.exports = {
   CURRENT_APP_VERSION,
   computePackageChecksum,
@@ -637,6 +746,8 @@ module.exports = {
   validatePackageStructure,
   inspectPackage,
   runComprehensiveHealthCheck,
+  runUpdatePreflightChecks,
+  invalidateServiceWorkerCache,
   applyUpdatePackage,
   rollbackUpdate,
   listUpdateHistory,

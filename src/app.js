@@ -32,15 +32,21 @@ const setupRoutes = require('./http/routes/setup');
 const adminRoutes = require('./http/routes/admin');
 const updatesRoutes = require('./http/routes/updates');
 const auditRoutes = require('./http/routes/audit');
-const { securityHeaders, strictCors, csrfProtection } = require('./http/middleware/security');
+const deviceRoutes = require('./http/routes/devices');
+const { securityHeaders, strictCors, csrfProtection, blockDebugEndpoints, requireHttps } = require('./http/middleware/security');
+const { adminLimiter, healthLimiter, updateLimiter } = require('./http/middleware/rate-limit');
 const { router: healthRoutes, recordRequestMetric } = require('./http/routes/health');
 
 function createApp() {
   const app = express();
 
   // Security Headers & Strict CORS
+  app.use(requireHttps);
   app.use(securityHeaders);
   app.use(strictCors);
+
+  // Block debug endpoints, source maps, SQLite files, logs, backup dir before anything is served
+  app.use(blockDebugEndpoints);
 
   // Request Metrics Tracking
   app.use((req, res, next) => {
@@ -101,15 +107,15 @@ function createApp() {
   app.use('/api', syncRoutes);
   app.use('/api', printRoutes);
   app.use('/api/setup', setupRoutes);
-  app.use('/api/admin/updates', updatesRoutes);
+  app.use('/api/admin/updates', updateLimiter, updatesRoutes);
   app.use('/api/audit', auditRoutes);
   app.use('/api/activity-ledger', auditRoutes);
-  app.use('/api/admin', adminRoutes);
-  app.use('/api', adminRoutes);
+  app.use('/api/devices', deviceRoutes);
+  app.use('/api/admin', adminLimiter, adminRoutes);
   app.use('/api', healthRoutes);
 
-  // Health check endpoint
-  app.get('/healthz', (req, res) => {
+  // Health check endpoint (publicly accessible for load balancers and monitoring)
+  app.get('/healthz', healthLimiter, (req, res) => {
     res.json({
       status: 'OK',
       timestamp: new Date().toISOString(),
@@ -251,6 +257,9 @@ function createApp() {
     res.setHeader('X-Port', String(env.PORT || 3000));
     res.setHeader('X-Process-Id', String(process.pid));
 
+    // Redact full database path in production — only expose basename
+    const exposePath = env.EXPOSE_DATABASE_PATH;
+
     res.json({
       status: 'OK',
       buildId: BUILD_ID,
@@ -268,7 +277,7 @@ function createApp() {
       environmentMode: env.NODE_ENV || 'development',
       environment: env.NODE_ENV || 'development',
       databaseIdentity: dbIdentity,
-      databasePath: activeDbPath,
+      databasePath: exposePath ? activeDbPath : '[REDACTED]',
       fixtureId: isFixture ? dbIdentity : null,
       processStartTime: PROCESS_START_TIME,
       serverInstanceId: SERVER_INSTANCE_ID,

@@ -1,0 +1,84 @@
+version: '3.8'
+
+# Cafe System ERP — Production Docker Compose
+# Usage:
+#   docker-compose -f docker-compose.prod.yml up -d
+#
+# Prerequisites:
+#   - Set all environment variables in .env.production (copy from .env.production.template)
+#   - Ensure ./data/production/ directory exists and is writable
+#   - Caddy or Nginx is configured to proxy to cafe-app:3000
+
+services:
+  cafe-app:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      args:
+        NODE_ENV: production
+    container_name: cafe-system-prod
+    restart: unless-stopped
+
+    # Only expose port to localhost — never directly to the internet
+    # Reverse proxy (Caddy/Nginx) handles TLS and public access
+    ports:
+      - "127.0.0.1:3000:3000"
+
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      HOST: 0.0.0.0
+      # All secrets MUST be set via external env or Docker secrets — never hardcoded
+      DB_PATH: /data/cafe.db
+      SESSION_SECRET: ${SESSION_SECRET}
+      BACKUP_ENCRYPTION_KEY: ${BACKUP_ENCRYPTION_KEY}
+      PACKAGE_SIGNING_KEY: ${PACKAGE_SIGNING_KEY}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-https://cafe.example.com}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      INCIDENT_CONTACT_EMAIL: ${INCIDENT_CONTACT_EMAIL:-ops@cafe.example.com}
+      EXPOSE_DATABASE_PATH: "false"
+
+    volumes:
+      # Persistent production database (never inside the image)
+      - ./data/production:/data
+      # Backup directory (persisted outside container lifecycle)
+      - ./backups:/app/backups
+      # Uploads directory
+      - ./uploads:/app/uploads
+
+    # Read-only source code (prevent tampering)
+    read_only: false   # Set to true if your deployment supports it
+
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '1.0'
+        reservations:
+          memory: 128M
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+    # Security hardening
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+
+networks:
+  default:
+    name: cafe-network

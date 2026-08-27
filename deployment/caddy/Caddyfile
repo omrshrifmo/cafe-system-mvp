@@ -1,0 +1,98 @@
+# Caddy Reverse Proxy Configuration
+# Production deployment for Cafe System ERP
+# Replace "cafe.example.com" with your actual domain before deploying.
+# Requires: Caddy v2.x (https://caddyserver.com)
+#
+# To use:
+#   1. Install Caddy: https://caddyserver.com/docs/install
+#   2. Place this file at /etc/caddy/Caddyfile
+#   3. Run: sudo systemctl restart caddy
+#
+# Caddy handles Let's Encrypt HTTPS automatically, including:
+#   - Automatic TLS certificate issuance and renewal
+#   - HTTP -> HTTPS redirect (built-in)
+#   - HSTS after TLS validation
+#   - HTTP/2 and HTTP/3 support
+
+cafe.example.com {
+    # Automatic HTTPS via Let's Encrypt
+    # HTTP -> HTTPS redirect is automatic in Caddy
+
+    # Enforce HSTS (only valid after TLS is working)
+    header Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+
+    # Remove server fingerprinting
+    header -Server
+    header -X-Powered-By
+
+    # Add security headers (app also sets these, but defense-in-depth)
+    header X-Frame-Options DENY
+    header X-Content-Type-Options nosniff
+    header Referrer-Policy strict-origin-when-cross-origin
+
+    # Block dangerous paths at proxy level (defense-in-depth on top of app blocking)
+    @blocked {
+        path /.git/*
+        path /backups/*
+        path /node_modules/*
+        path /src/*
+        path /test/*
+        path /scripts/*
+        path /fixtures/*
+        path /uploads/*.sql
+        path /uploads/*.sh
+        path /uploads/*.py
+        path *.map
+        path *.sqlite
+        path *.db
+        path *.log
+    }
+    respond @blocked 404
+
+    # Health check accessible without rate-limiting for load balancers
+    handle /healthz {
+        reverse_proxy localhost:3000
+    }
+
+    # Restrict body size to 10 MB
+    request_body {
+        max_size 10MB
+    }
+
+    # Rate limiting (requires Caddy rate limit plugin - optional, app also enforces)
+    # rate_limit {
+    #     zone dynamic {
+    #         key {remote_host}
+    #         events 300
+    #         window 1m
+    #     }
+    # }
+
+    # Proxy all requests to Node.js app on localhost (never expose port publicly)
+    reverse_proxy localhost:3000 {
+        # Forward real client IP for logging and rate limiting
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+
+        # Health check upstream
+        health_uri /healthz
+        health_interval 30s
+        health_timeout 5s
+    }
+
+    # Access logging
+    log {
+        output file /var/log/caddy/cafe-access.log {
+            roll_size 100mb
+            roll_keep 5
+            roll_keep_for 720h
+        }
+        format json
+    }
+}
+
+# HTTP to HTTPS redirect for www subdomain
+www.cafe.example.com {
+    redir https://cafe.example.com{uri} permanent
+}

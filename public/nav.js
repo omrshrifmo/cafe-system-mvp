@@ -502,6 +502,15 @@
     const userRole = currentUser.role || 'WAITER';
     const currentShift = getActiveShiftType();
 
+    // Kiosk Mode Restriction Guard: Enforce strict station lockdown
+    const isKioskMode = (typeof localStorage !== 'undefined' && localStorage.getItem('is_kiosk') === 'true') || currentUser.is_kiosk;
+    const kioskAllowedRoute = (typeof localStorage !== 'undefined' && localStorage.getItem('kiosk_allowed_route')) || currentUser.kiosk_allowed_route;
+    if (isKioskMode && kioskAllowedRoute && !pathname.endsWith(kioskAllowedRoute) && !pathname.includes('index.html')) {
+      console.warn('Kiosk mode lockdown: redirecting to authorized station route', kioskAllowedRoute);
+      window.location.replace(kioskAllowedRoute);
+      return;
+    }
+
     // Determine current active page and check role permissions
     let currentPageTitle = 'لوحة التحكم';
     let matchedItem = null;

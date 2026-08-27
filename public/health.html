@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>لوحة تحكم صحة النظام — مزاج كافيه</title>
+  <meta name="description" content="لوحة مراقبة وصحة النظام الإدارية لنظام مزاج كافيه — API، قاعدة البيانات، النسخ الاحتياطية، القرص، الجلسات والأداء" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg-deep: #0a0e1a;
+      --bg-card: rgba(16, 22, 40, 0.85);
+      --bg-glass: rgba(30, 40, 70, 0.55);
+      --border: rgba(80, 120, 200, 0.2);
+      --border-bright: rgba(100, 160, 255, 0.4);
+      --accent: #3b82f6;
+      --accent-glow: rgba(59, 130, 246, 0.3);
+      --green: #10b981;
+      --green-bg: rgba(16, 185, 129, 0.12);
+      --amber: #f59e0b;
+      --amber-bg: rgba(245, 158, 11, 0.12);
+      --red: #ef4444;
+      --red-bg: rgba(239, 68, 68, 0.12);
+      --text-primary: #e2e8f0;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --radius: 14px;
+      --radius-sm: 8px;
+      --shadow: 0 8px 32px rgba(0,0,0,0.5);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'IBM Plex Sans Arabic', sans-serif;
+      background: var(--bg-deep);
+      color: var(--text-primary);
+      min-height: 100vh;
+      background-image:
+        radial-gradient(ellipse at 20% 20%, rgba(59,130,246,0.08) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 80%, rgba(139,92,246,0.06) 0%, transparent 50%);
+    }
+
+    /* ──────────── Header ──────────── */
+    .header {
+      background: var(--bg-glass);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .header-icon {
+      width: 40px; height: 40px;
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+    }
+
+    .header-title { font-size: 18px; font-weight: 700; }
+    .header-subtitle { font-size: 12px; color: var(--text-muted); }
+
+    .header-actions { display: flex; align-items: center; gap: 12px; }
+
+    .refresh-btn {
+      background: var(--bg-glass);
+      border: 1px solid var(--border);
+      color: var(--text-primary);
+      padding: 8px 16px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 13px;
+      display: flex; align-items: center; gap: 6px;
+      transition: all 0.2s;
+    }
+    .refresh-btn:hover { background: var(--accent-glow); border-color: var(--accent); }
+    .refresh-btn.spinning .icon { animation: spin 1s linear infinite; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .auto-refresh-badge {
+      background: rgba(16,185,129,0.15);
+      border: 1px solid rgba(16,185,129,0.3);
+      color: var(--green);
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+    }
+
+    /* ──────────── Overall Status Banner ──────────── */
+    .status-banner {
+      margin: 24px 24px 0;
+      padding: 20px 24px;
+      border-radius: var(--radius);
+      border: 1px solid;
+      backdrop-filter: blur(12px);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: all 0.4s ease;
+    }
+    .status-banner.green { background: var(--green-bg); border-color: rgba(16,185,129,0.4); }
+    .status-banner.amber { background: var(--amber-bg); border-color: rgba(245,158,11,0.4); }
+    .status-banner.red { background: var(--red-bg); border-color: rgba(239,68,68,0.4); }
+    .status-banner.loading { background: var(--bg-glass); border-color: var(--border); }
+
+    .status-indicator {
+      display: flex; align-items: center; gap: 14px;
+    }
+
+    .status-dot {
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      animation: pulse 2s ease-in-out infinite;
+    }
+    .green .status-dot { background: var(--green); box-shadow: 0 0 12px var(--green); }
+    .amber .status-dot { background: var(--amber); box-shadow: 0 0 12px var(--amber); }
+    .red .status-dot { background: var(--red); box-shadow: 0 0 12px var(--red); }
+    .loading .status-dot { background: var(--text-muted); }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.6; transform: scale(0.9); }
+    }
+
+    .status-label { font-size: 22px; font-weight: 700; }
+    .status-sub { font-size: 13px; color: var(--text-secondary); }
+    .status-time { font-size: 12px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
+
+    /* ──────────── Main Grid ──────────── */
+    .main { padding: 24px; display: flex; flex-direction: column; gap: 24px; }
+
+    .section-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 12px;
+    }
+
+    .checks-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 16px;
+    }
+
+    /* ──────────── Check Card ──────────── */
+    .check-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+      backdrop-filter: blur(10px);
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    .check-card::before {
+      content: '';
+      position: absolute;
+      top: 0; right: 0;
+      width: 3px; height: 100%;
+      border-radius: 0 var(--radius) var(--radius) 0;
+    }
+    .check-card.pass::before { background: var(--green); }
+    .check-card.warn::before { background: var(--amber); }
+    .check-card.fail::before { background: var(--red); }
+    .check-card.loading::before { background: var(--text-muted); }
+    .check-card:hover { transform: translateY(-2px); box-shadow: var(--shadow); border-color: var(--border-bright); }
+
+    .check-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .check-name {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+
+    .check-icon { font-size: 16px; }
+
+    .check-badge {
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+    .pass .check-badge { background: var(--green-bg); color: var(--green); border: 1px solid rgba(16,185,129,0.3); }
+    .warn .check-badge { background: var(--amber-bg); color: var(--amber); border: 1px solid rgba(245,158,11,0.3); }
+    .fail .check-badge { background: var(--red-bg); color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
+    .loading .check-badge { background: var(--bg-glass); color: var(--text-muted); }
+
+    .check-value {
+      font-size: 26px;
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+    .pass .check-value { color: var(--green); }
+    .warn .check-value { color: var(--amber); }
+    .fail .check-value { color: var(--red); }
+
+    .check-detail {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* ──────────── Skeleton loader ──────────── */
+    .skeleton {
+      background: linear-gradient(90deg, var(--bg-glass) 25%, rgba(50,60,90,0.5) 50%, var(--bg-glass) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: 6px;
+    }
+    @keyframes shimmer { to { background-position: -200% 0; } }
+
+    /* ──────────── Alerts Panel ──────────── */
+    .alerts-panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      backdrop-filter: blur(10px);
+    }
+
+    .alerts-empty {
+      color: var(--text-muted);
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .alert-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+      gap: 12px;
+    }
+    .alert-item:last-child { border-bottom: none; }
+
+    .alert-meta { flex: 1; min-width: 0; }
+    .alert-type { font-size: 12px; font-weight: 600; color: var(--red); }
+    .alert-msg { font-size: 13px; color: var(--text-primary); margin: 2px 0; }
+    .alert-time { font-size: 11px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
+
+    .ack-btn {
+      background: var(--bg-glass);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      padding: 6px 12px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 12px;
+      white-space: nowrap;
+      transition: all 0.2s;
+      flex-shrink: 0;
+    }
+    .ack-btn:hover { background: var(--accent-glow); border-color: var(--accent); color: var(--text-primary); }
+
+    /* ──────────── Info Panel ──────────── */
+    .info-panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      backdrop-filter: blur(10px);
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 12px;
+    }
+
+    .info-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .info-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .info-value {
+      font-size: 13px;
+      color: var(--text-primary);
+      font-family: 'JetBrains Mono', monospace;
+      word-break: break-all;
+    }
+
+    /* ──────────── Toast ──────────── */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: var(--bg-card);
+      border: 1px solid var(--border-bright);
+      color: var(--text-primary);
+      padding: 12px 24px;
+      border-radius: var(--radius);
+      font-size: 13px;
+      backdrop-filter: blur(20px);
+      transition: transform 0.3s ease;
+      z-index: 1000;
+      max-width: 90vw;
+      text-align: center;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+
+    /* ──────────── Error state ──────────── */
+    .error-notice {
+      background: var(--red-bg);
+      border: 1px solid rgba(239,68,68,0.3);
+      border-radius: var(--radius);
+      padding: 16px;
+      font-size: 13px;
+      color: var(--red);
+    }
+
+    @media (max-width: 600px) {
+      .checks-grid { grid-template-columns: 1fr; }
+      .info-grid { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Header -->
+<header class="header">
+  <div class="header-brand">
+    <div class="header-icon">🏥</div>
+    <div>
+      <div class="header-title">صحة النظام</div>
+      <div class="header-subtitle">لوحة المراقبة الإدارية — مزاج كافيه</div>
+    </div>
+  </div>
+  <div class="header-actions">
+    <div class="auto-refresh-badge" id="refresh-timer">⟳ تحديث كل 30 ث</div>
+    <button class="refresh-btn" id="refresh-btn" onclick="loadHealth()">
+      <span class="icon">↻</span>
+      <span>تحديث الآن</span>
+    </button>
+  </div>
+</header>
+
+<!-- Overall Status Banner -->
+<div class="status-banner loading" id="status-banner">
+  <div class="status-indicator">
+    <div class="status-dot"></div>
+    <div>
+      <div class="status-label" id="status-label">جارٍ الفحص...</div>
+      <div class="status-sub" id="status-sub">يتم فحص جميع مكونات النظام</div>
+    </div>
+  </div>
+  <div class="status-time" id="status-time">—</div>
+</div>
+
+<!-- Main Content -->
+<div class="main">
+
+  <!-- Health Checks Grid -->
+  <section>
+    <div class="section-title">🔍 فحوصات الصحة المباشرة</div>
+    <div class="checks-grid" id="checks-grid">
+      <!-- Skeleton cards while loading -->
+      <div class="check-card loading" style="height:120px"><div class="skeleton" style="height:100%"></div></div>
+      <div class="check-card loading" style="height:120px"><div class="skeleton" style="height:100%"></div></div>
+      <div class="check-card loading" style="height:120px"><div class="skeleton" style="height:100%"></div></div>
+      <div class="check-card loading" style="height:120px"><div class="skeleton" style="height:100%"></div></div>
+      <div class="check-card loading" style="height:120px"><div class="skeleton" style="height:100%"></div></div>
+      <div class="check-card loading" style="height:120px"><div class="skeleton" style="height:100%"></div></div>
+    </div>
+  </section>
+
+  <!-- Active Alerts -->
+  <section>
+    <div class="section-title">🚨 التنبيهات النشطة</div>
+    <div class="alerts-panel" id="alerts-panel">
+      <div class="alerts-empty">⏳ جارٍ تحميل التنبيهات...</div>
+    </div>
+  </section>
+
+  <!-- Build Provenance -->
+  <section>
+    <div class="section-title">🔖 معلومات البناء والإصدار</div>
+    <div class="info-panel" id="build-panel">
+      <div class="info-grid" id="build-grid">
+        <div class="skeleton" style="height:48px;border-radius:8px"></div>
+        <div class="skeleton" style="height:48px;border-radius:8px"></div>
+        <div class="skeleton" style="height:48px;border-radius:8px"></div>
+        <div class="skeleton" style="height:48px;border-radius:8px"></div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<!-- Toast notification -->
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+
+const CHECK_META = {
+  api:            { icon: '⚡', name: 'استجابة API',       valueKey: 'latency_ms',       fmt: v => v + ' ms' },
+  database:       { icon: '🗄️', name: 'قاعدة البيانات',    valueKey: 'integrity',         fmt: v => v === 'ok' ? 'سليمة' : '⚠️ ' + v },
+  migrations:     { icon: '📋', name: 'الترحيلات',         valueKey: 'applied',           fmt: (v, c) => `${v}/${c.available}` },
+  disk:           { icon: '💾', name: 'القرص',             valueKey: 'free_gb',           fmt: v => v + ' GB' },
+  backup:         { icon: '🔒', name: 'النسخ الاحتياطي',  valueKey: 'age_hours',          fmt: v => v === Infinity ? 'لا يوجد' : v + ' ساعة' },
+  outbox_queue:   { icon: '📬', name: 'قائمة الأحداث',   valueKey: 'pending',           fmt: v => v + ' معلّق' },
+  active_sessions:{ icon: '👥', name: 'الجلسات النشطة',   valueKey: 'count',             fmt: v => v + ' جلسة' },
+  websocket:      { icon: '🔌', name: 'WebSocket',        valueKey: 'recently_failed_outbox', fmt: v => v === 0 ? 'سليم' : v + ' فشل' },
+  last_deployment:{ icon: '🚀', name: 'آخر نشر',          valueKey: 'version',           fmt: v => v || 'base' },
+  error_rate:     { icon: '📊', name: 'معدل الأخطاء',    valueKey: 'rate_pct',           fmt: v => v + '%' },
+  process:        { icon: '⚙️', name: 'العملية',          valueKey: 'heap_used_mb',      fmt: v => v + ' MB' }
+};
+
+const STATUS_LABELS = {
+  PASS: 'سليم', WARN: 'تحذير', FAIL: 'خطأ', loading: 'جارٍ الفحص'
+};
+const OVERALL_LABELS = {
+  GREEN: '🟢 النظام سليم تماماً',
+  AMBER: '🟡 النظام يحتاج انتباهاً',
+  RED: '🔴 النظام يواجه مشكلة'
+};
+const OVERALL_SUB = {
+  GREEN: 'جميع الفحوصات اجتازت بنجاح',
+  AMBER: 'بعض الفحوصات تحتاج مراجعة',
+  RED: 'فحص أو أكثر فشل — مطلوب تدخل فوري'
+};
+
+let refreshInterval = null;
+let lastTimestamp = null;
+
+async function getAuthToken() {
+  // Retrieve session token from cookie or localStorage (consistent with nav.js auth)
+  const cookieMatch = document.cookie.match(/(?:^|;\s*)session_token=([^;]+)/);
+  return cookieMatch ? decodeURIComponent(cookieMatch[1]) : (localStorage.getItem('session_token') || null);
+}
+
+function showToast(msg, duration = 3000) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), duration);
+}
+
+function setStatusBanner(overall) {
+  const banner = document.getElementById('status-banner');
+  banner.className = 'status-banner ' + (overall || 'loading').toLowerCase();
+  document.getElementById('status-label').textContent = overall ? OVERALL_LABELS[overall] : 'جارٍ الفحص...';
+  document.getElementById('status-sub').textContent = overall ? OVERALL_SUB[overall] : 'يتم فحص جميع مكونات النظام';
+  document.getElementById('status-time').textContent = lastTimestamp ? new Date(lastTimestamp).toLocaleTimeString('ar-SA') : '—';
+}
+
+function renderCheckCard(key, data) {
+  const meta = CHECK_META[key] || { icon: '📌', name: key, valueKey: 'status', fmt: v => v };
+  const status = (data.status || 'loading').toLowerCase();
+  const rawVal = data[meta.valueKey];
+  const displayVal = rawVal !== undefined && rawVal !== null ? meta.fmt(rawVal, data) : '—';
+  const badgeText = STATUS_LABELS[data.status] || data.status;
+
+  const detail = [];
+  if (data.error) detail.push('خطأ: ' + data.error);
+  if (key === 'disk') detail.push(`مستخدم: ${data.used_pct || 0}%`);
+  if (key === 'backup' && data.checksum) detail.push(data.checksum.slice(0, 16) + '…');
+  if (key === 'last_deployment' && data.applied_at) detail.push(data.applied_at.replace('T', ' ').slice(0, 16));
+  if (key === 'migrations') detail.push(`${data.applied || 0} من ${data.available || 0} مُطبّقة`);
+  if (key === 'error_rate') detail.push(`${data.total_requests || 0} طلب إجمالي`);
+  if (key === 'process') detail.push(`وقت التشغيل: ${data.uptime_hours || 0} ساعة`);
+
+  return `
+    <div class="check-card ${status}">
+      <div class="check-header">
+        <div class="check-name">
+          <span class="check-icon">${meta.icon}</span>
+          <span>${meta.name}</span>
+        </div>
+        <span class="check-badge">${badgeText}</span>
+      </div>
+      <div class="check-value">${displayVal}</div>
+      ${detail.length ? `<div class="check-detail">${detail.join(' · ')}</div>` : ''}
+    </div>
+  `;
+}
+
+async function loadHealth() {
+  const btn = document.getElementById('refresh-btn');
+  btn.classList.add('spinning');
+
+  const token = await getAuthToken();
+  if (!token) {
+    document.getElementById('checks-grid').innerHTML = `<div class="error-notice" style="grid-column:1/-1">⚠️ يجب تسجيل الدخول لعرض بيانات الصحة. <a href="/" style="color:var(--accent)">تسجيل الدخول</a></div>`;
+    btn.classList.remove('spinning');
+    return;
+  }
+
+  try {
+    const [healthRes, buildRes, alertsRes] = await Promise.all([
+      fetch('/api/health/full', { headers: { Authorization: 'Bearer ' + token } }),
+      fetch('/api/build-info', { headers: { Authorization: 'Bearer ' + token } }),
+      fetch('/api/admin/alerts?limit=10&unacknowledged=true', { headers: { Authorization: 'Bearer ' + token } }).catch(() => null)
+    ]);
+
+    if (healthRes.status === 401) {
+      document.getElementById('checks-grid').innerHTML = `<div class="error-notice" style="grid-column:1/-1">⚠️ انتهت صلاحية الجلسة. <a href="/" style="color:var(--accent)">تسجيل الدخول مجدداً</a></div>`;
+      btn.classList.remove('spinning');
+      return;
+    }
+
+    const health = await healthRes.json();
+    lastTimestamp = health.timestamp;
+    setStatusBanner(health.overall);
+
+    // Render check cards
+    if (health.checks) {
+      const order = ['api','database','migrations','disk','backup','outbox_queue','active_sessions','websocket','last_deployment','error_rate','process'];
+      const keys = [...order.filter(k => health.checks[k]), ...Object.keys(health.checks).filter(k => !order.includes(k))];
+      document.getElementById('checks-grid').innerHTML = keys.map(k => renderCheckCard(k, health.checks[k])).join('');
+    }
+
+    // Build info
+    if (buildRes.ok) {
+      const build = await buildRes.json();
+      document.getElementById('build-grid').innerHTML = [
+        ['معرف البناء', build.buildId || '—'],
+        ['الكوميت', (build.commitSha || '—').slice(0, 12)],
+        ['الفرع', build.branch || '—'],
+        ['إصدار DB', build.schemaVersion || '—'],
+        ['Service Worker', build.serviceWorkerVersion || '—'],
+        ['البيئة', build.environmentMode || '—'],
+        ['قاعدة البيانات', build.databaseIdentity || '—'],
+        ['بداية العملية', build.processStartTime ? build.processStartTime.replace('T', ' ').slice(0, 16) : '—'],
+        ['معرف الخادم', (build.serverInstanceId || '—').slice(0, 18) + '…'],
+        ['وقت التشغيل', Math.floor((build.process?.uptimeSeconds || 0) / 3600) + ' ساعة']
+      ].map(([label, val]) => `
+        <div class="info-item">
+          <div class="info-label">${label}</div>
+          <div class="info-value">${val}</div>
+        </div>
+      `).join('');
+    }
+
+    // Alerts panel
+    const alertsPanel = document.getElementById('alerts-panel');
+    if (alertsRes && alertsRes.ok) {
+      const alertsData = await alertsRes.json();
+      const alerts = alertsData.alerts || alertsData.data || [];
+      if (alerts.length === 0) {
+        alertsPanel.innerHTML = `<div class="alerts-empty">✅ لا توجد تنبيهات نشطة غير معتمدة</div>`;
+      } else {
+        alertsPanel.innerHTML = alerts.map(a => `
+          <div class="alert-item" id="alert-${a.id}">
+            <div class="alert-meta">
+              <div class="alert-type">${a.alert_type || a.type || 'تنبيه'}</div>
+              <div class="alert-msg">${a.message || a.details || '—'}</div>
+              <div class="alert-time">${a.created_at ? a.created_at.replace('T', ' ').slice(0, 16) : '—'}</div>
+            </div>
+            <button class="ack-btn" onclick="acknowledgeAlert('${a.id}')">✔ اعتماد</button>
+          </div>
+        `).join('');
+      }
+    } else {
+      alertsPanel.innerHTML = `<div class="alerts-empty">— لا توجد بيانات تنبيهات متاحة</div>`;
+    }
+
+  } catch (err) {
+    setStatusBanner(null);
+    document.getElementById('checks-grid').innerHTML = `<div class="error-notice" style="grid-column:1/-1">❌ خطأ في تحميل بيانات الصحة: ${err.message}</div>`;
+  } finally {
+    btn.classList.remove('spinning');
+  }
+}
+
+async function acknowledgeAlert(alertId) {
+  const token = await getAuthToken();
+  try {
+    const res = await fetch('/api/health/alerts/acknowledge', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
+      },
+      body: JSON.stringify({ alertId })
+    });
+    if (res.ok) {
+      const el = document.getElementById('alert-' + alertId);
+      if (el) { el.style.opacity = '0.4'; el.style.pointerEvents = 'none'; }
+      showToast('✅ تم اعتماد التنبيه');
+    } else {
+      const data = await res.json();
+      showToast('⚠️ ' + (data.error || 'فشل الاعتماد'));
+    }
+  } catch (e) {
+    showToast('❌ خطأ في الشبكة');
+  }
+}
+
+function startAutoRefresh() {
+  if (refreshInterval) clearInterval(refreshInterval);
+  let countdown = 30;
+  const timer = document.getElementById('refresh-timer');
+  refreshInterval = setInterval(() => {
+    countdown--;
+    timer.textContent = `⟳ تحديث بعد ${countdown} ث`;
+    if (countdown <= 0) {
+      countdown = 30;
+      loadHealth();
+    }
+  }, 1000);
+}
+
+// Init
+document.addEventListener('DOMContentLoaded', () => {
+  loadHealth();
+  startAutoRefresh();
+});
+</script>
+</body>
+</html>
