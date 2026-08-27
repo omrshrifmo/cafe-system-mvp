@@ -191,11 +191,17 @@
         else { window.location.href = '/index.html'; return; }
       }
 
-      document.getElementById('userName').textContent = currentUser.name || "مستخدم";
-      document.getElementById('userRole').textContent = roleLabels[currentUser.role] || currentUser.role;
+      const rawRole = currentUser.role || 'WAITER';
+      const userRole = String(rawRole).toUpperCase().replace(/^ROLE_/, '').replace(/^R_/, '');
 
-      const userRole = currentUser.role || 'WAITER';
-      const tools = ALL_TOOLS.filter(t => t.roles.includes(userRole));
+      document.getElementById('userName').textContent = currentUser.name || "مستخدم";
+      document.getElementById('userRole').textContent = roleLabels[userRole] || roleLabels[rawRole] || userRole;
+
+      const tools = ALL_TOOLS.filter(t => 
+        t.roles.includes(userRole) || 
+        t.roles.includes(rawRole) ||
+        t.roles.map(r => r.toUpperCase().replace(/^ROLE_/, '').replace(/^R_/, '')).includes(userRole)
+      );
       renderTools(tools);
 
       fetchShiftStatus();

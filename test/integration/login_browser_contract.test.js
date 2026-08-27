@@ -126,4 +126,48 @@ describe('Login Browser & 16-Role Contract Integration Gate', function() {
     assert.strictEqual(meRes.status, 401);
     assert.strictEqual(meRes.body.code, 'AUTH_REQUIRED');
   });
+
+  it('20. Authenticated OWNER session receives normalized role OWNER and defaultRoute /portal.html on /api/auth/me', async function() {
+    const loginRes = await request(app)
+      .post('/api/auth/login')
+      .send({ pin: '8802' }); // Owner
+
+    const cookie = loginRes.headers['set-cookie'];
+    assert(cookie);
+
+    const meRes = await request(app)
+      .get('/api/auth/me')
+      .set('Cookie', cookie);
+
+    assert.strictEqual(meRes.status, 200);
+    assert.strictEqual(meRes.body.success, true);
+    assert.strictEqual(meRes.body.user.role, 'OWNER');
+    assert.strictEqual(meRes.body.user.defaultRoute, '/portal.html');
+
+    // Follow default route
+    const portalRes = await request(app)
+      .get(meRes.body.user.defaultRoute)
+      .set('Cookie', cookie);
+    assert.strictEqual(portalRes.status, 200);
+  });
+
+  it('21. Negative test: Unauthorized role (BARISTA) is denied access to admin-only API routes with 403 FORBIDDEN', async function() {
+    const loginRes = await request(app)
+      .post('/api/auth/login')
+      .send({ pin: '8805' }); // Barista
+
+    const cookie = loginRes.headers['set-cookie'];
+    assert(cookie);
+
+    const meRes = await request(app)
+      .get('/api/auth/me')
+      .set('Cookie', cookie);
+    assert.strictEqual(meRes.body.user.role, 'BARISTA');
+
+    // Barista attempting admin update catalog
+    const forbiddenRes = await request(app)
+      .get('/api/admin/updates/catalog')
+      .set('Cookie', cookie);
+    assert(forbiddenRes.status === 403 || forbiddenRes.body.code === 'FORBIDDEN' || forbiddenRes.body.code === 'DEFAULT_DENY');
+  });
 });

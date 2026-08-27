@@ -499,7 +499,8 @@
     }
 
     const currentUser = authenticatedUser;
-    const userRole = currentUser.role || 'WAITER';
+    const rawRole = currentUser.role || 'WAITER';
+    const userRole = String(rawRole).toUpperCase().replace(/^ROLE_/, '').replace(/^R_/, '');
     const currentShift = getActiveShiftType();
 
     // Kiosk Mode Restriction Guard: Enforce strict station lockdown
@@ -525,8 +526,14 @@
       if (matchedItem) break;
     }
 
+    const isRoleAllowed = !matchedItem || (
+      matchedItem.roles.includes(userRole) ||
+      matchedItem.roles.includes(rawRole) ||
+      matchedItem.roles.map(r => r.toUpperCase().replace(/^ROLE_/, '').replace(/^R_/, '')).includes(userRole)
+    );
+
     // Direct access control guard: If current page requires roles that user lacks, show access denied
-    if (matchedItem && !matchedItem.roles.includes(userRole)) {
+    if (matchedItem && !isRoleAllowed) {
       document.body.innerHTML = `
         <div class="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-center text-slate-200" style="font-family: 'Tajawal', sans-serif;">
           <div class="w-16 h-16 bg-rose-500/20 text-rose-400 border border-rose-500/40 rounded-2xl flex items-center justify-center text-3xl mb-4 shadow-lg">

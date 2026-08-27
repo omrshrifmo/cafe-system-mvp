@@ -199,14 +199,16 @@ async function validateSession(rawSessionToken, touch = true) {
     ).catch(() => {});
   }
 
+  const normalizedRole = normalizeRole(session.role_name);
+
   return {
     id: session.user_id,
     name: session.name,
-    role: session.role_name || 'READ_ONLY',
+    role: normalizedRole,
     permission_version: PERMISSION_VERSION,
     venueId: session.venue_id,
     sessionId: session.session_id,
-    permissions: getRolePermissions(session.role_name || 'READ_ONLY')
+    permissions: getRolePermissions(normalizedRole)
   };
 }
 
