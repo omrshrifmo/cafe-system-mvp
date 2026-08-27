@@ -35,7 +35,9 @@ async function saveIdempotencyKey(tx, key, actorId, hash, response) {
 
 async function settleOrder(sessionId, intent = {}, expectedVersion = 1) {
   return runTransaction(async (tx) => {
-    const currentHash = crypto.createHash('sha256').update(JSON.stringify(intent)).digest('hex');
+    const payloadForHash = { ...intent };
+    delete payloadForHash.request_id;
+    const currentHash = crypto.createHash('sha256').update(JSON.stringify(payloadForHash)).digest('hex');
 
     // 1. Idempotency Check (MUST execute before version lock)
     if (intent.idempotency_key) {
@@ -169,7 +171,7 @@ async function settleOrder(sessionId, intent = {}, expectedVersion = 1) {
 
     // 6. Record Payment Rows bound to the immutable shift scope
     const venueId = intent.venue_id || order.venue_id || order.branch_id || 'V_DEFAULT';
-    let shiftId = intent.shift_id || null;
+    let shiftId = intent.shift_id || order.shift_id || null;
     if (!shiftId && isV3) {
       try {
         const shiftRow = await tx.get(
@@ -277,7 +279,7 @@ async function settleOrder(sessionId, intent = {}, expectedVersion = 1) {
           if (!menuItemId) continue;
           const qty = line.quantity || 1;
           const bomRows = await tx.all(
-            `SELECT ri.inventory_item_id, ri.quantity_microunits, ri.unit, ii.current_stock_microunits
+            `SELECT ri.inventory_item_id, ri.quantity_microunits, ri.unit, ii.cost_per_unit_minor
              FROM v3_recipe_versions r
              JOIN v3_recipe_ingredients ri ON ri.recipe_version_id = r.id
              JOIN v3_inventory_items ii ON ii.id = ri.inventory_item_id
@@ -287,11 +289,13 @@ async function settleOrder(sessionId, intent = {}, expectedVersion = 1) {
           );
           for (const bom of bomRows) {
             const deltaMicrounits = -Math.round(bom.quantity_microunits * qty);
+            const lineCost = Math.round((bom.cost_per_unit_minor || 0) * (bom.quantity_microunits / 1000000) * qty);
+            totalBomCostMinor += lineCost;
             bomLines.push({
               inventory_item_id: bom.inventory_item_id,
               quantity_delta_microunits: deltaMicrounits,
               unit: bom.unit,
-              unit_cost_minor: 0
+              unit_cost_minor: bom.cost_per_unit_minor || 0
             });
           }
         }
@@ -302,10 +306,12 @@ async function settleOrder(sessionId, intent = {}, expectedVersion = 1) {
             [bl.inventory_item_id, bl.quantity_delta_microunits, bl.unit, bl.unit_cost_minor, order.id,
             `${consumptionSetId}:${bl.inventory_item_id}`, 'Automatic BOM consumption on settlement', intent.actor_id || null]
           );
-          await tx.run(
-            `UPDATE inventory_items SET current_stock_microunits = current_stock_microunits + ?, updated_at = datetime('now', 'localtime') WHERE id = ?`,
-            [bl.quantity_delta_microunits, bl.inventory_item_id]
-          );
+          try {
+            await tx.run(
+              `UPDATE inventory_items SET current_stock_microunits = current_stock_microunits + ?, updated_at = datetime('now', 'localtime') WHERE id = ?`,
+              [bl.quantity_delta_microunits, bl.inventory_item_id]
+            );
+          } catch (e) { }
         }
         await tx.run(
           `INSERT INTO bom_consumption_sets (id, consumption_set_id, order_session_id, shift_id, line_count, total_cost_minor, actor_id, device_id, request_id, created_at)

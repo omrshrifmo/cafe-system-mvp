@@ -87,8 +87,6 @@ async function routeOrderToKds(tx, venueId, orderSessionId, lines = []) {
 
   // Group lines by station
   const stationBatches = {
->>>>>>>
-    task_progress
     [STATIONS.BARISTA]: [],
     [STATIONS.KITCHEN]: [],
     [STATIONS.SHISHA]: []
@@ -128,9 +126,9 @@ for (const [station, stLines] of Object.entries(stationBatches)) {
 
   // Create KDS order header
   await tx.run(
-    `INSERT INTO kds_orders (id, venue_id, order_session_id, station_id, state, created_at, updated_at) 
-       VALUES (?, ?, ?, ?, 'NEW', datetime('now', 'localtime'), datetime('now', 'localtime'))`,
-    [kdsOrderId, venueId, orderSessionId, station]
+    `INSERT INTO kds_orders (id, venue_id, order_session_id, station_id, state, shift_id, created_at, updated_at) 
+       VALUES (?, ?, ?, ?, 'NEW', ?, datetime('now', 'localtime'), datetime('now', 'localtime'))`,
+    [kdsOrderId, venueId, orderSessionId, station, sessionShiftId]
   );
 
   const lineRecords = [];
@@ -313,7 +311,7 @@ async function updateKdsLineState(kdsLineId, newState, actorId, expectedVersion,
     // Update Line State
     await tx.run(
       `UPDATE kds_order_lines SET state = ?, updated_at = datetime('now', 'localtime') WHERE id = ?`,
-      [targetState, kdsLineId]
+      [targetNorm, kdsLineId]
     );
 
     // Immutable transition audit row (actor, station, device, version, timestamp, request id)
@@ -321,16 +319,16 @@ async function updateKdsLineState(kdsLineId, newState, actorId, expectedVersion,
       `INSERT INTO kds_line_transitions (id, kds_line_id, kds_order_id, order_session_id, station_id, from_state, to_state, actor_id, device_id, version, request_id, created_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))`,
       [`KLT-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`, kdsLineId, line.kds_order_id,
-      line.order_session_id, line.station_id, currentState, targetState, actorId, deviceId, newVersion, requestId]
+      line.order_session_id, line.station_id, currentNorm, targetNorm, actorId, deviceId, newVersion, requestId]
     );
 
     // Propagate floor state back onto the authoritative sales ledger lines
     const salesStatusMap = { 'READY': 'READY', 'PICKED_UP': 'READY', 'SERVED': 'SERVED', 'CANCELLED': 'CANCELLED' };
-    if (salesStatusMap[targetState] && line.v3_order_line_id) {
+    if (salesStatusMap[targetNorm] && line.v3_order_line_id) {
       try {
         await tx.run(
           `UPDATE v3_order_lines SET status = ?, updated_at = datetime('now', 'localtime') WHERE id = ?`,
-          [salesStatusMap[targetState], line.v3_order_line_id]
+          [salesStatusMap[targetNorm], line.v3_order_line_id]
         );
       } catch (e) { /* legacy tables may lack updated_at; state propagation is best-effort */ }
     }
@@ -343,7 +341,7 @@ async function updateKdsLineState(kdsLineId, newState, actorId, expectedVersion,
 
     // If line is READY, check if Runner task should be created
     let runnerTaskId = null;
-    if (targetState === 'READY') {
+    if (targetNorm === 'READY') {
       const { createTask } = require('../floor/runnerService');
       const orderSession = await tx.get(
         `SELECT id, table_id FROM v3_order_sessions WHERE id = ?`,
@@ -375,8 +373,8 @@ async function updateKdsLineState(kdsLineId, newState, actorId, expectedVersion,
       kds_order_id: line.kds_order_id,
       order_session_id: line.order_session_id,
       item_name: line.item_name,
-      previous_state: currentState,
-      new_state: targetState,
+      previous_state: currentNorm,
+      new_state: targetNorm,
       actor_id: actorId,
       device_id: deviceId,
       version: newVersion,
@@ -395,8 +393,8 @@ async function updateKdsLineState(kdsLineId, newState, actorId, expectedVersion,
       status: 'SUCCESS',
       kds_line_id: kdsLineId,
       kds_order_id: line.kds_order_id,
-      state: targetState,
-      previous_state: currentState,
+      state: targetNorm,
+      previous_state: currentNorm,
       version: newVersion,
       runner_task_id: runnerTaskId
     };

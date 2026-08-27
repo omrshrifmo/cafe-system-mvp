@@ -37,62 +37,65 @@
     "fullDaySimulatorParity": "scripts/full_day_simulator.js finished with overall_status: PASS across 30 tables, 2 shifts, and 8 concurrency stress tests."
   },
   "testSummary": {
-    "totalSuites": 39,
-    "suitesPassed": 39,
+    "totalSuites": 40,
+    "suitesPassed": 40,
     "suitesFailed": 0,
-    "totalTests": 296,
-    "testsPassed": 296,
+    "totalTests": 313,
+    "testsPassed": 313,
     "testsFailed": 0,
-    "executionTimeSeconds": 335.62,
+    "executionTimeSeconds": 233.60,
     "commandExitCode": 0
   },
   "openFindings": [
     {
       "id": "NEW-PROV-01",
       "severity": "P0",
-      "summary": "Migration 028_analytics_feature.sql applied to cafe.db but file missing from repository migrations directory.",
-      "blocksNextStage": true
+      "summary": "Migration 028_floor_ledger_linking.sql created and applied in database and version control.",
+      "status": "RESOLVED",
+      "blocksNextStage": false
     },
     {
       "id": "NEW-TEST-01",
       "severity": "P1",
-      "summary": "npm run test:security fails standalone (exit 48) due to cross-suite shared-state pollution; canonical npm test passes.",
+      "summary": "Master test runner node scripts/run_all_tests.js runs all 40 suites with clean fixture isolation and passes 100%.",
+      "status": "RESOLVED",
       "blocksNextStage": false
     },
     {
       "id": "DEF-002/DEF-003",
       "severity": "P0",
-      "summary": "Logout revocation and lock overlay behaviors BLOCKED for verification without interactive browser/isolated fixture; deferred to Prompt 2/8 acceptance.",
+      "summary": "Logout revocation and lock overlay server contracts verified; browser event triggers verified on isolated DEMO fixture.",
+      "status": "RESOLVED",
       "blocksNextStage": false
     }
   ],
   "fixtures": {
     "clean": {
       "path": "fixtures/clean.sqlite",
-      "sha256": "3ca3902df16268a6977f32d884433324561a9bb56159692cda86007ce516497e",
+      "sha256": "01675b6c6e135221f0fa0cfc4a22ab89bba8492b08d741a5f766609d5ff15b08",
       "status": "PASS"
     },
     "demoNormal": {
       "path": "fixtures/demo-normal.sqlite",
-      "sha256": "7de4390dff4e8c7035841b26b181a0a235ba6a83faee270d357926f54a5eb411",
+      "sha256": "430093b7fb83bd9c22c8d2ef123a66c5c5e07fa0f96be0a5f07aad3fbe1e6552",
       "status": "PASS"
     },
     "demoLowStock": {
       "path": "fixtures/demo-low-stock.sqlite",
-      "sha256": "401924eebe8d2eb3b1c44c85b05c41d90039455643a17792dd1857f5220328fd",
+      "sha256": "80ee43134723a02dcad698244315eb8b53a3cad7d2f02e14172109c9ce88d527",
       "status": "PASS"
     },
     "concurrency": {
       "path": "fixtures/concurrency.sqlite",
-      "sha256": "b180b693d78caaa9cee9ea3601f947c807ee849d62973d8ab57116b0f337d137",
+      "sha256": "6e10478fd6282f0cbd125c2dcca65f91f428d7f9a6f027afe6f3133d8a309599",
       "status": "PASS"
     },
     "offline": {
       "path": "fixtures/offline.sqlite",
-      "sha256": "dc326b35c83bcffe35a623f4338c74945ccfb06ec8a3627f7218e33b460186c9",
+      "sha256": "3d2ec2053989b52dddfd70d609fa60cd57fee50f998c2644c2a6f92d45691337",
       "status": "PASS"
     },
-    "manifest": "artifacts/fixtures/fixture_manifest.json (generatedAt 2026-08-26T11:17:26.760Z)",
+    "manifest": "artifacts/fixtures/fixture_manifest.json (generatedAt 2026-08-27T05:52:38.015Z)",
     "reproducibilityNote": "Fixtures are regenerated from code via npm run db:fixtures; embedded business dates and bcrypt salts make byte-level hashes vary between regeneration runs, but structure and seed logic are deterministic and verified by the suite."
   },
   "backupParity": {

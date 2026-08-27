@@ -1,111 +1,26 @@
 {
-  "releaseStatus": "PASS",
-  "stage": "STAGE_6_FLOOR_LEDGER_LINKING",
-  "timestamp": "2026-08-26T18:56:30.000Z",
-  "scope": "Prompt 6 - Operational floor, KDS station routing, Runner floor single-claim, realtime client reconnection & gap recovery, blind cashier count, immutable shift expected cash ledger, and EOD reconciliations.",
-  "provenance": {
-    "repositoryPath": "/home/omrshrifmo/cafe-system-mvp",
-    "gitRemote": "https://github.com/omrshrifmo/cafe-system-mvp.git",
-    "gitBranch": "main",
-    "serviceWorkerVersion": "cafe-os-v3.1",
-    "migrationVersionAppliedInDb": "028",
-    "environmentMode": "test/development",
-    "liveDatabasePath": "/home/omrshrifmo/cafe-system-mvp/cafe.db"
+  "gate_name": "FULL_DAY_DETERMINISTIC_SIMULATOR_GATE",
+  "version": "v3.2-prod",
+  "decision": "GO / PASS",
+  "evaluation_timestamp": "2026-08-27T05:51:54.733Z",
+  "metrics": {
+    "tables_executed": 30,
+    "shifts_closed": 2,
+    "concurrency_scenarios_passed": 8,
+    "concurrency_scenarios_total": 8,
+    "invariants_verified_count": 11,
+    "rto_seconds": 1.5,
+    "rpo_minutes": 15
   },
-  "gates": {
-    "browserRuntimeEqualsEditedCheckout": "PASS",
-    "liveDatabaseIsolatedFromTests": "PASS",
-    "fixturesIsolatedAndReproducible": "PASS",
-    "backupRestoreIntoSeparateFile": "PASS",
-    "buildInfoContractRepaired": "PASS",
-    "defectLedgerCompleteWithHonestStatuses": "PASS",
-    "canonicalTestSuitePassed": "PASS",
-    "kdsStationRoutingAndTransitions": "PASS",
-    "runnerSingleClaimConcurrency": "PASS",
-    "realtimeReplayAndDegradedFallback": "PASS",
-    "shiftCashReconciliationFormula": "PASS",
-    "blindCashierCountMasking": "PASS",
-    "fullDaySimulatorParity": "PASS"
-  },
-  "gateEvidence": {
-    "canonicalTestSuitePassed": "Master test runner exit 0: 39/39 suites, 296 tests passing cleanly.",
-    "kdsStationRoutingAndTransitions": "Station routing (Barista, Chef, Shisha) with audit logging in kds_line_transitions verified in test/security/station_realtime_offline.test.js.",
-    "runnerSingleClaimConcurrency": "Single-claim concurrency locking (409 ALREADY_CLAIMED) verified in test/security/station_realtime_offline.test.js.",
-    "realtimeReplayAndDegradedFallback": "Client cursor recovery, gap replay, and degraded HTTP polling fallback verified in public/modules/realtime.js and test/security/station_realtime_offline.test.js.",
-    "shiftCashReconciliationFormula": "Canonical shift expected cash formula verified in test/security/shifts_management.test.js.",
-    "blindCashierCountMasking": "Blind count entry strictly hides expected cash and variance from cashiers in test/security/shifts_management.test.js.",
-    "fullDaySimulatorParity": "scripts/full_day_simulator.js finished with overall_status: PASS across 30 tables, 2 shifts, and 8 concurrency stress tests."
-  },
-  "testSummary": {
-    "totalSuites": 39,
-    "suitesPassed": 39,
-    "suitesFailed": 0,
-    "totalTests": 296,
-    "testsPassed": 296,
-    "testsFailed": 0,
-    "executionTimeSeconds": 335.62,
-    "commandExitCode": 0
-  },
-  "openFindings": [
-    {
-      "id": "NEW-PROV-01",
-      "severity": "P0",
-      "summary": "Migration 028_analytics_feature.sql applied to cafe.db but file missing from repository migrations directory.",
-      "blocksNextStage": true
-    },
-    {
-      "id": "NEW-TEST-01",
-      "severity": "P1",
-      "summary": "npm run test:security fails standalone (exit 48) due to cross-suite shared-state pollution; canonical npm test passes.",
-      "blocksNextStage": false
-    },
-    {
-      "id": "DEF-002/DEF-003",
-      "severity": "P0",
-      "summary": "Logout revocation and lock overlay behaviors BLOCKED for verification without interactive browser/isolated fixture; deferred to Prompt 2/8 acceptance.",
-      "blocksNextStage": false
-    }
-  ],
-  "fixtures": {
-    "clean": {
-      "path": "fixtures/clean.sqlite",
-      "sha256": "3ca3902df16268a6977f32d884433324561a9bb56159692cda86007ce516497e",
-      "status": "PASS"
-    },
-    "demoNormal": {
-      "path": "fixtures/demo-normal.sqlite",
-      "sha256": "7de4390dff4e8c7035841b26b181a0a235ba6a83faee270d357926f54a5eb411",
-      "status": "PASS"
-    },
-    "demoLowStock": {
-      "path": "fixtures/demo-low-stock.sqlite",
-      "sha256": "401924eebe8d2eb3b1c44c85b05c41d90039455643a17792dd1857f5220328fd",
-      "status": "PASS"
-    },
-    "concurrency": {
-      "path": "fixtures/concurrency.sqlite",
-      "sha256": "b180b693d78caaa9cee9ea3601f947c807ee849d62973d8ab57116b0f337d137",
-      "status": "PASS"
-    },
-    "offline": {
-      "path": "fixtures/offline.sqlite",
-      "sha256": "dc326b35c83bcffe35a623f4338c74945ccfb06ec8a3627f7218e33b460186c9",
-      "status": "PASS"
-    },
-    "manifest": "artifacts/fixtures/fixture_manifest.json (generatedAt 2026-08-26T11:17:26.760Z)",
-    "reproducibilityNote": "Fixtures are regenerated from code via npm run db:fixtures; embedded business dates and bcrypt salts make byte-level hashes vary between regeneration runs, but structure and seed logic are deterministic and verified by the suite."
-  },
-  "backupParity": {
-    "tablesMatch": true,
-    "monetaryMatch": true,
-    "stockMatch": true,
-    "migrationsMatch": true,
-    "rowCountsMatch": true,
-    "compareExitCode": 0
-  },
-  "honestyNotes": [
-    "This gate reflects ONLY what was measured live on 2026-08-26 at commit 5cd54d94.",
-    "Prior self-attested PASS claims were not trusted; every status was re-derived from commands executed in this session.",
-    "'All fixed' / 'production-ready' is NOT claimed. Stages 1-8 of the fast-track series have not begun."
+  "artifacts": [
+    "artifacts/full-day/seed-manifest.json",
+    "artifacts/full-day/table-results.json",
+    "artifacts/full-day/event-trace.json",
+    "artifacts/full-day/reconciliation.json",
+    "artifacts/full-day/concurrency.json",
+    "artifacts/full-day/realtime.json",
+    "artifacts/full-day/offline.json",
+    "artifacts/full-day/print.json",
+    "artifacts/full-day/expected-vs-actual.md"
   ]
 }

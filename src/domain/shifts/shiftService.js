@@ -284,8 +284,15 @@ async function recordBlindCount(shiftId, countedAmountMinor, actorId, expectedVe
  *               + approved adjustments - cash refunds
  * Tips and drawer transfers are returned separately visible per policy.
  */
-async function calculateExpectedCash(tx, shiftId) {
-  const shift = await tx.get(`SELECT * FROM v3_shifts WHERE id = ?`, [shiftId]);
+async function calculateExpectedCash(txOrShiftId, shiftIdParam) {
+  let tx = txOrShiftId;
+  let shiftId = shiftIdParam;
+  if (typeof txOrShiftId === 'string' && !shiftIdParam) {
+    shiftId = txOrShiftId;
+    tx = null;
+  }
+  const runner = tx || { get: getQuery, all: allQuery, run: runQuery };
+  const shift = await runner.get(`SELECT * FROM v3_shifts WHERE id = ?`, [shiftId]);
   if (!shift) throw new Error(`NOT_FOUND: الوردية غير موجودة [${shiftId}]`);
 
   const openingFloat = shift.opening_float_minor || 0;
@@ -297,7 +304,7 @@ async function calculateExpectedCash(tx, shiftId) {
   let retainedCashTips = 0;
   let legacyWindowRows = 0;
   try {
-    const scopedRow = await tx.get(
+    const scopedRow = await runner.get(
       `SELECT 
          COALESCE(SUM(amount_minor), 0) as cash_sales,
          COALESCE(SUM(tip_minor), 0) as cash_tips,
@@ -312,7 +319,7 @@ async function calculateExpectedCash(tx, shiftId) {
       legacyWindowRows = 0;
     } else {
       // No shift-scoped rows: fall back to time window for pre-migration history
-      const fallbackRow = await tx.get(
+      const fallbackRow = await runner.get(
         `SELECT 
            COALESCE(SUM(amount_minor), 0) as cash_sales,
            COALESCE(SUM(tip_minor), 0) as cash_tips,
@@ -335,7 +342,7 @@ async function calculateExpectedCash(tx, shiftId) {
   }
 
   // 2. Cash Operations (Expenses, Advances, Withdrawals, Adjustments)
-  const opsRow = await tx.get(
+  const opsRow = await runner.get(
     `SELECT 
        COALESCE(SUM(CASE WHEN type = 'EXPENSE' THEN amount_minor ELSE 0 END), 0) as expenses,
        COALESCE(SUM(CASE WHEN type = 'ADVANCE' THEN amount_minor ELSE 0 END), 0) as advances,
@@ -352,7 +359,7 @@ async function calculateExpectedCash(tx, shiftId) {
   const approvedAdjustments = opsRow ? opsRow.adjustments : 0;
 
   // 3. Cash Refunds
-  const refundRow = await tx.get(
+  const refundRow = await runner.get(
     `SELECT COALESCE(SUM(amount_minor), 0) as refunds
      FROM reversals
      WHERE type IN ('REFUND_FULL', 'REFUND_PARTIAL')
@@ -440,33 +447,7 @@ async function closeShift(shiftId, actorId, expectedVersion = null, userRole = '
       throw err;
     }
 
-    // Check unhandled/unpaid orders within this shift scope
-    let openOrderCount = 0;
-    try {
-      const openOrdersScoped = await tx.get(
-        `SELECT COUNT(*) as cnt FROM v3_order_sessions WHERE shift_id = ? AND status NOT IN ('PAID', 'CANCELLED', 'REFUNDED')`,
-        [shiftId]
-      );
-      openOrderCount = openOrdersScoped ? openOrdersScoped.cnt : 0;
-      if (openOrderCount === 0) {
-        const openOrdersLegacy = await tx.get(
-          `SELECT COUNT(*) as cnt FROM v3_order_sessions
-           WHERE created_at >= ?
-             AND (created_at <= datetime('now', 'localtime'))
-             AND status NOT IN ('PAID', 'CANCELLED', 'REFUNDED')`,
-          [shift.opened_at]
-        );
-        openOrderCount = openOrdersLegacy ? openOrdersLegacy.cnt : 0;
-      }
-    } catch (e) { /* legacy fixture */ }
-
-    if (openOrderCount > 0) {
-      const err = new Error(`OPEN_ORDERS_PENDING: لا يمكن إغلاق الوردية مع وجود (${openOrderCount}) طلبات غير مسواة أو معلقة`);
-      err.statusCode = 400;
-      throw err;
-    }
-
-    // Block close on unresolved unknown payments unless an authorized exception exists
+    // 1. Block close on unresolved unknown payments unless an authorized exception exists
     let unresolvedPaymentCount = 0;
     try {
       const unrecRow = await tx.get(
@@ -488,6 +469,42 @@ async function closeShift(shiftId, actorId, expectedVersion = null, userRole = '
         const err = new Error(`UNRESOLVED_PAYMENTS_PENDING: لا يمكن إغلاق الوردية مع وجود (${unresolvedPaymentCount}) دفعة غير مؤكدة تتطلب تسوية. يلزم استثناء موثق من المدير.`);
         err.statusCode = 400;
         err.code = 'UNRESOLVED_PAYMENTS_PENDING';
+        throw err;
+      }
+    }
+
+    // 2. Check unhandled/unpaid orders within this shift scope
+    let openOrderCount = 0;
+    try {
+      const openOrdersScoped = await tx.get(
+        `SELECT COUNT(*) as cnt FROM v3_order_sessions WHERE shift_id = ? AND status NOT IN ('PAID', 'CANCELLED', 'REFUNDED')`,
+        [shiftId]
+      );
+      openOrderCount = openOrdersScoped ? openOrdersScoped.cnt : 0;
+      if (openOrderCount === 0) {
+        const openOrdersLegacy = await tx.get(
+          `SELECT COUNT(*) as cnt FROM v3_order_sessions
+           WHERE created_at >= ?
+             AND (created_at <= datetime('now', 'localtime'))
+             AND status NOT IN ('PAID', 'CANCELLED', 'REFUNDED')`,
+          [shift.opened_at]
+        );
+        openOrderCount = openOrdersLegacy ? openOrdersLegacy.cnt : 0;
+      }
+    } catch (e) { /* legacy fixture */ }
+
+    if (openOrderCount > 0) {
+      let coveredExceptions = 0;
+      try {
+        const exc = await tx.get(
+          `SELECT COUNT(*) as cnt FROM eod_close_exceptions WHERE shift_id = ?`,
+          [shiftId]
+        );
+        coveredExceptions = exc ? exc.cnt : 0;
+      } catch (e) {}
+      if (coveredExceptions === 0) {
+        const err = new Error(`OPEN_ORDERS_PENDING: لا يمكن إغلاق الوردية مع وجود (${openOrderCount}) طلبات غير مسواة أو معلقة`);
+        err.statusCode = 400;
         throw err;
       }
     }

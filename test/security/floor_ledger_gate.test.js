@@ -36,7 +36,26 @@ describe('Floor & Day-Management Ledger Linking Gate', function () {
             if (fs.existsSync(f)) fs.unlinkSync(f);
         }
         await runMigrations();
-        console.log('    [gate] isolated fixture migrated:', dbPath);
+
+        // Seed baseline entities for foreign key integrity in clean fixture
+        await runQuery(`INSERT OR IGNORE INTO venues (id, name) VALUES ('V_DEFAULT', 'Main Branch')`);
+        await runQuery(`INSERT OR IGNORE INTO roles (id, venue_id, name) VALUES ('R_OWNER', 'V_DEFAULT', 'OWNER')`);
+        await runQuery(`INSERT OR IGNORE INTO branches (id, venue_id, name) VALUES ('BR_DEFAULT', 'V_DEFAULT', 'Main Branch')`);
+        await runQuery(`INSERT OR IGNORE INTO v3_menu_categories (id, venue_id, name) VALUES ('CAT_GATE', 'V_DEFAULT', 'Gate Category')`);
+
+        const seedUsers = [
+            'USER-OWNER', 'USER-W1', 'USER-R1', 'USER-B1', 'USER-C1', 'USER-MGR',
+            'USER-BARISTA', 'RUNNER-A', 'RUNNER-B', 'USER-CASHIER', 'USER-MANAGER',
+            'USER-NIGHT-MGR', 'USER-NIGHT-2'
+        ];
+        for (const uid of seedUsers) {
+            await runQuery(
+                `INSERT OR IGNORE INTO v3_users (id, venue_id, name, role_id, pin_hash, is_active)
+                 VALUES (?, 'V_DEFAULT', ?, 'R_OWNER', 'dummyhash', 1)`,
+                [uid, uid]
+            );
+        }
+        console.log('    [gate] isolated fixture migrated & seeded:', dbPath);
     });
 
     after(async () => {
@@ -85,16 +104,10 @@ describe('Floor & Day-Management Ledger Linking Gate', function () {
 
             const menuItemId = `MI-GATE-${Date.now()}`;
             await runQuery(
-                `INSERT INTO v3_menu_items (id, name, department, price_minor, is_available)
-         VALUES (?, ?, ?, ?, 1)`,
-                [menuItemId, 'Gate Latte', 'BARISTA', 5000]
-            ).catch(async () => {
-                // Fallback if schema requires more columns
-                await runQuery(
-                    `INSERT INTO v3_menu_items (id, name, department) VALUES (?, ?, ?)`,
-                    [menuItemId, 'Gate Latte', 'BARISTA']
-                );
-            });
+                `INSERT OR REPLACE INTO v3_menu_items (id, category_id, name, department, is_available)
+         VALUES (?, 'CAT_GATE', ?, ?, 1)`,
+                [menuItemId, 'Gate Latte', 'BARISTA']
+            );
 
             const created = await routeOrderToKds(null, venueId, orderSessionId, [
                 { menu_item_id: menuItemId, quantity: 2, id: `LN-GATE-${Date.now()}` }
