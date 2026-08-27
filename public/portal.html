@@ -161,7 +161,7 @@
         <span>⚡</span>
         <span>الأدوات والشاشات المتاحة</span>
       </h2>
-      <span id="toolCount" class="px-2.5 py-0.5 bg-slate-800 border border-slate-700 rounded-lg text-slate-400 text-xs font-bold font-mono">0 أدوات</span>
+      <span id="toolCount" class="px-2.5 py-0.5 bg-slate-800 border border-slate-700 rounded-lg text-slate-400 text-xs font-bold font-mono">جاري التحميل...</span>
     </div>
 
     <!-- Tools Grid -->
@@ -189,7 +189,7 @@
       CASHIER: "كاشير الصالة",
       WAITER: "ويتر الصالة",
       BARISTA: "باريستا الكافيه",
-      SHIASH: "معد الشيشة",
+      SHISHA: "معد الشيشة",
       CHEF: "شيف المطبخ",
       JOKER: "جوكر شامل",
       ADMIN: "مدير النظام",
@@ -201,8 +201,8 @@
       { name: "إدارة وتوزيع الطاولات", url: "/tables.html", icon: "🪑", roles: ['SUPER_ADMIN','OWNER','OP_MANAGER','ADMIN','MANAGER','OP_ASSISTANT_CASHIER','HALL_MANAGER','WAITER','JOKER','CASHIER'] },
       { name: "شاشة البارستا KDS", url: "/kds.html", icon: "☕", roles: ['SUPER_ADMIN','OWNER','OP_MANAGER','ADMIN','MANAGER','BARISTA','JOKER'] },
       { name: "شاشة المطبخ KDS", url: "/kitchen.html", icon: "🍳", roles: ['SUPER_ADMIN','OWNER','OP_MANAGER','ADMIN','MANAGER','CHEF','JOKER'] },
-      { name: "شاشة الشيشة KDS", url: "/shisha.html", icon: "💨", roles: ['SUPER_ADMIN','OWNER','OP_MANAGER','ADMIN','MANAGER','SHIASH','JOKER'] },
-      { name: "شاشة الويتر والرانر", url: "/runner.html", icon: "🏃", roles: ['SUPER_ADMIN','OWNER','OP_MANAGER','ADMIN','MANAGER','HALL_MANAGER','WAITER','JOKER','BARISTA','SHIASH','CHEF'] },
+      { name: "شاشة الشيشة KDS", url: "/shisha.html", icon: "💨", roles: ['SUPER_ADMIN','OWNER','OP_MANAGER','ADMIN','MANAGER','SHISHA','JOKER'] },
+      { name: "شاشة الويتر والرانر", url: "/runner.html", icon: "🏃", roles: ['SUPER_ADMIN','OWNER','OP_MANAGER','ADMIN','MANAGER','HALL_MANAGER','WAITER','JOKER','BARISTA','SHISHA','CHEF'] },
       { name: "مدير القائمة الموحد", url: "/menu-manager.html", icon: "🍽️", roles: ['SUPER_ADMIN','OWNER','OP_MANAGER','ADMIN','MANAGER','BOM_MANAGER'] },
       { name: "المخزون ومطابقة BOM", url: "/inventory.html", icon: "📦", roles: ['SUPER_ADMIN','OWNER','OP_MANAGER','ADMIN','MANAGER','BOM_MANAGER'] },
       { name: "فواتير المشتريات", url: "/purchasing.html", icon: "🛒", roles: ['SUPER_ADMIN','OWNER','OP_MANAGER','ADMIN','MANAGER','BOM_MANAGER'] },
@@ -272,11 +272,10 @@
 
       const tools = (userRole === 'OWNER' || userRole === 'SUPER_ADMIN')
         ? ALL_TOOLS
-        : ALL_TOOLS.filter(t => 
-            t.roles.includes(userRole) || 
-            t.roles.includes(rawRole) ||
-            t.roles.map(r => r.toUpperCase().replace(/^ROLE_/, '').replace(/^R_/, '')).includes(userRole)
-          );
+        : ALL_TOOLS.filter(t => {
+            const normalizedRoles = t.roles.map(r => r.toUpperCase().replace(/^ROLE_/, '').replace(/^R_/, ''));
+            return normalizedRoles.includes(userRole) || normalizedRoles.includes(rawRole);
+          });
       renderTools(tools);
 
       fetchShiftStatus();

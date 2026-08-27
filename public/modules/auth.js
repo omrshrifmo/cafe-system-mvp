@@ -121,7 +121,7 @@ function updateCountdownWarning() {
 function resetInactivityTimer(e) {
   if (typeof window === 'undefined') return;
   const path = window.location.pathname;
-  if (path === '/' || path.endsWith('/index.html') || path.endsWith('/setup.html') || path.includes('qr-menu.html')) {
+  if (path === '/' || path.endsWith('/index.html') || path.endsWith('/setup.html') || path.endsWith('/manual.html') || path.includes('qr-menu.html')) {
     return;
   }
 
@@ -176,7 +176,7 @@ function updateLockDisplay() {
 
 function lockScreen() {
   const path = window.location.pathname;
-  if (path === '/' || path.endsWith('/index.html') || path.endsWith('/setup.html') || path.includes('qr-menu.html')) {
+  if (path === '/' || path.endsWith('/index.html') || path.endsWith('/setup.html') || path.endsWith('/manual.html') || path.includes('qr-menu.html')) {
     return;
   }
   if (document.getElementById('mazaj-lock-overlay')) return;
@@ -536,7 +536,16 @@ if (typeof window !== 'undefined') {
     checkAndPromptRestore
   };
   
-  resetInactivityTimer();
-  setTimeout(checkAndPromptRestore, 800);
+  
+  // Wait for the DOM to be fully loaded before starting the inactivity timer
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      resetInactivityTimer();
+      setTimeout(checkAndPromptRestore, 800);
+    });
+  } else {
+    resetInactivityTimer();
+    setTimeout(checkAndPromptRestore, 800);
+  }
 }
 

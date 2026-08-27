@@ -115,6 +115,12 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // ── Bypass cache entirely in development mode ──
+  if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
+    event.respondWith(fetch(event.request));
+    return;
+  }
+
   // ── NEVER cache: pass through entirely ──
   if (url.pathname.startsWith('/ws') || isNeverCache(url.pathname)) {
     event.respondWith(

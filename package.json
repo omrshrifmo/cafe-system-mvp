@@ -10,6 +10,7 @@
     "db:status": "node src/db/cli.js status",
     "db:backup": "node src/db/cli.js backup",
     "db:restore": "node src/db/cli.js restore",
+    "db:reset": "node scripts/db_create.js",
     "db:fixtures": "node src/domain/system/fixtureService.js",
     "lint": "eslint src/ test/ public/modules/",
     "format:check": "echo \"Checking code format... OK\"",

@@ -50,7 +50,7 @@
         { title: 'تقفيل الوردية (EOD)', path: '/eod.html', icon: '📊', roles: [...ALL_PRIVILEGED, 'CASHIER'] },
         { title: 'مؤشرات الأداء (BI)', path: '/bi.html', icon: '📈', roles: [...ALL_PRIVILEGED, 'READ_ONLY'] },
         { title: 'حسابات الشركاء', path: '/shareholders.html', icon: '💎', roles: ['SUPER_ADMIN', 'OWNER'] },
-        { title: 'البوابة الرئيسية', path: '/portal.html', icon: '🏠', roles: [...ALL_PRIVILEGED, 'BOM_MANAGER', 'HALL_MANAGER', 'WAITER', 'RUNNER', 'BARISTA', 'SHISHA', 'CHEF', 'CASHIER', 'HR_PAYROLL', 'QA', 'READ_ONLY'] }
+        { title: 'البوابة الرئيسية', path: '/portal.html', icon: '🏠', roles: [...ALL_PRIVILEGED, 'ADMIN', 'MANAGER', 'OP_ASSISTANT_CASHIER', 'JOKER', 'BOM_MANAGER', 'HALL_MANAGER', 'WAITER', 'RUNNER', 'BARISTA', 'SHISHA', 'CHEF', 'CASHIER', 'HR_PAYROLL', 'QA', 'READ_ONLY'] }
       ]
     }
   ];
