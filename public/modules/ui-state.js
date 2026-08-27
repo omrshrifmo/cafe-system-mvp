@@ -264,8 +264,35 @@
   /**
    * Accessible Modal Manager with Focus Trap and Escape Recovery
    */
+  function trapFocus(modalElement) {
+    const focusable = modalElement.querySelectorAll('button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])');
+    if (!focusable.length) return () => {};
+
+    const firstEl = focusable[0];
+    const lastEl = focusable[focusable.length - 1];
+
+    const keyHandler = (e) => {
+      if (e.key !== 'Tab') return;
+      if (e.shiftKey) {
+        if (document.activeElement === firstEl) {
+          e.preventDefault();
+          lastEl.focus();
+        }
+      } else {
+        if (document.activeElement === lastEl) {
+          e.preventDefault();
+          firstEl.focus();
+        }
+      }
+    };
+
+    modalElement.addEventListener('keydown', keyHandler);
+    return () => modalElement.removeEventListener('keydown', keyHandler);
+  }
+
   function openModal(modalId, options = {}) {
-    const modal = document.getElementById(modalId);
+    if (typeof document === 'undefined') return;
+    const modal = typeof modalId === 'string' ? document.getElementById(modalId) : modalId;
     if (!modal) return;
 
     previouslyFocusedElement = document.activeElement;
@@ -276,20 +303,40 @@
     modal.setAttribute('role', 'dialog');
     modal.setAttribute('aria-modal', 'true');
 
-    // Focus on first focusable element inside modal
-    const focusable = modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+    const removeTrap = trapFocus(modal);
+    modal._removeTrap = removeTrap;
+
+    const escapeHandler = (e) => {
+      if (e.key === 'Escape' && !options.preventEscape) {
+        if (typeof options.onCancel === 'function') {
+          options.onCancel();
+        } else {
+          closeModal(modal);
+        }
+      }
+    };
+    document.addEventListener('keydown', escapeHandler);
+    modal._escapeHandler = escapeHandler;
+
+    const focusable = modal.querySelectorAll('button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])');
     if (focusable.length > 0) {
       setTimeout(() => focusable[0].focus(), 50);
-      focusable[0].focus();
     }
   }
 
   function closeModal(modalId) {
-    const modal = document.getElementById(modalId) || activeModal;
+    if (typeof document === 'undefined') return;
+    const modal = typeof modalId === 'string' ? document.getElementById(modalId) : (modalId || activeModal);
     if (!modal) return;
 
     modal.classList.add('hidden');
     modal.removeAttribute('aria-modal');
+    modal.setAttribute('aria-hidden', 'true');
+
+    if (modal._removeTrap) {
+      modal._removeTrap();
+      delete modal._removeTrap;
+    }
 
     if (modal._escapeHandler) {
       document.removeEventListener('keydown', modal._escapeHandler);
@@ -297,10 +344,308 @@
     }
 
     if (previouslyFocusedElement && typeof previouslyFocusedElement.focus === 'function') {
-      previouslyFocusedElement.focus();
+      try { previouslyFocusedElement.focus(); } catch (e) {}
     }
 
-    activeModal = null;
+    if (activeModal === modal) activeModal = null;
+  }
+
+  /**
+   * Generic In-Page Dialog Container
+   */
+  function getOrCreateDialogContainer() {
+    if (typeof document === 'undefined') return null;
+    let container = document.getElementById('mazaj-dialog-root');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'mazaj-dialog-root';
+      container.setAttribute('aria-live', 'assertive');
+      document.body.appendChild(container);
+    }
+    return container;
+  }
+
+  /**
+   * Accessible In-Page Alert Modal (Promise-based)
+   */
+  function showInPageAlert(message, options = {}) {
+    return new Promise((resolve) => {
+      if (typeof document === 'undefined') return resolve();
+
+      const container = getOrCreateDialogContainer();
+      if (!container) return resolve();
+
+      const title = options.title || 'تنبيه من النظام';
+      const severity = options.severity || 'info'; // 'info' | 'success' | 'warning' | 'error'
+      const confirmText = options.confirmText || 'حسناً، فهمت';
+      const requestId = options.requestId || null;
+
+      const colors = {
+        info: { border: 'border-amber-500/40', btn: 'bg-amber-500 hover:bg-amber-400 text-slate-950', icon: 'ℹ️' },
+        success: { border: 'border-emerald-500/50', btn: 'bg-emerald-500 hover:bg-emerald-400 text-slate-950', icon: '✅' },
+        warning: { border: 'border-amber-500/60', btn: 'bg-amber-500 hover:bg-amber-400 text-slate-950', icon: '⚠️' },
+        error: { border: 'border-rose-500/60', btn: 'bg-rose-600 hover:bg-rose-500 text-white', icon: '🚨' }
+      }[severity] || { border: 'border-slate-700', btn: 'bg-amber-500 text-slate-950', icon: 'ℹ️' };
+
+      const dialogId = 'mazaj-alert-' + Date.now();
+      const modalEl = document.createElement('div');
+      modalEl.id = dialogId;
+      modalEl.className = 'fixed inset-0 z-[999999] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4';
+      modalEl.setAttribute('role', 'dialog');
+      modalEl.setAttribute('aria-modal', 'true');
+      modalEl.setAttribute('aria-labelledby', `${dialogId}-title`);
+      modalEl.setAttribute('aria-describedby', `${dialogId}-desc`);
+      modalEl.setAttribute('dir', 'rtl');
+
+      modalEl.innerHTML = `
+        <div class="bg-slate-900 border ${colors.border} rounded-2xl max-w-md w-full p-6 shadow-2xl text-slate-100 flex flex-col gap-4 text-right transform transition-all animate-in fade-in zoom-in-95 duration-150">
+          <div class="flex items-center gap-3">
+            <span class="text-3xl">${colors.icon}</span>
+            <h2 id="${dialogId}-title" class="text-base font-black text-slate-100">${title}</h2>
+          </div>
+          <div id="${dialogId}-desc" class="text-xs text-slate-300 leading-relaxed max-h-60 overflow-y-auto whitespace-pre-wrap">${message}</div>
+          ${options.technicalDetails ? `
+            <details class="bg-slate-950/70 border border-slate-800 rounded-xl p-3 text-[11px] font-mono text-slate-400">
+              <summary class="cursor-pointer font-bold text-amber-400 select-none">تفاصيل فنية للدعم الفني</summary>
+              <pre class="mt-2 text-rose-300 overflow-x-auto whitespace-pre-wrap">${options.technicalDetails}</pre>
+            </details>
+          ` : ''}
+          ${requestId ? `<div class="text-[10px] font-mono text-slate-500 border-t border-slate-800 pt-2 flex justify-between"><span>معرف الطلب:</span><span class="text-amber-400">${requestId}</span></div>` : ''}
+          <div class="flex justify-end gap-2 pt-2 border-t border-slate-800/80">
+            <button id="${dialogId}-btn-ok" class="px-5 py-2.5 ${colors.btn} font-black text-xs rounded-xl shadow-lg transition-all cursor-pointer focus:ring-2 focus:ring-amber-300 focus:outline-none">
+              ${confirmText}
+            </button>
+          </div>
+        </div>
+      `;
+
+      container.appendChild(modalEl);
+      openModal(modalEl, {
+        onCancel: () => {
+          closeModal(modalEl);
+          modalEl.remove();
+          resolve(true);
+        }
+      });
+
+      const okBtn = modalEl.querySelector(`#${dialogId}-btn-ok`);
+      okBtn.onclick = () => {
+        closeModal(modalEl);
+        modalEl.remove();
+        resolve(true);
+      };
+    });
+  }
+
+  /**
+   * Accessible In-Page Confirm Modal (Promise-based)
+   */
+  function showInPageConfirm(message, options = {}) {
+    return new Promise((resolve) => {
+      if (typeof document === 'undefined') return resolve(false);
+
+      const container = getOrCreateDialogContainer();
+      if (!container) return resolve(false);
+
+      const title = options.title || 'تأكيد العملية';
+      const severity = options.severity || 'warning'; // 'warning' | 'danger' | 'info'
+      const confirmText = options.confirmText || 'نعم، متابعة';
+      const cancelText = options.cancelText || 'إلغاء التراجع';
+      const requestId = options.requestId || null;
+
+      const colors = {
+        warning: { border: 'border-amber-500/60', btn: 'bg-amber-500 hover:bg-amber-400 text-slate-950', icon: '⚠️' },
+        danger: { border: 'border-rose-500/60', btn: 'bg-rose-600 hover:bg-rose-500 text-white', icon: '🚨' },
+        info: { border: 'border-sky-500/50', btn: 'bg-sky-500 hover:bg-sky-400 text-slate-950', icon: '❓' }
+      }[severity] || { border: 'border-amber-500/50', btn: 'bg-amber-500 text-slate-950', icon: '⚠️' };
+
+      const dialogId = 'mazaj-confirm-' + Date.now();
+      const modalEl = document.createElement('div');
+      modalEl.id = dialogId;
+      modalEl.className = 'fixed inset-0 z-[999999] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4';
+      modalEl.setAttribute('role', 'dialog');
+      modalEl.setAttribute('aria-modal', 'true');
+      modalEl.setAttribute('aria-labelledby', `${dialogId}-title`);
+      modalEl.setAttribute('aria-describedby', `${dialogId}-desc`);
+      modalEl.setAttribute('dir', 'rtl');
+
+      modalEl.innerHTML = `
+        <div class="bg-slate-900 border ${colors.border} rounded-2xl max-w-md w-full p-6 shadow-2xl text-slate-100 flex flex-col gap-4 text-right transform transition-all animate-in fade-in zoom-in-95 duration-150">
+          <div class="flex items-center gap-3">
+            <span class="text-3xl">${colors.icon}</span>
+            <h2 id="${dialogId}-title" class="text-base font-black text-slate-100">${title}</h2>
+          </div>
+          <div id="${dialogId}-desc" class="text-xs text-slate-300 leading-relaxed max-h-60 overflow-y-auto whitespace-pre-wrap">${message}</div>
+          ${requestId ? `<div class="text-[10px] font-mono text-slate-500 border-t border-slate-800 pt-2 flex justify-between"><span>معرف الطلب:</span><span class="text-amber-400">${requestId}</span></div>` : ''}
+          <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-800/80">
+            <button id="${dialogId}-btn-cancel" class="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-xl border border-slate-700 shadow-md transition-all cursor-pointer focus:ring-2 focus:ring-slate-400 focus:outline-none">
+              ${cancelText}
+            </button>
+            <button id="${dialogId}-btn-confirm" class="px-5 py-2.5 ${colors.btn} font-black text-xs rounded-xl shadow-lg transition-all cursor-pointer focus:ring-2 focus:ring-amber-300 focus:outline-none">
+              ${confirmText}
+            </button>
+          </div>
+        </div>
+      `;
+
+      container.appendChild(modalEl);
+      openModal(modalEl, {
+        onCancel: () => {
+          closeModal(modalEl);
+          modalEl.remove();
+          resolve(false);
+        }
+      });
+
+      const confirmBtn = modalEl.querySelector(`#${dialogId}-btn-confirm`);
+      const cancelBtn = modalEl.querySelector(`#${dialogId}-btn-cancel`);
+
+      confirmBtn.onclick = () => {
+        closeModal(modalEl);
+        modalEl.remove();
+        resolve(true);
+      };
+
+      cancelBtn.onclick = () => {
+        closeModal(modalEl);
+        modalEl.remove();
+        resolve(false);
+      };
+    });
+  }
+
+  /**
+   * Accessible In-Page Prompt Modal (Promise-based)
+   */
+  function showInPagePrompt(message, defaultValue = '', options = {}) {
+    return new Promise((resolve) => {
+      if (typeof document === 'undefined') return resolve(null);
+
+      const container = getOrCreateDialogContainer();
+      if (!container) return resolve(null);
+
+      const title = options.title || 'إدخال بيانات';
+      const placeholder = options.placeholder || 'أدخل القيمة هنا...';
+      const inputType = options.inputType || 'text';
+      const confirmText = options.confirmText || 'تأكيد';
+      const cancelText = options.cancelText || 'إلغاء';
+      const isPassword = options.isPassword || inputType === 'password';
+
+      const dialogId = 'mazaj-prompt-' + Date.now();
+      const modalEl = document.createElement('div');
+      modalEl.id = dialogId;
+      modalEl.className = 'fixed inset-0 z-[999999] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4';
+      modalEl.setAttribute('role', 'dialog');
+      modalEl.setAttribute('aria-modal', 'true');
+      modalEl.setAttribute('aria-labelledby', `${dialogId}-title`);
+      modalEl.setAttribute('aria-describedby', `${dialogId}-desc`);
+      modalEl.setAttribute('dir', 'rtl');
+
+      modalEl.innerHTML = `
+        <div class="bg-slate-900 border border-amber-500/40 rounded-2xl max-w-md w-full p-6 shadow-2xl text-slate-100 flex flex-col gap-4 text-right transform transition-all animate-in fade-in zoom-in-95 duration-150">
+          <div class="flex items-center gap-3">
+            <span class="text-3xl">📝</span>
+            <h2 id="${dialogId}-title" class="text-base font-black text-slate-100">${title}</h2>
+          </div>
+          <div id="${dialogId}-desc" class="text-xs text-slate-300 leading-relaxed">${message}</div>
+          <div class="flex flex-col gap-1.5">
+            <input
+              id="${dialogId}-input"
+              type="${isPassword ? 'password' : 'text'}"
+              value="${defaultValue || ''}"
+              placeholder="${placeholder}"
+              class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-100 placeholder-slate-500 focus:border-amber-400 focus:ring-1 focus:ring-amber-400 focus:outline-none font-mono"
+            />
+            <span id="${dialogId}-error" class="text-[11px] text-rose-400 hidden"></span>
+          </div>
+          <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-800/80">
+            <button id="${dialogId}-btn-cancel" class="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-xl border border-slate-700 shadow-md transition-all cursor-pointer focus:ring-2 focus:ring-slate-400 focus:outline-none">
+              ${cancelText}
+            </button>
+            <button id="${dialogId}-btn-confirm" class="px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs rounded-xl shadow-lg transition-all cursor-pointer focus:ring-2 focus:ring-amber-300 focus:outline-none">
+              ${confirmText}
+            </button>
+          </div>
+        </div>
+      `;
+
+      container.appendChild(modalEl);
+      openModal(modalEl, {
+        onCancel: () => {
+          closeModal(modalEl);
+          modalEl.remove();
+          resolve(null);
+        }
+      });
+
+      const inputEl = modalEl.querySelector(`#${dialogId}-input`);
+      const errorEl = modalEl.querySelector(`#${dialogId}-error`);
+      const confirmBtn = modalEl.querySelector(`#${dialogId}-btn-confirm`);
+      const cancelBtn = modalEl.querySelector(`#${dialogId}-btn-cancel`);
+
+      setTimeout(() => inputEl.focus(), 100);
+
+      const submit = () => {
+        const val = inputEl.value;
+        if (options.validate && typeof options.validate === 'function') {
+          const err = options.validate(val);
+          if (err) {
+            errorEl.innerText = err;
+            errorEl.classList.remove('hidden');
+            inputEl.focus();
+            return;
+          }
+        }
+        closeModal(modalEl);
+        modalEl.remove();
+        resolve(val);
+      };
+
+      confirmBtn.onclick = submit;
+      inputEl.onkeydown = (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          submit();
+        }
+      };
+
+      cancelBtn.onclick = () => {
+        closeModal(modalEl);
+        modalEl.remove();
+        resolve(null);
+      };
+    });
+  }
+
+  /**
+   * Accessible API Error Dialog with Request ID and Debug Accordion
+   */
+  function showApiError(errorObjOrMsg, options = {}) {
+    let msg = 'حدث خطأ غير متوقع أثناء معالجة الطلب.';
+    let requestId = options.requestId || null;
+    let technicalDetails = null;
+
+    if (typeof errorObjOrMsg === 'string') {
+      msg = errorObjOrMsg;
+    } else if (errorObjOrMsg && typeof errorObjOrMsg === 'object') {
+      msg = errorObjOrMsg.error || errorObjOrMsg.message || msg;
+      requestId = errorObjOrMsg.requestId || errorObjOrMsg.request_id || requestId;
+      if (errorObjOrMsg.details || errorObjOrMsg.stack) {
+        technicalDetails = typeof errorObjOrMsg.details === 'object'
+          ? JSON.stringify(errorObjOrMsg.details, null, 2)
+          : (errorObjOrMsg.details || errorObjOrMsg.stack);
+      }
+    }
+
+    if (!requestId) requestId = generateRequestId('ERR');
+
+    return showInPageAlert(msg, {
+      title: options.title || 'خطأ في معالجة الطلب',
+      severity: 'error',
+      confirmText: options.confirmText || 'حسناً، فهمت',
+      requestId: requestId,
+      technicalDetails: technicalDetails || options.technicalDetails
+    });
   }
 
   /**
@@ -308,18 +653,19 @@
    */
   function showToast(message, type = 'info', options = {}) {
     if (typeof document === 'undefined') return;
-    const duration = options.duration || 3500;
+    const duration = options.duration || 4000;
     let container = document.getElementById('mazaj-toast-container');
     if (!container) {
       container = document.createElement('div');
       container.id = 'mazaj-toast-container';
       container.className = 'fixed bottom-5 right-5 z-[999999] flex flex-col gap-2 pointer-events-none max-w-sm w-full';
       container.setAttribute('aria-live', 'polite');
+      container.setAttribute('dir', 'rtl');
       document.body.appendChild(container);
     }
 
     const toast = document.createElement('div');
-    toast.className = `pointer-events-auto px-4 py-2.5 rounded-xl border text-xs font-bold shadow-2xl flex items-center gap-2.5 transform transition-all duration-300 translate-y-[-10px] opacity-0 ${
+    toast.className = `pointer-events-auto px-4 py-3 rounded-xl border text-xs font-bold shadow-2xl flex items-center justify-between gap-3 transform transition-all duration-300 translate-y-[-10px] opacity-0 ${
       type === 'success' ? 'bg-emerald-950/95 text-emerald-300 border-emerald-500/50' :
       type === 'error' ? 'bg-rose-950/95 text-rose-300 border-rose-500/50' :
       type === 'warning' ? 'bg-amber-950/95 text-amber-300 border-amber-500/50' :
@@ -328,9 +674,11 @@
 
     const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : type === 'warning' ? '⚠️' : 'ℹ️';
     toast.innerHTML = `
-      <span>${icon}</span>
-      <span>${message}</span>
-      ${options.requestId ? `<span class="text-[10px] font-mono text-slate-400 border-r border-slate-700 pr-2 mr-1">${options.requestId}</span>` : ''}
+      <div class="flex items-center gap-2.5">
+        <span class="text-base">${icon}</span>
+        <span class="leading-snug">${message}</span>
+      </div>
+      ${options.requestId ? `<span class="text-[10px] font-mono text-slate-400 bg-slate-950/60 px-1.5 py-0.5 rounded border border-slate-800 mr-2 select-all">${options.requestId}</span>` : ''}
     `;
 
     container.appendChild(toast);
@@ -346,6 +694,15 @@
     }, duration);
   }
 
+  // Safe global bindings in browser environment
+  if (typeof window !== 'undefined') {
+    window.showInPageAlert = showInPageAlert;
+    window.showInPageConfirm = showInPageConfirm;
+    window.showInPagePrompt = showInPagePrompt;
+    window.showToast = showToast;
+    window.showApiError = showApiError;
+  }
+
   return {
     STATES,
     I18N,
@@ -358,6 +715,16 @@
     guardButtonAction,
     openModal,
     closeModal,
-    showToast
+    showToast,
+    showInPageAlert,
+    showInPageConfirm,
+    showInPagePrompt,
+    showApiError,
+    alert: showInPageAlert,
+    confirm: showInPageConfirm,
+    prompt: showInPagePrompt,
+    toast: showToast,
+    apiError: showApiError
   };
 });
+

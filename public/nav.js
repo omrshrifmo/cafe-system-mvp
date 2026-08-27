@@ -56,10 +56,37 @@
   ];
 
   // Dynamically load UIState script if missing
-  if (typeof window !== 'undefined' && !window.UIState) {
-    const script = document.createElement('script');
-    script.src = '/modules/ui-state.js';
-    document.head.appendChild(script);
+  if (typeof window !== 'undefined') {
+    if (!window.UIState) {
+      const script = document.createElement('script');
+      script.src = '/modules/ui-state.js';
+      document.head.appendChild(script);
+    }
+
+    // Intercept native dialogs to guarantee zero browser-native popups
+    window.alert = function (msg) {
+      if (window.UIState && window.UIState.alert) {
+        window.UIState.alert(String(msg || ''));
+      } else {
+        console.warn('Native alert suppressed:', msg);
+      }
+    };
+    window.confirm = function (msg) {
+      if (window.UIState && window.UIState.confirm) {
+        window.UIState.confirm(String(msg || ''));
+      } else {
+        console.warn('Native confirm suppressed:', msg);
+      }
+      return false;
+    };
+    window.prompt = function (msg, def) {
+      if (window.UIState && window.UIState.prompt) {
+        window.UIState.prompt(String(msg || ''), def);
+      } else {
+        console.warn('Native prompt suppressed:', msg);
+      }
+      return null;
+    };
   }
 
   // Auto-Register PWA Service Worker with Update Prompt
@@ -265,6 +292,10 @@
   }
 
   async function logout() {
+    try {
+      localStorage.setItem('mazaj_session_revoked_at', Date.now().toString());
+    } catch (e) {}
+
     if (window.AuthModule && typeof window.AuthModule.logout === 'function') {
       await window.AuthModule.logout();
       return;
@@ -286,6 +317,106 @@
       </div>
     `;
     window.location.replace('/index.html');
+  }
+
+  function toggleCaffeineModal() {
+    let modal = document.getElementById('caffeine-mode-modal');
+    if (modal) {
+      modal.remove();
+      return;
+    }
+
+    modal = document.createElement('div');
+    modal.id = 'caffeine-mode-modal';
+    modal.dir = 'rtl';
+    modal.className = 'fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[99999] flex items-center justify-center p-4 text-slate-100 select-none';
+    modal.style.fontFamily = "'Tajawal', system-ui, sans-serif";
+
+    modal.innerHTML = `
+      <div class="w-full max-w-sm bg-slate-900 border border-amber-500/40 rounded-2xl p-5 shadow-2xl">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
+          <div class="flex items-center gap-2">
+            <span class="text-xl">☕</span>
+            <h3 class="text-sm font-black text-amber-300">وضع الكافيين (منع القفل المؤقت)</h3>
+          </div>
+          <button onclick="document.getElementById('caffeine-mode-modal').remove()" class="w-6 h-6 rounded-lg bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center text-xs">✕</button>
+        </div>
+
+        <p class="text-xs text-slate-300 mb-4 leading-relaxed">
+          يحافظ هذا الوضع على بقاء الشاشة مفتوحة أثناء ساعات الذروة التشغيلية بدون إغلاق تلقائي. يتطلب موافقة المدير أو المشرف.
+        </p>
+
+        <div class="space-y-3 mb-4">
+          <div>
+            <label class="block text-[11px] font-bold text-slate-400 mb-1">المدة المطلوبة (بالدقائق - أقصى حد 60 دقيقة):</label>
+            <select id="caffeine-duration-input" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white">
+              <option value="15">15 دقيقة</option>
+              <option value="30" selected>30 دقيقة</option>
+              <option value="45">45 دقيقة</option>
+              <option value="60">60 دقيقة</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-[11px] font-bold text-slate-400 mb-1">رمز PIN المشرف / المدير للتأكيد:</label>
+            <input type="password" id="caffeine-manager-pin" placeholder="••••" maxlength="6" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-center text-lg tracking-widest text-amber-400">
+          </div>
+
+          <div id="caffeine-modal-err" class="hidden p-2 rounded-lg bg-rose-950/60 border border-rose-800 text-rose-300 text-xs text-center font-bold"></div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button onclick="window.MazajNav.submitEnableCaffeine()" class="flex-1 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs rounded-xl transition-all shadow cursor-pointer">
+            تفعيل الوضع ☕
+          </button>
+          <button onclick="window.MazajNav.submitDisableCaffeine()" class="py-2.5 px-3 bg-rose-950/50 hover:bg-rose-900/60 text-rose-300 border border-rose-500/30 text-xs font-bold rounded-xl transition-colors cursor-pointer">
+            إيقاف
+          </button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+  }
+
+  async function submitEnableCaffeine() {
+    const dur = parseInt(document.getElementById('caffeine-duration-input').value, 10) || 30;
+    const pin = document.getElementById('caffeine-manager-pin').value;
+    const errEl = document.getElementById('caffeine-modal-err');
+    
+    try {
+      if (window.AuthModule) {
+        const res = await window.AuthModule.enableCaffeineMode(dur, 'PEAK_HOURS_KEEP_ALIVE', pin || null);
+        if (!res.success) {
+          throw new Error(res.error || 'فشل التفعيل');
+        }
+      }
+      const modal = document.getElementById('caffeine-mode-modal');
+      if (modal) modal.remove();
+      const btn = document.getElementById('caffeine-mode-btn');
+      if (btn) {
+        btn.classList.add('bg-amber-500/30', 'border-amber-400', 'animate-pulse');
+      }
+    } catch (err) {
+      if (errEl) {
+        errEl.textContent = err.message || 'فشل تفعيل وضع الكافيين';
+        errEl.classList.remove('hidden');
+      }
+    }
+  }
+
+  async function submitDisableCaffeine() {
+    try {
+      if (window.AuthModule) {
+        await window.AuthModule.disableCaffeineMode();
+      }
+      const modal = document.getElementById('caffeine-mode-modal');
+      if (modal) modal.remove();
+      const btn = document.getElementById('caffeine-mode-btn');
+      if (btn) {
+        btn.classList.remove('bg-amber-500/30', 'border-amber-400', 'animate-pulse');
+      }
+    } catch (e) {}
   }
 
   function updateClock() {
@@ -448,8 +579,14 @@
             <span class="hidden sm:inline">${currentShift === 'MORNING' ? 'وردية صباحية' : 'وردية مسائية'}</span>
           </button>
 
-          <div id="nav-live-clock" class="hidden lg:block text-slate-400 font-mono text-[11px] bg-slate-950/80 px-2.5 py-1 rounded-lg border border-slate-800">
-            00:00:00 م
+          <button onclick="window.MazajNav.toggleCaffeineModal()" id="caffeine-mode-btn" title="وضع الكافيين (منع القفل المؤقت)" class="px-2 md:px-2.5 py-1 bg-amber-950/30 hover:bg-amber-900/50 text-amber-300 border border-amber-500/30 rounded-lg text-[11px] font-bold cursor-pointer transition-colors flex items-center gap-1">
+            <span>☕</span>
+            <span class="hidden sm:inline">كافيين</span>
+          </button>
+
+          <div class="hidden xl:flex px-2 py-1 bg-slate-950/80 rounded-lg text-[10px] font-mono text-slate-400 border border-slate-800 items-center gap-1">
+            <span>💺</span>
+            <span>مقعد: ${(typeof localStorage !== 'undefined' && localStorage.getItem('cafe_seat_id')) || 'POS-01'}</span>
           </div>
 
           <div class="px-2 md:px-2.5 py-1 bg-slate-950 rounded-lg text-[11px] font-bold text-slate-300 border border-slate-800 flex items-center gap-1.5">
@@ -620,6 +757,9 @@
     toggleSidebar,
     toggleMobileMenu,
     toggleShiftType,
+    toggleCaffeineModal,
+    submitEnableCaffeine,
+    submitDisableCaffeine,
     logout,
     initNav: validateSessionAndRender
   };

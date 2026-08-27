@@ -218,8 +218,15 @@
           body: JSON.stringify({ status })
         });
         const data = await res.json();
-        if (data.success) loadReservations();
-      } catch(e) { alert('حدث خطأ'); }
+        if (data.success) {
+          UIState.showToast('تم تحديث حالة الحجز بنجاح', 'success');
+          loadReservations();
+        } else {
+          UIState.showApiError(data.error || 'فشل تحديث حالة الحجز');
+        }
+      } catch(e) {
+        UIState.showToast('حدث خطأ في الاتصال بالخادم', 'error');
+      }
     }
 
     function openAddModal() {
@@ -232,7 +239,7 @@
     async function saveReservation() {
       const name = document.getElementById('resName').value.trim();
       const datetime = document.getElementById('resDatetime').value;
-      if (!name || !datetime) { alert('الاسم والموعد مطلوبان'); return; }
+      if (!name || !datetime) { UIState.showToast('الاسم والموعد مطلوبان', 'warning'); return; }
       const body = {
         customer_name: name,
         customer_phone: document.getElementById('resPhone').value.trim(),
@@ -246,15 +253,18 @@
         const res = await fetch('/api/reservations', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
         const data = await res.json();
         if (data.success) {
+          UIState.showToast('تم حفظ الحجز بنجاح', 'success');
           closeModal();
           document.getElementById('resName').value = '';
           document.getElementById('resPhone').value = '';
           document.getElementById('resNotes').value = '';
           loadReservations();
         } else {
-          alert('خطأ: ' + (data.error || 'حدث خطأ'));
+          UIState.showApiError(data.error || 'حدث خطأ في حفظ الحجز');
         }
-      } catch(e) { alert('خطأ في الاتصال'); }
+      } catch(e) {
+        UIState.showToast('خطأ في الاتصال بالخادم', 'error');
+      }
     }
 
     loadReservations();

@@ -627,7 +627,11 @@
       } catch (err) {
         btn.disabled = false;
         btn.textContent = 'إرسال الطلب للمطبخ 🚀';
-        alert('حدث خطأ: ' + err.message);
+        if (window.UIState && window.UIState.showApiError) {
+          UIState.showApiError(err.message);
+        } else {
+          showToast('حدث خطأ: ' + err.message);
+        }
       }
     }
 
@@ -640,5 +644,6 @@
     validateTable();
     loadMenu();
   </script>
+  <script src="/modules/ui-state.js"></script>
 </body>
 </html>

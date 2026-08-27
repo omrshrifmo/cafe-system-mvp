@@ -78,6 +78,7 @@ router.get('/me', requireAuth, (req, res) => {
       id: req.user.id,
       name: req.user.name,
       role: req.user.role,
+      permission_version: req.user.permission_version || '2.1.0',
       venueId: req.user.venueId,
       defaultRoute,
       permissions: safePermissions
@@ -154,6 +155,113 @@ router.post('/rotate-pin', requireAuth, authLimiter, async (req, res) => {
 // Ping endpoint to manually extend inactivity timeout (e.g. while actively interacting)
 router.post('/ping', requireAuth, (req, res) => {
   res.json({ success: true });
+});
+
+// --- Caffeine Keep-Alive Mode Routes ---
+const { 
+  enableCaffeineMode, 
+  disableCaffeineMode, 
+  getCaffeineModeStatus, 
+  saveActivityCheckpoint, 
+  getValidActivityCheckpoint, 
+  clearActivityCheckpoint 
+} = require('../../domain/auth/checkpointService');
+
+router.post('/caffeine', requireAuth, async (req, res) => {
+  try {
+    const { duration_minutes, reason, manager_pin } = req.body;
+    const ip = req.ip || req.connection.remoteAddress;
+    const sessionId = req.user.sessionId;
+
+    const result = await enableCaffeineMode(
+      sessionId, 
+      req.user.id, 
+      req.user.venueId, 
+      duration_minutes, 
+      reason, 
+      manager_pin, 
+      ip
+    );
+
+    res.json({ success: true, ...result, message: 'تم تفعيل وضع الكافيين بنجاح' });
+  } catch (e) {
+    res.status(400).json({ success: false, error: e.message });
+  }
+});
+
+router.delete('/caffeine', requireAuth, async (req, res) => {
+  try {
+    const ip = req.ip || req.connection.remoteAddress;
+    const sessionId = req.user.sessionId;
+    const result = await disableCaffeineMode(sessionId, req.user.id, req.user.venueId, ip);
+    res.json({ success: true, ...result, message: 'تم إلغاء تفعيل وضع الكافيين' });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+router.get('/caffeine', requireAuth, async (req, res) => {
+  try {
+    const sessionId = req.user.sessionId;
+    const result = await getCaffeineModeStatus(sessionId);
+    res.json({ success: true, ...result });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// --- Activity Checkpoint Routes ---
+router.post('/checkpoint', requireAuth, async (req, res) => {
+  try {
+    const { route, draft_type, draft_payload } = req.body;
+    const deviceId = req.headers['x-device-id'] || null;
+    const contextId = req.headers['x-context-id'] || null;
+    const ip = req.ip || req.connection.remoteAddress;
+
+    const result = await saveActivityCheckpoint(
+      req.user.id,
+      req.user.venueId,
+      req.user.role,
+      deviceId,
+      contextId,
+      route,
+      draft_type,
+      draft_payload,
+      ip
+    );
+
+    res.json({ success: true, ...result });
+  } catch (e) {
+    res.status(400).json({ success: false, error: e.message });
+  }
+});
+
+router.get('/checkpoint', requireAuth, async (req, res) => {
+  try {
+    const deviceId = req.headers['x-device-id'] || null;
+    const contextId = req.headers['x-context-id'] || null;
+
+    const result = await getValidActivityCheckpoint(
+      req.user.id,
+      req.user.venueId,
+      req.user.role,
+      deviceId,
+      contextId
+    );
+
+    res.json({ success: true, data: result });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+router.delete('/checkpoint', requireAuth, async (req, res) => {
+  try {
+    await clearActivityCheckpoint(req.user.id);
+    res.json({ success: true, message: 'تم مسح نقطة الاستعادة بنجاح' });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
 });
 
 module.exports = router;

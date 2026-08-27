@@ -1,8 +1,22 @@
 /**
  * Client-Side IndexedDB Offline Store & Audit Queue
+ * Partitioned by user/device context with strict financial safety policies.
  */
 const DB_NAME = 'CafeSystemOfflineDB';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
+
+// Strict list of unsafe operations that can never be executed or queued in offline mode
+const UNSAFE_OFFLINE_ACTIONS = new Set([
+  'SETTLE_PAYMENT', 'PAYMENT_SETTLE', 'PROCESS_PAYMENT', 'CAPTURE_PAYMENT', 'SETTLE_BILL', 'CHECKOUT',
+  'REFUND', 'REFUND_TRANSACTION', 'VOID_PAID', 'VOID_ORDER', 'VOID_ITEM',
+  'DRAWER_OPEN', 'DRAWER_EXPENSE', 'DRAWER_ADVANCE', 'DRAWER_OPERATION',
+  'PAYROLL_POST', 'PAYROLL_ISSUE', 'STAFF_ALLOWANCE_POST', 'ADVANCE_ISSUE',
+  'EOD_CLOSE', 'CLOSE_DAY', 'Z_REPORT_CLOSE', 'SHIFT_CLOSE', 'DECLARE_CASH',
+  'PACKAGE_UPDATE', 'SYSTEM_UPDATE', 'ROLLBACK', 'FACTORY_RESET',
+  'PERMISSION_CHANGE', 'ROLE_UPDATE', 'USER_CREATE', 'USER_UPDATE', 'USER_DELETE',
+  'DEVICE_REVOKE', 'SESSION_REVOKE_ALL', 'ROTATE_PIN',
+  'SHAREHOLDER_TRANSACTION', 'DIVIDEND_DISTRIBUTION'
+]);
 
 class OfflineDB {
   static async open() {
@@ -15,8 +29,14 @@ class OfflineDB {
         if (!db.objectStoreNames.contains('offline_commands')) {
           const store = db.createObjectStore('offline_commands', { keyPath: 'client_command_id' });
           store.createIndex('status', 'status', { unique: false });
+          store.createIndex('actor_user_id', 'actor_user_id', { unique: false });
           store.createIndex('idempotency_key', 'idempotency_key', { unique: false });
           store.createIndex('created_at', 'created_at', { unique: false });
+        } else {
+          const store = event.target.transaction.objectStore('offline_commands');
+          if (!store.indexNames.contains('actor_user_id')) {
+            store.createIndex('actor_user_id', 'actor_user_id', { unique: false });
+          }
         }
         
         if (!db.objectStoreNames.contains('local_snapshots')) {
@@ -39,36 +59,75 @@ class OfflineDB {
     return id;
   }
 
+  static sanitizePayload(payload = {}) {
+    // Sanitize and strip raw PINs, card CVVs, or secret tokens before saving offline
+    const sanitized = JSON.parse(JSON.stringify(payload));
+    const sensitiveKeys = ['pin', 'pin_hash', 'cvv', 'card_number', 'secret', 'password', 'token'];
+    
+    function scrub(obj) {
+      if (!obj || typeof obj !== 'object') return;
+      for (const k of Object.keys(obj)) {
+        if (sensitiveKeys.includes(k.toLowerCase())) {
+          delete obj[k];
+        } else if (typeof obj[k] === 'object') {
+          scrub(obj[k]);
+        }
+      }
+    }
+    scrub(sanitized);
+    return sanitized;
+  }
+
   /**
    * Queues an action for offline execution.
-   * STRICT POLICY: Financial payments (e.g. SETTLE_PAYMENT) are NEVER accepted for offline queuing.
+   * STRICT POLICY: Financial payments, refunds, voids, payroll, and EOD are NEVER accepted for offline queuing.
    */
-  static async queueCommand(action, payload = {}) {
-    if (['SETTLE_PAYMENT', 'VOID_PAID', 'EOD_CLOSE', 'SETTLE_BILL'].includes(action)) {
-      throw new Error('UNSAFE_OFFLINE_ACTION: لا يمكن تنفيذ عمليات الدفع أو التسوية المالية بدون اتصال مباشر بالخادم');
+  static async queueCommand(action, payload = {}, options = {}) {
+    if (UNSAFE_OFFLINE_ACTIONS.has(action)) {
+      throw new Error(`UNSAFE_OFFLINE_ACTION: إجراء [${action}] غير مسموح به في وضع عدم الاتصال - يلزم اتصال مباشر بالخادم لتفادي الأخطاء المالية والأمنية`);
     }
 
     const db = await this.open();
     const commandId = 'CMD-' + Date.now() + '-' + Math.random().toString(36).substring(2, 8);
-    const idempotencyKey = 'IDEM-' + Date.now() + '-' + Math.random().toString(36).substring(2, 8);
+    const idempotencyKey = options.idempotencyKey || ('IDEM-' + Date.now() + '-' + Math.random().toString(36).substring(2, 8));
     const deviceId = this.getDeviceId();
     const nowIso = new Date().toISOString();
+    const sanitizedPayload = this.sanitizePayload(payload);
+
+    // Calculate a simple payload hash for consistency
+    let payloadHash = null;
+    try {
+      const str = JSON.stringify(sanitizedPayload);
+      let hash = 0;
+      for (let i = 0; i < str.length; i++) {
+        hash = (hash << 5) - hash + str.charCodeAt(i);
+        hash |= 0;
+      }
+      payloadHash = 'h_' + Math.abs(hash).toString(16);
+    } catch (e) {}
 
     const record = {
       client_command_id: commandId,
-      device_id: deviceId,
       idempotency_key: idempotencyKey,
-      request_hash: null,
-      action,
-      payload,
-      status: 'QUEUED', // QUEUED, SYNCING, ACCEPTED, DUPLICATE, REJECTED, CONFLICT, UNKNOWN_REQUIRES_RECONCILIATION
+      actor_user_id: options.userId || (typeof window !== 'undefined' && window.currentUser ? String(window.currentUser.id) : null),
+      role_id: options.role || (typeof window !== 'undefined' && window.currentUser ? window.currentUser.role : null),
+      device_id: deviceId,
+      seat_id: options.seatId || 'SEAT-1',
+      venue_id: options.venueId || 'V_DEFAULT',
+      shift_id: options.shiftId || null,
+      business_date: options.businessDate || new Date().toISOString().split('T')[0],
       created_at: nowIso,
-      attempted_at: null,
+      payload_hash: payloadHash,
+      schema_version: '3.1',
+      catalog_version: options.catalogVersion || '1.0',
+      policy_version: '1.0',
+      action,
+      payload: sanitizedPayload,
+      status: 'QUEUED', // QUEUED, SYNCING, ACCEPTED, DUPLICATE, REJECTED, CONFLICT, UNKNOWN_REQUIRES_RECONCILIATION, CANCELLED, DEAD_LETTER
       attempts: 0,
-      backoff: 1000,
       last_error: null,
       result: null,
-      conflict: null
+      conflict_reason: null
     };
 
     return new Promise((resolve, reject) => {
@@ -80,7 +139,10 @@ class OfflineDB {
     });
   }
 
-  static async getPendingCommands() {
+  /**
+   * Retrieves pending commands, partitioned by active user context if specified.
+   */
+  static async getPendingCommands(userId = null) {
     const db = await this.open();
     return new Promise((resolve, reject) => {
       const tx = db.transaction('offline_commands', 'readonly');
@@ -88,7 +150,13 @@ class OfflineDB {
       const index = store.index('status');
       const req = index.getAll(IDBKeyRange.only('QUEUED'));
       
-      req.onsuccess = () => resolve(req.result || []);
+      req.onsuccess = () => {
+        let results = req.result || [];
+        if (userId) {
+          results = results.filter(cmd => !cmd.actor_user_id || cmd.actor_user_id === String(userId));
+        }
+        resolve(results);
+      };
       req.onerror = () => reject(req.error);
     });
   }
@@ -118,6 +186,39 @@ class OfflineDB {
     });
   }
 
+  static async quarantineUserQueue(userId) {
+    const db = await this.open();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction('offline_commands', 'readwrite');
+      const store = tx.objectStore('offline_commands');
+      const req = store.getAll();
+
+      req.onsuccess = () => {
+        const all = req.result || [];
+        all.forEach(cmd => {
+          if (cmd.actor_user_id === String(userId) && (cmd.status === 'QUEUED' || cmd.status === 'SYNCING')) {
+            cmd.status = 'DEAD_LETTER';
+            cmd.conflict_reason = 'SESSION_REVOKED_OR_LOGOUT';
+            store.put(cmd);
+          }
+        });
+        resolve(true);
+      };
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  static async clearDeviceQueue() {
+    const db = await this.open();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction('offline_commands', 'readwrite');
+      const store = tx.objectStore('offline_commands');
+      const req = store.clear();
+      req.onsuccess = () => resolve(true);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
   static async getAllCommands() {
     const db = await this.open();
     return new Promise((resolve, reject) => {
@@ -130,8 +231,8 @@ class OfflineDB {
   }
 
   // Compatibility aliases
-  static async getPendingOfflineCommands() {
-    return this.getPendingCommands();
+  static async getPendingOfflineCommands(userId = null) {
+    return this.getPendingCommands(userId);
   }
 
   static async markOfflineCommandCompleted(commandId, result = null) {
@@ -142,3 +243,8 @@ class OfflineDB {
 if (typeof window !== 'undefined') {
   window.OfflineDB = OfflineDB;
 }
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = OfflineDB;
+}
+

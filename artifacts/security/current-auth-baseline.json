@@ -1,0 +1,56 @@
+{
+  "capturedAt": "2026-08-27T08:59:45.000Z",
+  "buildProvenance": {
+    "commitSha": "1adc9ed21735c213e94e3e499b1ec31c8515aaa3",
+    "buildId": "build-1adc9ed2-v2",
+    "branch": "main",
+    "repository": "omrshrifmo/cafe-system-mvp",
+    "serviceWorkerVersion": "cafe-os-v3.1",
+    "serviceWorkerSha256": "57cb96548fb033563f83c71dfdcff69c3be1c80dab759753b8e3ed191ddd5811",
+    "schemaVersion": "028_floor_ledger_linking.sql",
+    "migrationVersion": "028",
+    "environmentMode": "development",
+    "serverInstanceId": "aea489bc-9087-4c7d-a09c-fa8e50509f6c",
+    "nodeVersion": "v22.23.1"
+  },
+  "cookiePolicy": {
+    "name": "session_token",
+    "httpOnly": true,
+    "secure": false,
+    "sameSite": "lax",
+    "path": "/",
+    "maxAgeMs": 86400000
+  },
+  "sessionPolicy": {
+    "sessionSecretConfigured": true,
+    "tokenHashAlgorithm": "sha256",
+    "pinHashAlgorithm": "bcrypt (work factor 10)",
+    "maxFailedAttempts": 5,
+    "lockoutDurationMinutes": 15,
+    "inactivityTimeoutMinutes": 15,
+    "absoluteExpiryHours": 24,
+    "storageTable": "v3_user_sessions"
+  },
+  "endpoints": {
+    "auth": [
+      { "method": "POST", "path": "/api/auth/login", "authRequired": false, "rateLimited": true },
+      { "method": "POST", "path": "/api/auth/logout", "authRequired": false, "rateLimited": false },
+      { "method": "GET", "path": "/api/auth/me", "authRequired": true, "rateLimited": false },
+      { "method": "POST", "path": "/api/auth/verify-pin", "authRequired": true, "rateLimited": true },
+      { "method": "POST", "path": "/api/auth/unlock", "authRequired": true, "rateLimited": true },
+      { "method": "POST", "path": "/api/auth/revoke-all", "authRequired": true, "rateLimited": false },
+      { "method": "POST", "path": "/api/auth/rotate-pin", "authRequired": true, "rateLimited": true },
+      { "method": "POST", "path": "/api/auth/ping", "authRequired": true, "rateLimited": false }
+    ],
+    "realtime": [
+      { "protocol": "WSS", "path": "/ws", "authRequired": true, "authMechanism": "Cookie or Query Token" },
+      { "method": "GET", "path": "/api/realtime/events", "authRequired": true, "fallback": "HTTP Polling" }
+    ]
+  },
+  "roleRegistry": [
+    "SUPER_ADMIN", "OWNER", "OP_MANAGER", "OP_ASSISTANT_CASHIER", "CASHIER",
+    "BARISTA", "CHEF", "SHISHA", "WAITER", "RUNNER", "HALL_MANAGER",
+    "JOKER", "BOM_MANAGER", "HR_PAYROLL", "QA", "READ_ONLY"
+  ],
+  "verificationStatus": "VERIFIED_ACCURATE"
+}

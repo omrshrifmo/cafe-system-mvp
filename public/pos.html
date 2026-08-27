@@ -8,6 +8,8 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="/modules/ui-state.js"></script>
   <script src="/nav.js"></script>
+  <script src="/modules/db.js"></script>
+  <script src="/modules/sync.js"></script>
   <!-- Cairo Font -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1275,7 +1277,13 @@
     async function vacateCurrentTable() {
       const num = selectedTableNumber;
       if (!num || num === 0) return;
-      if (!confirm(`هل أنت متأكد من تفريغ وإخلاء طاولة #${num} ومغادرة الضيف؟`)) return;
+      const ok = await UIState.confirm(`هل أنت متأكد من تفريغ وإخلاء طاولة #${num} ومغادرة الضيف؟`, {
+        title: 'تأكيد إخلاء الطاولة',
+        severity: 'warning',
+        confirmText: 'نعم، إخلاء الطاولة',
+        cancelText: 'إلغاء التراجع'
+      });
+      if (!ok) return;
 
       try {
         const res = await fetch('/api/tables/vacate', {
@@ -1340,7 +1348,13 @@
       e.preventDefault();
       const toTable = Number(document.getElementById('move-to-table').value);
       if (!toTable || toTable === selectedTableNumber) return;
-      if (!confirm(`هل أنت متأكد من نقل جميع الطلبات من طاولة #${selectedTableNumber} إلى طاولة #${toTable}؟`)) return;
+      const ok = await UIState.confirm(`هل أنت متأكد من نقل جميع الطلبات من طاولة #${selectedTableNumber} إلى طاولة #${toTable}؟`, {
+        title: 'تأكيد نقل الطاولة',
+        severity: 'warning',
+        confirmText: 'نعم، نقل الطلبات',
+        cancelText: 'إلغاء'
+      });
+      if (!ok) return;
 
       try {
         const res = await fetch('/api/tables/move', {
@@ -2108,7 +2122,21 @@
 
     async function submitCheckout(event) {
       event.preventDefault();
-      if (!confirm(`هل أنت متأكد من إغلاق الحساب وتحصيل الدفع للطاولة رقم ${selectedTableNumber || 'سفري'}؟`)) return;
+      if (!navigator.onLine) {
+        await UIState.alert('لا يمكن إتمام السداد أو تحصيل المبالغ المالية في وضع عدم الاتصال بالخادم. يرجى الانتظار حتى عودة الاتصال لضمان سلامة العمليات المالية.', {
+          title: 'العملية تتطلب اتصالاً بالخادم (Online Required)',
+          severity: 'warning'
+        });
+        return;
+      }
+
+      const ok = await UIState.confirm(`هل أنت متأكد من إغلاق الحساب وتحصيل الدفع للطاولة رقم ${selectedTableNumber || 'سفري'}؟`, {
+        title: 'تأكيد إغلاق وتحصيل الحساب',
+        severity: 'info',
+        confirmText: 'تأكيد السداد وإصدار الإيصال',
+        cancelText: 'مراجعة الحساب'
+      });
+      if (!ok) return;
 
       const submitBtn = document.getElementById('pos-submit-checkout-btn');
       await UIState.guardButtonAction(submitBtn, async () => {
@@ -2170,7 +2198,14 @@
           }
         } catch (err) {
           console.error('Error submitting checkout:', err);
-          UIState.showToast('خطأ في الاتصال بالخادم', 'error');
+          if (!navigator.onLine || err.name === 'TypeError') {
+            await UIState.alert('فُقد الاتصال بالخادم أثناء معالجة الدفع. تم تعليق العملية كحالة [UNKNOWN_REQUIRES_RECONCILIATION] لتفادي تكرار الخصم المالي حتى يتم التحقق من حالة الفاتورة بعد عودة الاتصال.', {
+              title: 'انقطاع الاتصال أثناء السداد',
+              severity: 'error'
+            });
+          } else {
+            UIState.showApiError(err);
+          }
         }
       });
     }

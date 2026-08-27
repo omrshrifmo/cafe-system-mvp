@@ -4,7 +4,7 @@
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const { getQuery, runQuery, allQuery } = require('../../db/connection');
-const { getRolePermissions, getRoleDefaultRoute, getClientSafePermissions, normalizeRole } = require('./permissions');
+const { getRolePermissions, getRoleDefaultRoute, getClientSafePermissions, normalizeRole, PERMISSION_VERSION } = require('./permissions');
 const env = require('../../config/env');
 const logger = require('../../observability/logger');
 
@@ -122,6 +122,7 @@ async function authenticateWithPin(pin, ip = null, userAgent = null, deviceId = 
       id: matchedUser.id,
       name: matchedUser.name,
       role: roleName,
+      permission_version: PERMISSION_VERSION,
       venueId: matchedUser.venue_id,
       defaultRoute,
       permissions: getClientSafePermissions(roleName)
@@ -172,6 +173,7 @@ async function validateSession(rawSessionToken, touch = true) {
     id: session.user_id,
     name: session.name,
     role: session.role_name || 'READ_ONLY',
+    permission_version: PERMISSION_VERSION,
     venueId: session.venue_id,
     sessionId: session.session_id,
     permissions: getRolePermissions(session.role_name || 'READ_ONLY')
@@ -179,19 +181,33 @@ async function validateSession(rawSessionToken, touch = true) {
 }
 
 async function revokeSessionByHash(sessionHash) {
+  const session = await getQuery(`SELECT id, user_id FROM v3_user_sessions WHERE session_hash = ?`, [sessionHash]);
   await runQuery(
     `UPDATE v3_user_sessions SET revoked_at = datetime('now', 'localtime') WHERE session_hash = ?`,
     [sessionHash]
   );
+  if (session) {
+    try {
+      const { closeSessionSocket } = require('../../realtime/websocket');
+      closeSessionSocket(session.id);
+    } catch (e) {}
+  }
 }
 
 async function revokeSession(rawSessionToken) {
   if (!rawSessionToken) return false;
   const sessionHash = hashToken(rawSessionToken);
+  const session = await getQuery(`SELECT id, user_id FROM v3_user_sessions WHERE session_hash = ?`, [sessionHash]);
   const res = await runQuery(
     `UPDATE v3_user_sessions SET revoked_at = datetime('now', 'localtime') WHERE session_hash = ? AND revoked_at IS NULL`,
     [sessionHash]
   );
+  if (session) {
+    try {
+      const { closeSessionSocket } = require('../../realtime/websocket');
+      closeSessionSocket(session.id);
+    } catch (e) {}
+  }
   return res.changes > 0;
 }
 
@@ -200,6 +216,10 @@ async function revokeAllUserSessions(userId) {
     `UPDATE v3_user_sessions SET revoked_at = datetime('now', 'localtime') WHERE user_id = ? AND revoked_at IS NULL`,
     [userId]
   );
+  try {
+    const { closeUserSockets } = require('../../realtime/websocket');
+    closeUserSockets(userId);
+  } catch (e) {}
   return res.changes;
 }
 
@@ -208,7 +228,7 @@ async function verifyReauthentication(userId, pin) {
   if (!user || !user.pin_hash) return false;
 
   if (user.locked_until && new Date(user.locked_until).getTime() > Date.now()) {
-    throw new Error('ACCOUNT_LOCKED: الحساب مقفول مؤقتاً بسبب كثرة المحاولات الخاطئة');
+    throw new Error('ACCOUNT_LOCKED: الحساب مقفول مؤقتاً لمدة 15 دقيقة بسبب تكرار المحاولات الخاطئة');
   }
 
   const valid = await verifyPin(pin, user.pin_hash);
@@ -217,6 +237,8 @@ async function verifyReauthentication(userId, pin) {
     let lockedUntil = null;
     if (fails >= MAX_FAILED_ATTEMPTS) {
       lockedUntil = new Date(Date.now() + LOCKOUT_MINUTES * 60 * 1000).toISOString();
+      await runQuery(`UPDATE v3_users SET failed_attempts = ?, locked_until = ? WHERE id = ?`, [fails, lockedUntil, userId]);
+      throw new Error('ACCOUNT_LOCKED: الحساب مقفول مؤقتاً لمدة 15 دقيقة بسبب تكرار المحاولات الخاطئة');
     }
     await runQuery(`UPDATE v3_users SET failed_attempts = ?, locked_until = ? WHERE id = ?`, [fails, lockedUntil, userId]);
     throw new Error('INVALID_PIN: الرمز السري غير صحيح');

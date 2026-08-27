@@ -273,12 +273,13 @@
         });
         const data = await res.json();
         if (data.success) {
+          UIState.showToast(currentShift ? 'تم تسجيل الانصراف بنجاح' : 'تم تسجيل الحضور وبدء الوردية بنجاح', 'success');
           await fetchShiftStatus();
         } else {
-          alert(data.error || "تعذر إتمام عملية الوردية");
+          UIState.showApiError(data.error || "تعذر إتمام عملية الوردية");
         }
       } catch (err) {
-        alert("حدث خطأ أثناء الاتصال بالخادم");
+        UIState.showToast("حدث خطأ أثناء الاتصال بالخادم", 'error');
       }
     }
 

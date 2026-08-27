@@ -373,12 +373,14 @@ class RealtimeClient {
     if (!el) return;
 
     const badges = {
-      'CONNECTED': { bg: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400', dot: 'bg-emerald-500', text: '🟢 متصل لحظياً' },
+      'CONNECTED': { bg: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400', dot: 'bg-emerald-500', text: '🟢 متصل لحظياً (ONLINE)' },
+      'ONLINE': { bg: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400', dot: 'bg-emerald-500', text: '🟢 متصل بالخادم (ONLINE)' },
       'SYNCING': { bg: 'bg-blue-500/10 border-blue-500/30 text-blue-400', dot: 'bg-blue-500 animate-pulse', text: '🔄 جاري المزامنة...' },
-      'DEGRADED': { bg: 'bg-amber-500/10 border-amber-500/30 text-amber-400', dot: 'bg-amber-500 animate-ping', text: '⚠️ اتصال ضعيف' },
+      'DEGRADED': { bg: 'bg-amber-500/10 border-amber-500/30 text-amber-400', dot: 'bg-amber-500 animate-ping', text: '⚠️ اتصال ضعيف (DEGRADED)' },
       'RECONNECTING': { bg: 'bg-amber-500/10 border-amber-500/30 text-amber-400', dot: 'bg-amber-500 animate-pulse', text: '⏳ إعادة الاتصال...' },
-      'OFFLINE': { bg: 'bg-red-500/10 border-red-500/30 text-red-400', dot: 'bg-red-500', text: '🔴 غير متصل (أوفلاين)' },
-      'STALE': { bg: 'bg-purple-500/10 border-purple-500/30 text-purple-400', dot: 'bg-purple-500', text: '⏱️ البيانات متأخرة' }
+      'OFFLINE': { bg: 'bg-red-500/10 border-red-500/30 text-red-400', dot: 'bg-red-500', text: '🔴 وضع عدم الاتصال (OFFLINE)' },
+      'STALE': { bg: 'bg-purple-500/10 border-purple-500/30 text-purple-400', dot: 'bg-purple-500', text: '⏱️ البيانات متأخرة (STALE)' },
+      'SYNC_ERROR': { bg: 'bg-rose-500/10 border-rose-500/30 text-rose-400', dot: 'bg-rose-500', text: '❌ خطأ في المزامنة (SYNC_ERROR)' }
     };
 
     const cfg = badges[this.state] || badges['OFFLINE'];
@@ -391,4 +393,8 @@ class RealtimeClient {
 
 if (typeof window !== 'undefined') {
   window.RealtimeClient = RealtimeClient;
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = RealtimeClient;
 }

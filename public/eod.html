@@ -234,7 +234,7 @@
       </div>
 
       <div class="flex items-center justify-between pt-2">
-        <button onclick="window.print()" class="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl text-xs flex items-center gap-1.5 shadow-lg cursor-pointer">
+        <button id="z-report-print-btn" onclick="triggerZReportPrint(event)" class="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl text-xs flex items-center gap-1.5 shadow-lg cursor-pointer">
           <span>🖨️</span> <span>طباعة التقرير</span>
         </button>
         <button onclick="UIState.closeModal('z-report-modal')" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl text-xs cursor-pointer">
@@ -426,6 +426,32 @@
 
       document.getElementById('z-report-content').innerHTML = content;
       UIState.openModal('z-report-modal');
+    }
+
+    async function triggerZReportPrint(event) {
+      const btn = event?.currentTarget || document.getElementById('z-report-print-btn');
+      await UIState.guardButtonAction(btn, async () => {
+        try {
+          UIState.showToast('جاري إعداد وإرسال أمر الطباعة المباشرة...', 'info');
+          const res = await fetch('/api/print/receipt', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: 'Z_REPORT', content: document.getElementById('z-report-content')?.innerText || '' })
+          });
+          const data = await res.json();
+          if (res.ok && data.success) {
+            UIState.showToast('تم إرسال تقرير Z للطابعة بنجاح! 🖨️', 'success');
+          } else {
+            UIState.showApiError(data.error || 'تعذر إرسال تقرير Z للطابعة الحرارية', {
+              title: 'تنبيه فشل الطباعة',
+              severity: 'warning',
+              technicalDetails: data.details || 'تأكد من تشغيل الطابعة وتوصيل كابل الشبكة أو البلوتوث.'
+            });
+          }
+        } catch (e) {
+          UIState.showToast('حدث خطأ في الاتصال بخدمة الطباعة', 'error');
+        }
+      });
     }
 
     fetchReportsData();

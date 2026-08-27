@@ -1,0 +1,56 @@
+{
+  "capturedAt": "2026-08-27T08:59:45.000Z",
+  "storageBaseline": {
+    "cookies": [
+      {
+        "name": "session_token",
+        "flags": ["HttpOnly", "SameSite=Lax"],
+        "maxAgeSeconds": 86400,
+        "purpose": "Server-side session identification token"
+      }
+    ],
+    "localStorage": [
+      { "key": "currentUser", "type": "JSON", "sensitive": false, "clearedOnLogout": true },
+      { "key": "user", "type": "JSON", "sensitive": false, "clearedOnLogout": true },
+      { "key": "cafe_device_id", "type": "String", "sensitive": false, "clearedOnLogout": false },
+      { "key": "cafe_events_cursor_*", "type": "Number", "sensitive": false, "clearedOnLogout": false },
+      { "key": "active_shift_type", "type": "String", "sensitive": false, "clearedOnLogout": false },
+      { "key": "sidebar_collapsed", "type": "Boolean", "sensitive": false, "clearedOnLogout": false },
+      { "key": "mazaj_session_reference", "type": "String", "sensitive": false, "clearedOnLogout": true },
+      { "key": "userTools", "type": "JSON", "sensitive": false, "clearedOnLogout": true }
+    ],
+    "sessionStorage": [
+      { "scope": "Per-Tab In-Memory", "clearedOnLogout": true, "clearMethod": "sessionStorage.clear()" }
+    ],
+    "indexedDB": {
+      "databaseName": "CafeSystemOfflineDB",
+      "version": 2,
+      "objectStores": [
+        {
+          "name": "offline_commands",
+          "keyPath": "client_command_id",
+          "indexes": ["status", "idempotency_key", "created_at"],
+          "financialMutationsAllowed": false
+        },
+        {
+          "name": "local_snapshots",
+          "keyPath": "key",
+          "indexes": [],
+          "readOnly": true
+        }
+      ]
+    },
+    "serviceWorkerCache": {
+      "cacheName": "cafe-os-v3.1",
+      "preCachedAssetsCount": 31,
+      "bypassRules": ["/api/*", "/ws*", "non-GET requests"]
+    }
+  },
+  "nativeDialogs": {
+    "totalOccurrences": 14,
+    "alertCalls": 8,
+    "confirmCalls": 5,
+    "promptCalls": 1,
+    "securityStatus": "INVENTORIED_FOR_MODAL_MIGRATION"
+  }
+}

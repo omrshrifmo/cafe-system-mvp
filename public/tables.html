@@ -530,7 +530,13 @@
     }
 
     async function revertOpen(tableNumber) {
-      if (!confirm(`هل أنت متأكد من إلغاء فتح طاولة #${tableNumber}؟`)) return;
+      const ok = await UIState.confirm(`هل أنت متأكد من إلغاء فتح طاولة #${tableNumber}؟`, {
+        title: 'إلغاء فتح الطاولة',
+        severity: 'warning',
+        confirmText: 'نعم، إلغاء الفتح',
+        cancelText: 'تراجع'
+      });
+      if (!ok) return;
       try {
         const res = await fetch(`/api/tables/${tableNumber}/revert`, {
           method: 'POST',

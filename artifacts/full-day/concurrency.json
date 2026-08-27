@@ -45,7 +45,7 @@
     "test": "DISASTER_RECOVERY_REHEARSAL",
     "description": "Hot backup, encryption, isolated restore, and RTO/RPO calculation",
     "expected": "RTO < 60s, RPO <= 15m, Integrity OK",
-    "observed": "RTO: 0.26s, RPO: 15m, Status: SUCCESS",
+    "observed": "RTO: 0.22s, RPO: 15m, Status: SUCCESS",
     "passed": true
   },
   {

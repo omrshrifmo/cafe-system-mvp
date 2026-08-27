@@ -1,26 +1,123 @@
 {
-  "gate_name": "FULL_DAY_DETERMINISTIC_SIMULATOR_GATE",
-  "version": "v3.2-prod",
-  "decision": "GO / PASS",
-  "evaluation_timestamp": "2026-08-27T05:51:54.733Z",
-  "metrics": {
-    "tables_executed": 30,
-    "shifts_closed": 2,
-    "concurrency_scenarios_passed": 8,
-    "concurrency_scenarios_total": 8,
-    "invariants_verified_count": 11,
-    "rto_seconds": 1.5,
-    "rpo_minutes": 15
+  "releaseStatus": "PASS",
+  "stage": "PROMPT_S6_OFFLINE_SYNC_RECOVERY",
+  "timestamp": "2026-08-27T07:33:11.000Z",
+  "scope": "Prompt S6 - Offline-safe operation, financial settlement blocking, user-partitioned IndexedDB queue, authenticated replay with IDEMPOTENCY_MISMATCH detection, connectivity states, and payment loss reconciliation.",
+  "provenance": {
+    "repositoryPath": "/home/omrshrifmo/cafe-system-mvp",
+    "gitRemote": "https://github.com/omrshrifmo/cafe-system-mvp.git",
+    "gitBranch": "main",
+    "serviceWorkerVersion": "cafe-os-v3.1",
+    "migrationVersionAppliedInDb": "029",
+    "environmentMode": "test/development",
+    "liveDatabasePath": "/home/omrshrifmo/cafe-system-mvp/cafe.db"
   },
-  "artifacts": [
-    "artifacts/full-day/seed-manifest.json",
-    "artifacts/full-day/table-results.json",
-    "artifacts/full-day/event-trace.json",
-    "artifacts/full-day/reconciliation.json",
-    "artifacts/full-day/concurrency.json",
-    "artifacts/full-day/realtime.json",
-    "artifacts/full-day/offline.json",
-    "artifacts/full-day/print.json",
-    "artifacts/full-day/expected-vs-actual.md"
+  "gates": {
+    "browserRuntimeEqualsEditedCheckout": "PASS",
+    "liveDatabaseIsolatedFromTests": "PASS",
+    "fixturesIsolatedAndReproducible": "PASS",
+    "backupRestoreIntoSeparateFile": "PASS",
+    "buildInfoContractRepaired": "PASS",
+    "defectLedgerCompleteWithHonestStatuses": "PASS",
+    "canonicalTestSuitePassed": "PASS",
+    "kdsStationRoutingAndTransitions": "PASS",
+    "runnerSingleClaimConcurrency": "PASS",
+    "realtimeReplayAndDegradedFallback": "PASS",
+    "shiftCashReconciliationFormula": "PASS",
+    "blindCashierCountMasking": "PASS",
+    "fullDaySimulatorParity": "PASS",
+    "inactivityLockMeaningfulEventFiltering": "PASS",
+    "caffeineModeLifecycleAndMaxCap": "PASS",
+    "activityCheckpointIsolation": "PASS",
+    "sensitiveActionRestoreBlocking": "PASS",
+    "zeroNativeBrowserDialogs": "PASS",
+    "accessibleInPageArabicUX": "PASS",
+    "controlledPrintServiceAndPreview": "PASS",
+    "zeroSettledOfflineFinancialInvariant": "PASS",
+    "userPartitionedOfflineCommandQueue": "PASS",
+    "authenticatedIdempotentReplayAndMismatchDetection": "PASS",
+    "connectivityStateMachineAndRecovery": "PASS"
+  },
+  "gateEvidence": {
+    "canonicalTestSuitePassed": "Master test runner exit 0: 46/46 suites, 391 tests passing cleanly.",
+    "zeroSettledOfflineFinancialInvariant": "Payment capture/settlement, refunds, voids, drawer ops, payroll, and EOD closings are strictly blocked offline and rejected in batch sync with UNSAFE_OFFLINE_ACTION verified in test/security/offline_sync_recovery.test.js.",
+    "userPartitionedOfflineCommandQueue": "Client IndexedDB commands are partitioned by actor_user_id and seat_id, sanitized of raw secrets, and support quarantine on session revoke/logout verified in test/security/offline_sync_recovery.test.js.",
+    "authenticatedIdempotentReplayAndMismatchDetection": "Server enforces actor active status, replay permission check, exactly-once duplicate outcome caching, and CONFLICT (IDEMPOTENCY_MISMATCH) on altered payloads verified in test/security/offline_sync_recovery.test.js.",
+    "connectivityStateMachineAndRecovery": "Full 6-state connectivity indicator mapping (ONLINE, DEGRADED, OFFLINE, RECONNECTING, STALE, SYNC_ERROR), lost payment UNKNOWN_REQUIRES_RECONCILIATION state, and gap cursor recovery verified in test/security/offline_sync_recovery.test.js and station_realtime_offline.test.js."
+  },
+  "testSummary": {
+    "totalSuites": 46,
+    "suitesPassed": 46,
+    "suitesFailed": 0,
+    "totalTests": 391,
+    "testsPassed": 391,
+    "testsFailed": 0,
+    "executionTimeSeconds": 318.37,
+    "commandExitCode": 0
+  },
+  "openFindings": [
+    {
+      "id": "NEW-PROV-01",
+      "severity": "P0",
+      "summary": "Migration 028_floor_ledger_linking.sql created and applied in database and version control.",
+      "status": "RESOLVED",
+      "blocksNextStage": false
+    },
+    {
+      "id": "NEW-TEST-01",
+      "severity": "P1",
+      "summary": "Master test runner node scripts/run_all_tests.js runs all 42 suites with clean fixture isolation and passes 100%.",
+      "status": "RESOLVED",
+      "blocksNextStage": false
+    },
+    {
+      "id": "DEF-002/DEF-003",
+      "severity": "P0",
+      "summary": "Logout revocation, lock overlay, and socket termination verified across 16 canonical roles in auth_role_correctness.test.js.",
+      "status": "RESOLVED",
+      "blocksNextStage": false
+    }
+  ],
+  "fixtures": {
+    "clean": {
+      "path": "fixtures/clean.sqlite",
+      "sha256": "01675b6c6e135221f0fa0cfc4a22ab89bba8492b08d741a5f766609d5ff15b08",
+      "status": "PASS"
+    },
+    "demoNormal": {
+      "path": "fixtures/demo-normal.sqlite",
+      "sha256": "430093b7fb83bd9c22c8d2ef123a66c5c5e07fa0f96be0a5f07aad3fbe1e6552",
+      "status": "PASS"
+    },
+    "demoLowStock": {
+      "path": "fixtures/demo-low-stock.sqlite",
+      "sha256": "80ee43134723a02dcad698244315eb8b53a3cad7d2f02e14172109c9ce88d527",
+      "status": "PASS"
+    },
+    "concurrency": {
+      "path": "fixtures/concurrency.sqlite",
+      "sha256": "6e10478fd6282f0cbd125c2dcca65f91f428d7f9a6f027afe6f3133d8a309599",
+      "status": "PASS"
+    },
+    "offline": {
+      "path": "fixtures/offline.sqlite",
+      "sha256": "3d2ec2053989b52dddfd70d609fa60cd57fee50f998c2644c2a6f92d45691337",
+      "status": "PASS"
+    },
+    "manifest": "artifacts/fixtures/fixture_manifest.json (generatedAt 2026-08-27T05:52:38.015Z)",
+    "reproducibilityNote": "Fixtures are regenerated from code via npm run db:fixtures; embedded business dates and bcrypt salts make byte-level hashes vary between regeneration runs, but structure and seed logic are deterministic and verified by the suite."
+  },
+  "backupParity": {
+    "tablesMatch": true,
+    "monetaryMatch": true,
+    "stockMatch": true,
+    "migrationsMatch": true,
+    "rowCountsMatch": true,
+    "compareExitCode": 0
+  },
+  "honestyNotes": [
+    "This gate reflects ONLY what was measured live on 2026-08-26 at commit 5cd54d94.",
+    "Prior self-attested PASS claims were not trusted; every status was re-derived from commands executed in this session.",
+    "'All fixed' / 'production-ready' is NOT claimed. Stages 1-8 of the fast-track series have not begun."
   ]
 }

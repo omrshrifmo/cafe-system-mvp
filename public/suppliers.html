@@ -255,7 +255,7 @@
 
     async function saveSupplier() {
       const name = document.getElementById('supplierName').value.trim();
-      if (!name) { alert('اسم المورد مطلوب'); return; }
+      if (!name) { UIState.showToast('اسم المورد مطلوب', 'warning'); return; }
       const id = document.getElementById('editId').value;
       const body = {
         name,
@@ -271,21 +271,38 @@
         const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
         const data = await res.json();
         if (data.success) {
+          UIState.showToast('تم حفظ بيانات المورد بنجاح', 'success');
           closeModal();
           loadSuppliers();
         } else {
-          alert('خطأ: ' + (data.error || 'حدث خطأ'));
+          UIState.showApiError(data.error || 'حدث خطأ في حفظ بيانات المورد');
         }
-      } catch(e) { alert('حدث خطأ في الاتصال'); }
+      } catch(e) {
+        UIState.showToast('حدث خطأ في الاتصال بالخادم', 'error');
+      }
     }
 
     async function deleteSupplier(id, name) {
-      if (!confirm(`هل تريد حذف المورد "${name}"؟`)) return;
+      const ok = await UIState.confirm(`هل تريد حذف المورد "${name}"؟`, {
+        title: 'تأكيد حذف المورد',
+        severity: 'danger',
+        confirmText: 'نعم، حذف المورد',
+        cancelText: 'إلغاء التراجع'
+      });
+      if (!ok) return;
+
       try {
         const res = await fetch(`/api/suppliers/${id}`, { method: 'DELETE' });
         const data = await res.json();
-        if (data.success) loadSuppliers();
-      } catch(e) { alert('حدث خطأ'); }
+        if (data.success) {
+          UIState.showToast('تم حذف المورد بنجاح', 'success');
+          loadSuppliers();
+        } else {
+          UIState.showApiError(data.error || 'فشل حذف المورد');
+        }
+      } catch(e) {
+        UIState.showToast('حدث خطأ أثناء معالجة طلب الحذف', 'error');
+      }
     }
 
     loadSuppliers();

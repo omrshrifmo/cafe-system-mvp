@@ -201,9 +201,34 @@ function broadcastEvent(topic, data, venueId = 'V_DEFAULT', stationId = null) {
   });
 }
 
+function closeUserSockets(userId) {
+  if (!wss || !userId) return;
+  wss.clients.forEach((client) => {
+    if (client.user && client.user.id === userId && client.readyState === 1) {
+      try {
+        client.close(4001, 'AUTH_REQUIRED: Session revoked or user logged out');
+      } catch (e) {}
+    }
+  });
+}
+
+function closeSessionSocket(sessionId) {
+  if (!wss || !sessionId) return;
+  wss.clients.forEach((client) => {
+    if (client.user && client.user.sessionId === sessionId && client.readyState === 1) {
+      try {
+        client.close(4001, 'AUTH_REQUIRED: Session explicitly revoked');
+      } catch (e) {}
+    }
+  });
+}
+
 module.exports = {
   setupWebSocketServer,
   dispatchPendingOutboxEvents,
   broadcastEvent,
+  closeUserSockets,
+  closeSessionSocket,
   getWss: () => wss
 };
+

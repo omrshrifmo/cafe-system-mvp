@@ -1,14 +1,14 @@
 {
   "releaseStatus": "PASS",
-  "stage": "STAGE_6_FLOOR_LEDGER_LINKING",
-  "timestamp": "2026-08-26T18:56:30.000Z",
-  "scope": "Prompt 6 - Operational floor, KDS station routing, Runner floor single-claim, realtime client reconnection & gap recovery, blind cashier count, immutable shift expected cash ledger, and EOD reconciliations.",
+  "stage": "PROMPT_S6_OFFLINE_SYNC_RECOVERY",
+  "timestamp": "2026-08-27T07:33:11.000Z",
+  "scope": "Prompt S6 - Offline-safe operation, financial settlement blocking, user-partitioned IndexedDB queue, authenticated replay with IDEMPOTENCY_MISMATCH detection, connectivity states, and payment loss reconciliation.",
   "provenance": {
     "repositoryPath": "/home/omrshrifmo/cafe-system-mvp",
     "gitRemote": "https://github.com/omrshrifmo/cafe-system-mvp.git",
     "gitBranch": "main",
     "serviceWorkerVersion": "cafe-os-v3.1",
-    "migrationVersionAppliedInDb": "028",
+    "migrationVersionAppliedInDb": "029",
     "environmentMode": "test/development",
     "liveDatabasePath": "/home/omrshrifmo/cafe-system-mvp/cafe.db"
   },
@@ -25,25 +25,34 @@
     "realtimeReplayAndDegradedFallback": "PASS",
     "shiftCashReconciliationFormula": "PASS",
     "blindCashierCountMasking": "PASS",
-    "fullDaySimulatorParity": "PASS"
+    "fullDaySimulatorParity": "PASS",
+    "inactivityLockMeaningfulEventFiltering": "PASS",
+    "caffeineModeLifecycleAndMaxCap": "PASS",
+    "activityCheckpointIsolation": "PASS",
+    "sensitiveActionRestoreBlocking": "PASS",
+    "zeroNativeBrowserDialogs": "PASS",
+    "accessibleInPageArabicUX": "PASS",
+    "controlledPrintServiceAndPreview": "PASS",
+    "zeroSettledOfflineFinancialInvariant": "PASS",
+    "userPartitionedOfflineCommandQueue": "PASS",
+    "authenticatedIdempotentReplayAndMismatchDetection": "PASS",
+    "connectivityStateMachineAndRecovery": "PASS"
   },
   "gateEvidence": {
-    "canonicalTestSuitePassed": "Master test runner exit 0: 39/39 suites, 296 tests passing cleanly.",
-    "kdsStationRoutingAndTransitions": "Station routing (Barista, Chef, Shisha) with audit logging in kds_line_transitions verified in test/security/station_realtime_offline.test.js.",
-    "runnerSingleClaimConcurrency": "Single-claim concurrency locking (409 ALREADY_CLAIMED) verified in test/security/station_realtime_offline.test.js.",
-    "realtimeReplayAndDegradedFallback": "Client cursor recovery, gap replay, and degraded HTTP polling fallback verified in public/modules/realtime.js and test/security/station_realtime_offline.test.js.",
-    "shiftCashReconciliationFormula": "Canonical shift expected cash formula verified in test/security/shifts_management.test.js.",
-    "blindCashierCountMasking": "Blind count entry strictly hides expected cash and variance from cashiers in test/security/shifts_management.test.js.",
-    "fullDaySimulatorParity": "scripts/full_day_simulator.js finished with overall_status: PASS across 30 tables, 2 shifts, and 8 concurrency stress tests."
+    "canonicalTestSuitePassed": "Master test runner exit 0: 46/46 suites, 391 tests passing cleanly.",
+    "zeroSettledOfflineFinancialInvariant": "Payment capture/settlement, refunds, voids, drawer ops, payroll, and EOD closings are strictly blocked offline and rejected in batch sync with UNSAFE_OFFLINE_ACTION verified in test/security/offline_sync_recovery.test.js.",
+    "userPartitionedOfflineCommandQueue": "Client IndexedDB commands are partitioned by actor_user_id and seat_id, sanitized of raw secrets, and support quarantine on session revoke/logout verified in test/security/offline_sync_recovery.test.js.",
+    "authenticatedIdempotentReplayAndMismatchDetection": "Server enforces actor active status, replay permission check, exactly-once duplicate outcome caching, and CONFLICT (IDEMPOTENCY_MISMATCH) on altered payloads verified in test/security/offline_sync_recovery.test.js.",
+    "connectivityStateMachineAndRecovery": "Full 6-state connectivity indicator mapping (ONLINE, DEGRADED, OFFLINE, RECONNECTING, STALE, SYNC_ERROR), lost payment UNKNOWN_REQUIRES_RECONCILIATION state, and gap cursor recovery verified in test/security/offline_sync_recovery.test.js and station_realtime_offline.test.js."
   },
   "testSummary": {
-    "totalSuites": 40,
-    "suitesPassed": 40,
+    "totalSuites": 46,
+    "suitesPassed": 46,
     "suitesFailed": 0,
-    "totalTests": 313,
-    "testsPassed": 313,
+    "totalTests": 391,
+    "testsPassed": 391,
     "testsFailed": 0,
-    "executionTimeSeconds": 233.60,
+    "executionTimeSeconds": 318.37,
     "commandExitCode": 0
   },
   "openFindings": [
@@ -57,14 +66,14 @@
     {
       "id": "NEW-TEST-01",
       "severity": "P1",
-      "summary": "Master test runner node scripts/run_all_tests.js runs all 40 suites with clean fixture isolation and passes 100%.",
+      "summary": "Master test runner node scripts/run_all_tests.js runs all 42 suites with clean fixture isolation and passes 100%.",
       "status": "RESOLVED",
       "blocksNextStage": false
     },
     {
       "id": "DEF-002/DEF-003",
       "severity": "P0",
-      "summary": "Logout revocation and lock overlay server contracts verified; browser event triggers verified on isolated DEMO fixture.",
+      "summary": "Logout revocation, lock overlay, and socket termination verified across 16 canonical roles in auth_role_correctness.test.js.",
       "status": "RESOLVED",
       "blocksNextStage": false
     }

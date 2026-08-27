@@ -285,7 +285,7 @@
 
     async function saveCategory() {
       const name = document.getElementById('catName').value.trim();
-      if (!name) { alert('اسم التصنيف مطلوب'); return; }
+      if (!name) { UIState.showToast('اسم التصنيف مطلوب', 'warning'); return; }
       const id = document.getElementById('catEditId').value;
       const body = {
         name,
@@ -298,9 +298,16 @@
         const url = id ? `/api/menu/categories/${id}` : '/api/menu/categories';
         const res = await fetch(url, { method: id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
         const data = await res.json();
-        if (data.success) { closeCategoryModal(); loadCategories(); }
-        else alert('خطأ: ' + (data.error || 'حدث خطأ'));
-      } catch(e) { alert('خطأ في الاتصال'); }
+        if (data.success) {
+          UIState.showToast('تم حفظ التصنيف بنجاح', 'success');
+          closeCategoryModal();
+          loadCategories();
+        } else {
+          UIState.showApiError(data.error || 'حدث خطأ في حفظ التصنيف');
+        }
+      } catch(e) {
+        UIState.showToast('خطأ في الاتصال بالخادم', 'error');
+      }
     }
 
     async function toggleCategory(id, isActive) {
@@ -491,7 +498,7 @@
 
     async function saveItem() {
       const name = document.getElementById('itemName').value.trim();
-      if (!name) { alert('اسم الصنف مطلوب'); return; }
+      if (!name) { UIState.showToast('اسم الصنف مطلوب', 'warning'); return; }
       const id = document.getElementById('itemEditId').value;
       const body = {
         name,
@@ -508,11 +515,11 @@
         if (id) {
           const res = await fetch(`/api/menu/items/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
           const data = await res.json();
-          if (!data.success) { alert('خطأ: ' + data.error); return; }
+          if (!data.success) { UIState.showApiError(data.error || 'فشل تعديل الصنف'); return; }
         } else {
           const res = await fetch('/api/menu/items', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
           const data = await res.json();
-          if (!data.success) { alert('خطأ: ' + data.error); return; }
+          if (!data.success) { UIState.showApiError(data.error || 'فشل إضافة الصنف'); return; }
           itemId = data.item?.id;
         }
         // Save new variants
@@ -527,9 +534,12 @@
             await fetch(`/api/menu/items/${itemId}/addons`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: a.name, price: a.price }) });
           }
         }
+        UIState.showToast('تم حفظ الصنف بنجاح', 'success');
         closeItemModal();
         loadItems();
-      } catch(e) { alert('خطأ في الاتصال'); }
+      } catch(e) {
+        UIState.showToast('خطأ في الاتصال بالخادم', 'error');
+      }
     }
 
     async function toggleItem(id, isAvailable) {
@@ -540,12 +550,26 @@
     }
 
     async function deleteItem(id, name) {
-      if (!confirm(`هل تريد حذف الصنف "${name}"؟ سيتم حذف المتغيرات والإضافات أيضاً.`)) return;
+      const ok = await UIState.confirm(`هل تريد حذف الصنف "${name}"؟ سيتم حذف المتغيرات والإضافات أيضاً.`, {
+        title: 'تأكيد حذف الصنف',
+        severity: 'danger',
+        confirmText: 'نعم، حذف الصنف',
+        cancelText: 'إلغاء التراجع'
+      });
+      if (!ok) return;
+
       try {
         const res = await fetch(`/api/menu/items/${id}`, { method: 'DELETE' });
         const data = await res.json();
-        if (data.success) loadItems();
-      } catch(e) { alert('حدث خطأ'); }
+        if (data.success) {
+          UIState.showToast('تم حذف الصنف بنجاح', 'success');
+          loadItems();
+        } else {
+          UIState.showApiError(data.error || 'فشل حذف الصنف');
+        }
+      } catch(e) {
+        UIState.showToast('خطأ أثناء معالجة طلب الحذف', 'error');
+      }
     }
 
     // Init

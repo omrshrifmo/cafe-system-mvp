@@ -597,8 +597,8 @@
           progressBar.style.width = '100%';
           progressBar.className = 'bg-emerald-500 h-full transition-all duration-300';
           
-          setTimeout(() => {
-            alert(`✅ ${data.message}`);
+          setTimeout(async () => {
+            await UIState.alert(`✅ ${data.message}`, { title: 'تمت الترقية بنجاح', severity: 'success' });
             closeApplyModal();
             loadSettings();
           }, 800);
@@ -615,7 +615,11 @@
     }
 
     async function promptRollback(packageId) {
-      const pin = prompt('⚠️ أدخل رمز PIN للمسؤول لتأكيد استرجاع النظام من النسخة الاحتياطية:');
+      const pin = await UIState.prompt('أدخل رمز PIN للمسؤول لتأكيد استرجاع النظام من النسخة الاحتياطية:', '', {
+        title: 'تأكيد الاسترجاع من النسخة الاحتياطية',
+        isPassword: true,
+        placeholder: 'رمز PIN الخاص بالمدير'
+      });
       if (!pin) return;
 
       try {
@@ -627,7 +631,7 @@
         });
         const data = await res.json();
         if (data.success) {
-          alert(`✅ ${data.message}`);
+          await UIState.alert(`✅ ${data.message}`, { title: 'تم الاسترجاع بنجاح', severity: 'success' });
           loadSettings();
         } else {
           showToast(data.error || 'فشل استرجاع النظام', true);
@@ -690,7 +694,13 @@
         return;
       }
 
-      if (!confirm('⚠️ تحذير شديد: هل أنت متأكد تماماً من حذف كافة البيانات وإعادة ضبط المصنع؟ هذا الإجراء لا يمكن الرجوع عنه.')) {
+      const confirmed = await UIState.confirm('⚠️ تحذير شديد: هل أنت متأكد تماماً من حذف كافة البيانات وإعادة ضبط المصنع؟ هذا الإجراء لا يمكن الرجوع عنه.', {
+        title: 'تأكيد إعادة ضبط المصنع',
+        severity: 'danger',
+        confirmText: 'نعم، حذف وإعادة الضبط',
+        cancelText: 'إلغاء التراجع'
+      });
+      if (!confirmed) {
         return;
       }
 
@@ -702,7 +712,7 @@
         });
         const data = await res.json();
         if (data.success) {
-          alert('✅ تم مسح البيانات وإعادة ضبط المصنع بنجاح. سيتم توجيهك لصفحة الدخول.');
+          await UIState.alert('✅ تم مسح البيانات وإعادة ضبط المصنع بنجاح. سيتم توجيهك لصفحة الدخول.', { title: 'تمت إعادة الضبط', severity: 'success' });
           window.location.href = '/portal.html';
         } else {
           showToast(data.error || 'رمز PIN غير مصرح به', true);

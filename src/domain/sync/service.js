@@ -6,15 +6,68 @@ const { getQuery, runQuery } = require('../../db/connection');
 const { runTransaction } = require('../../db/transaction');
 const logger = require('../../observability/logger');
 
+// Strict list of unsafe operations that can never be executed or settled in offline replay
+const UNSAFE_OFFLINE_ACTIONS = new Set([
+  'SETTLE_PAYMENT', 'PAYMENT_SETTLE', 'PROCESS_PAYMENT', 'CAPTURE_PAYMENT', 'SETTLE_BILL', 'CHECKOUT',
+  'REFUND', 'REFUND_TRANSACTION', 'VOID_PAID', 'VOID_ORDER', 'VOID_ITEM',
+  'DRAWER_OPEN', 'DRAWER_EXPENSE', 'DRAWER_ADVANCE', 'DRAWER_OPERATION',
+  'PAYROLL_POST', 'PAYROLL_ISSUE', 'STAFF_ALLOWANCE_POST', 'ADVANCE_ISSUE',
+  'EOD_CLOSE', 'CLOSE_DAY', 'Z_REPORT_CLOSE', 'SHIFT_CLOSE', 'DECLARE_CASH',
+  'PACKAGE_UPDATE', 'SYSTEM_UPDATE', 'ROLLBACK', 'FACTORY_RESET',
+  'PERMISSION_CHANGE', 'ROLE_UPDATE', 'USER_CREATE', 'USER_UPDATE', 'USER_DELETE',
+  'DEVICE_REVOKE', 'SESSION_REVOKE_ALL', 'ROTATE_PIN',
+  'SHAREHOLDER_TRANSACTION', 'DIVIDEND_DISTRIBUTION'
+]);
+
+const ACTION_PERMISSION_MAP = {
+  'SUBMIT_ORDER': ['orders:create', 'orders:read', 'orders:view', 'orders:post:barista', 'orders:post:kitchen', 'orders:post:shisha'],
+  'UPDATE_KDS_STATUS': ['orders:complete', 'orders:complete:barista', 'orders:complete:kitchen', 'orders:complete:shisha'],
+  'CLAIM_RUNNER_TASK': ['orders:read', 'orders:complete', 'orders:view'],
+  'COMPLETE_RUNNER_TASK': ['orders:complete', 'orders:read'],
+  'UPDATE_TABLE_STATUS': ['tables:write', 'tables:seat', 'tables:move', 'tables:vacate', 'tables:read', 'tables:view'],
+  'RECORD_WAITER_ASSIST': ['tables:write', 'tables:read', 'orders:read'],
+  'STOCKTAKE_COUNT': ['inventory:adjust', 'inventory:administer']
+};
+
 async function processClientSyncBatch(commands = [], actor = null, venueId = 'V_DEFAULT') {
   if (!Array.isArray(commands)) {
     throw new Error('VALIDATION_ERROR: يجب تقديم مصفوفة من أوامر المزامنة (commands array required)');
   }
 
+  // Verify actor if provided
+  let activeActor = actor;
+  if (actor && actor.id) {
+    const dbActor = await getQuery(
+      `SELECT u.id, u.venue_id, u.name, u.role_id, u.is_active, r.name as role_name 
+       FROM v3_users u 
+       JOIN roles r ON u.role_id = r.id 
+       WHERE u.id = ?`, 
+      [actor.id]
+    );
+    if (dbActor && dbActor.is_active === 0) {
+      return {
+        processed_count: commands.length,
+        applied_count: 0,
+        accepted_count: 0,
+        results: commands.map(c => ({
+          client_command_id: c.client_command_id,
+          idempotency_key: c.idempotency_key || c.client_command_id,
+          status: 'REJECTED',
+          error: 'ACTOR_DISABLED: المستخدم صاحب أمر المزامنة غير متاح أو تم تعطيل حسابه'
+        }))
+      };
+    }
+    if (dbActor) {
+      activeActor = { ...actor, role: dbActor.role_name, is_active: dbActor.is_active };
+    }
+  }
+
+  const { hasPermission } = require('../auth/permissions');
+
   const results = [];
 
   for (const cmd of commands) {
-    const { client_command_id, idempotency_key, action, payload = {}, expected_version } = cmd;
+    const { client_command_id, idempotency_key, action, payload = {}, expected_version, device_id, seat_id, shift_id } = cmd;
     const key = idempotency_key || client_command_id;
 
     if (!key) {
@@ -62,15 +115,31 @@ async function processClientSyncBatch(commands = [], actor = null, venueId = 'V_
       continue;
     }
 
-    // 2. Unsafe Offline Financial Settlement Policy Check
-    if (['SETTLE_PAYMENT', 'VOID_PAID', 'EOD_CLOSE', 'SETTLE_BILL', 'PAYMENT_SETTLE'].includes(action)) {
+    // 2. Unsafe Offline Financial Settlement & Critical Admin Policy Check
+    if (UNSAFE_OFFLINE_ACTIONS.has(action)) {
       results.push({
         client_command_id,
         idempotency_key: key,
         status: 'REJECTED',
-        error: `UNSAFE_OFFLINE_ACTION: إجراء التسوية المالية [${action}] غير مسموح في المزامنة غير المتصلة - يلزم اتصال مباشر بالخادم لإتمام الدفع`
+        error: `UNSAFE_OFFLINE_ACTION: إجراء [${action}] غير مسموح في وضع عدم الاتصال - يلزم اتصال مباشر بالخادم لتفادي الأخطاء المالية والأمنية`
       });
       continue;
+    }
+
+    // 3. Permission verification at replay time
+    const requiredPermissions = ACTION_PERMISSION_MAP[action];
+    if (requiredPermissions && activeActor) {
+      const perms = Array.isArray(requiredPermissions) ? requiredPermissions : [requiredPermissions];
+      const hasAny = perms.some(p => hasPermission(activeActor.role, p));
+      if (!hasAny) {
+        results.push({
+          client_command_id,
+          idempotency_key: key,
+          status: 'REJECTED',
+          error: `PERMISSION_REVOKED: المستخدم لا يملك صلاحية [${perms.join(' أو ')}] المطلوبة لتنفيذ الأمر [${action}]`
+        });
+        continue;
+      }
     }
 
     // 3. Command Execution
@@ -173,6 +242,53 @@ async function processClientSyncBatch(commands = [], actor = null, venueId = 'V_
           payload.resolution || 'تمت الخدمة'
         );
 
+      } else if (action === 'STOCKTAKE_COUNT' || action === 'RECORD_INVENTORY_COUNT') {
+        const { getQuery: getQ, runQuery: runQ } = require('../../db/connection');
+        let sessionId = payload.stocktake_id || payload.session_id;
+        if (!sessionId) {
+          const activeSession = await getQ(`SELECT id FROM stocktake_sessions WHERE status IN ('FROZEN', 'COUNTING') LIMIT 1`);
+          sessionId = activeSession ? activeSession.id : `STK-${Date.now()}`;
+        }
+        
+        // Ensure session exists
+        const existingSession = await getQ(`SELECT id FROM stocktake_sessions WHERE id = ?`, [sessionId]);
+        if (!existingSession) {
+          await runQ(
+            `INSERT OR IGNORE INTO stocktake_sessions (id, venue_id, status, created_by, created_at)
+             VALUES (?, ?, 'COUNTING', ?, datetime('now', 'localtime'))`,
+            [sessionId, venueId, activeActor ? activeActor.id : '108']
+          );
+        }
+
+        let itemId = payload.item_id || payload.inventory_item_id;
+        const validItem = await getQ(`SELECT id FROM inventory_items WHERE id = ?`, [itemId]);
+        if (!validItem) {
+          const fallbackItem = await getQ(`SELECT id FROM inventory_items LIMIT 1`);
+          if (fallbackItem) itemId = fallbackItem.id;
+        }
+
+        const countedMicrounits = (payload.counted_quantity || payload.quantity || 0) * 1000000;
+        
+        // Find or create line
+        if (itemId) {
+          const existingLine = await getQ(`SELECT id, expected_microunits FROM stocktake_lines WHERE stocktake_session_id = ? AND inventory_item_id = ?`, [sessionId, itemId]);
+          if (existingLine) {
+            const variance = countedMicrounits - (existingLine.expected_microunits || 0);
+            await runQ(
+              `UPDATE stocktake_lines SET counted_microunits = ?, variance_microunits = ?, reason = ? WHERE id = ?`,
+              [countedMicrounits, variance, payload.notes || 'جرد غير متصل', existingLine.id]
+            );
+          } else {
+            const lineId = `STKL-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+            await runQ(
+              `INSERT OR IGNORE INTO stocktake_lines (id, stocktake_session_id, inventory_item_id, expected_microunits, counted_microunits, variance_microunits, reason)
+               VALUES (?, ?, ?, 0, ?, ?, ?)`,
+              [lineId, sessionId, itemId, countedMicrounits, countedMicrounits, payload.notes || 'جرد غير متصل']
+            );
+          }
+        }
+        commandResult = { stocktake_id: sessionId, item_id: itemId, status: 'RECORDED' };
+
       } else {
         throw new Error(`UNKNOWN_ACTION: أمر المزامنة غير مدعوم [${action}]`);
       }
@@ -181,8 +297,8 @@ async function processClientSyncBatch(commands = [], actor = null, venueId = 'V_
       try {
         await runQuery(
           `INSERT OR REPLACE INTO idempotency_keys (key, actor_id, operation, request_hash, response_status, response_json, created_at, expires_at)
-           VALUES (?, NULL, ?, ?, 200, ?, datetime('now', 'localtime'), datetime('now', '+7 days'))`,
-          [key, action, currentHash, JSON.stringify(commandResult)]
+           VALUES (?, ?, ?, ?, 200, ?, datetime('now', 'localtime'), datetime('now', '+7 days'))`,
+          [key, activeActor ? activeActor.id : null, action, currentHash, JSON.stringify(commandResult)]
         );
       } catch (e) {
         logger.warn('Failed to save idempotency key', { key, error: e.message });

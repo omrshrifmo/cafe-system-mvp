@@ -366,9 +366,13 @@
         if (data.success) {
           closeFeedbackModal();
           loadFeedback();
-          alert('تم حفظ التقييم ✅');
+          UIState.showToast('تم حفظ التقييم بنجاح ✅', 'success');
+        } else {
+          UIState.showApiError(data.error || 'حدث خطأ في حفظ التقييم');
         }
-      } catch(e) { alert('حدث خطأ'); }
+      } catch(e) {
+        UIState.showToast('حدث خطأ في الاتصال بالخادم', 'error');
+      }
     }
 
     // Init

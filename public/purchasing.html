@@ -227,7 +227,7 @@
       const cost = document.getElementById('totalCost').value;
 
       if (!invId || !qty || !cost) {
-        alert("يرجى إدخال كافة البيانات المطلوبة");
+        UIState.showToast("يرجى إدخال كافة البيانات المطلوبة", 'warning');
         return;
       }
 
@@ -246,16 +246,16 @@
         });
         const data = await res.json();
         if (data.success) {
-          alert("تم تسجيل الشراء وإعادة تغذية المخزون بنجاح!");
+          UIState.showToast("تم تسجيل الشراء وإعادة تغذية المخزون بنجاح! 📦", 'success');
           document.getElementById('purchaseForm').reset();
           document.getElementById('unitBadge').textContent = '---';
           await loadInventory();
           await loadPurchasesHistory();
         } else {
-          alert(data.error || "خطأ في تسجيل الشراء");
+          UIState.showApiError(data.error || "خطأ في تسجيل الشراء");
         }
       } catch (err) {
-        alert("حدث خطأ أثناء الاتصال بالخادم");
+        UIState.showToast("حدث خطأ أثناء الاتصال بالخادم", 'error');
       }
     }
 
