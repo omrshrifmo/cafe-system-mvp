@@ -77,13 +77,15 @@ function createApp() {
     next();
   });
 
-  // Serve static assets from public/ directory
+  // Serve static assets from public/ directory with anti-stale cache controls
   app.use(express.static(path.join(__dirname, '../public'), {
-    maxAge: process.env.NODE_ENV === 'production' ? '1h' : 0,
+    maxAge: 0,
     etag: true,
-    setHeaders: (res, path) => {
-      if (path.endsWith('.html') || path.endsWith('sw.js')) {
-        res.setHeader('Cache-Control', 'no-cache');
+    setHeaders: (res, staticPath) => {
+      if (staticPath.endsWith('.html') || staticPath.endsWith('sw.js') || staticPath.endsWith('.js') || staticPath.endsWith('.json')) {
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
       }
     }
   }));

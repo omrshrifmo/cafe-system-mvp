@@ -13,8 +13,8 @@ const logger = require('../../observability/logger');
 
 const router = express.Router();
 
-// Setup Status & Wizard Progress
-router.get('/status', (req, res) => {
+// Setup Status & Wizard Progress (Requires Authentication)
+router.get('/status', requireAuth, (req, res) => {
   res.json({
     success: true,
     mode: getMode(),
@@ -22,7 +22,7 @@ router.get('/status', (req, res) => {
   });
 });
 
-router.get('/progress', async (req, res, next) => {
+router.get('/progress', requireAuth, async (req, res, next) => {
   try {
     const progress = await getSetupProgress();
     res.json(progress);
@@ -32,7 +32,7 @@ router.get('/progress', async (req, res, next) => {
 });
 
 // Save Wizard Step (Resumable)
-router.post('/step', async (req, res, next) => {
+router.post('/step', requireAuth, async (req, res, next) => {
   try {
     const { step, payload } = req.body;
     if (!step || !payload) {
@@ -45,8 +45,8 @@ router.post('/step', async (req, res, next) => {
   }
 });
 
-// Readiness Checklist
-router.get('/readiness', async (req, res, next) => {
+// Readiness Checklist (Protected)
+router.get('/readiness', requireAuth, async (req, res, next) => {
   try {
     const readiness = await getReadinessChecklist();
     res.json(readiness);
@@ -55,8 +55,8 @@ router.get('/readiness', async (req, res, next) => {
   }
 });
 
-// Finalize Setup & Mode Transition (Requires PIN reauthentication if authenticated)
-router.post('/finalize', async (req, res, next) => {
+// Finalize Setup & Mode Transition (Requires Authentication)
+router.post('/finalize', requireAuth, async (req, res, next) => {
   try {
     const { pin, ...finalPayload } = req.body;
     const result = await finalizeSetup(finalPayload, req.user || null, pin || null);
@@ -66,7 +66,7 @@ router.post('/finalize', async (req, res, next) => {
   }
 });
 
-router.post('/init-live', async (req, res, next) => {
+router.post('/init-live', requireAuth, async (req, res, next) => {
   try {
     const { pin, ...finalPayload } = req.body;
     finalPayload.mode = MODES.LIVE;
@@ -77,7 +77,7 @@ router.post('/init-live', async (req, res, next) => {
   }
 });
 
-router.post('/init-demo', async (req, res, next) => {
+router.post('/init-demo', requireAuth, async (req, res, next) => {
   try {
     const { pin, ...finalPayload } = req.body;
     finalPayload.mode = MODES.DEMO;

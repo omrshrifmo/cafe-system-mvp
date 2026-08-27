@@ -1,4 +1,4 @@
-Commit: 16731b4eb20ebabc97599663e4a1d1fb20fa6b23
+Commit: c4f25186b54fbe092251202a00252826062e6557
 
 Status:
 M .app_mode.json
@@ -7,7 +7,6 @@ M .app_mode.json
  M .claude/learning/cost-attribution.json
  M .claude/learning/pipeline-cycle.json
  M .claude/learning/project-profile.json
- M .claude/learning/remote-repo-probe.json
  M .claude/learning/today-cost.json
  M .github/instructions/deployment-practical.instructions.md
  M .github/instructions/doc-coauthoring.instructions.md
@@ -28,6 +27,12 @@ M .app_mode.json
  M artifacts/full-day/reconciliation.json
  M artifacts/full-day/seed-manifest.json
  M artifacts/full-day/table-results.json
+ M artifacts/release-gate/build-v3.2-prod/build-info.json
+ M artifacts/release-gate/build-v3.2-prod/git-status.txt
+ M artifacts/release-gate/build-v3.2-prod/http-headers.txt
+ M artifacts/release-gate/build-v3.2-prod/test-exit-code.txt
+ M artifacts/release-gate/build-v3.2-prod/test-stderr.txt
+ M artifacts/release-gate/build-v3.2-prod/test-stdout.txt
  M docs/release-gate.json
  M fixtures/gate-auth-role.sqlite
  M fixtures/gate-auth-role.sqlite-shm
@@ -42,38 +47,48 @@ M .app_mode.json
  M fixtures/gate-shared-context.sqlite-wal
  M fixtures/gate-shared-threat.sqlite-shm
  M fixtures/gate-shared-threat.sqlite-wal
- M public/index.html
- M public/nav.js
- M public/portal.html
- M public/setup.html
- M public/sw.js
- M src/app.js
- M src/domain/auth/service.js
- M src/domain/system/setupService.js
- M src/http/middleware/security.js
- M src/http/routes/auth.js
-?? artifacts/full-day/cafe-backup-2026-08-27T16-14-37-992Z.sqlite
-?? artifacts/full-day/cafe-backup-2026-08-27T16-14-37-992Z.sqlite.enc
-?? artifacts/full-day/manifest-2026-08-27T16-14-37-992Z.json
-?? artifacts/release-gate/
-?? backups/cafe-backup-2026-08-27T16-15-20-589Z.sqlite
-?? backups/cafe-backup-2026-08-27T16-15-20-643Z.sqlite
-?? backups/cafe-backup-2026-08-27T16-15-20-643Z.sqlite.enc
-?? backups/cafe-backup-2026-08-27T16-15-20-763Z.sqlite
-?? backups/cafe-backup-2026-08-27T16-15-20-763Z.sqlite.enc
-?? backups/cafe-backup-2026-08-27T16-15-20-968Z.sqlite
-?? backups/cafe-backup-2026-08-27T16-15-20-968Z.sqlite.enc
-?? backups/cafe-backup-2026-08-27T16-15-22-614Z.sqlite
-?? backups/cafe-backup-2026-08-27T16-16-48-009Z.sqlite
-?? backups/manifest-2026-08-27T16-15-20-589Z.json
-?? backups/manifest-2026-08-27T16-15-20-643Z.json
-?? backups/manifest-2026-08-27T16-15-20-763Z.json
-?? backups/manifest-2026-08-27T16-15-20-968Z.json
-?? backups/manifest-2026-08-27T16-15-22-614Z.json
-?? backups/manifest-2026-08-27T16-16-48-009Z.json
-?? fixtures/qa-auth.sqlite
-?? fixtures/qa-clean-live.sqlite
-?? fixtures/qa-demo.sqlite
-?? fixtures/qa-fixture-manifest.json
-?? scripts/generate_release_gate_fixtures.js
-?? scripts/run_release_gate.js
+ M scripts/run_release_gate.js
+ D test/fixtures/full_day_fixture.db-shm
+ D test/fixtures/full_day_fixture.db-wal
+?? artifacts/full-day/cafe-backup-2026-08-27T16-20-52-967Z.sqlite
+?? artifacts/full-day/cafe-backup-2026-08-27T16-20-52-967Z.sqlite.enc
+?? artifacts/full-day/cafe-backup-2026-08-27T16-26-27-100Z.sqlite
+?? artifacts/full-day/cafe-backup-2026-08-27T16-26-27-100Z.sqlite.enc
+?? artifacts/full-day/manifest-2026-08-27T16-20-52-967Z.json
+?? artifacts/full-day/manifest-2026-08-27T16-26-27-100Z.json
+?? artifacts/release-gate/build-v3.2-prod/browser-lock.md
+?? artifacts/release-gate/build-v3.2-prod/browser-login.md
+?? artifacts/release-gate/build-v3.2-prod/browser-logout.md
+?? artifacts/release-gate/build-v3.2-prod/browser-setup.md
+?? artifacts/release-gate/build-v3.2-prod/database-after.sha256
+?? artifacts/release-gate/build-v3.2-prod/protected-api-matrix.json
+?? backups/cafe-backup-2026-08-27T16-21-42-261Z.sqlite
+?? backups/cafe-backup-2026-08-27T16-21-42-325Z.sqlite
+?? backups/cafe-backup-2026-08-27T16-21-42-325Z.sqlite.enc
+?? backups/cafe-backup-2026-08-27T16-21-42-468Z.sqlite
+?? backups/cafe-backup-2026-08-27T16-21-42-468Z.sqlite.enc
+?? backups/cafe-backup-2026-08-27T16-21-42-749Z.sqlite
+?? backups/cafe-backup-2026-08-27T16-21-42-749Z.sqlite.enc
+?? backups/cafe-backup-2026-08-27T16-21-44-939Z.sqlite
+?? backups/cafe-backup-2026-08-27T16-23-05-955Z.sqlite
+?? backups/cafe-backup-2026-08-27T16-26-57-074Z.sqlite
+?? backups/cafe-backup-2026-08-27T16-26-57-128Z.sqlite
+?? backups/cafe-backup-2026-08-27T16-26-57-128Z.sqlite.enc
+?? backups/cafe-backup-2026-08-27T16-26-57-254Z.sqlite
+?? backups/cafe-backup-2026-08-27T16-26-57-254Z.sqlite.enc
+?? backups/cafe-backup-2026-08-27T16-26-57-459Z.sqlite
+?? backups/cafe-backup-2026-08-27T16-26-57-459Z.sqlite.enc
+?? backups/cafe-backup-2026-08-27T16-26-59-700Z.sqlite
+?? backups/cafe-backup-2026-08-27T16-28-02-328Z.sqlite
+?? backups/manifest-2026-08-27T16-21-42-261Z.json
+?? backups/manifest-2026-08-27T16-21-42-325Z.json
+?? backups/manifest-2026-08-27T16-21-42-468Z.json
+?? backups/manifest-2026-08-27T16-21-42-749Z.json
+?? backups/manifest-2026-08-27T16-21-44-939Z.json
+?? backups/manifest-2026-08-27T16-23-05-955Z.json
+?? backups/manifest-2026-08-27T16-26-57-074Z.json
+?? backups/manifest-2026-08-27T16-26-57-128Z.json
+?? backups/manifest-2026-08-27T16-26-57-254Z.json
+?? backups/manifest-2026-08-27T16-26-57-459Z.json
+?? backups/manifest-2026-08-27T16-26-59-700Z.json
+?? backups/manifest-2026-08-27T16-28-02-328Z.json

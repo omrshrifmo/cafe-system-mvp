@@ -25,9 +25,9 @@
     "pid": 4048550,
     "nodeVersion": "v22.23.1",
     "startTime": "2026-08-27T16:17:35.105Z",
-    "uptimeSeconds": 11
+    "uptimeSeconds": 658
   },
-  "timestamp": "2026-08-27T16:17:45.604Z",
+  "timestamp": "2026-08-27T16:28:32.877Z",
   "success": true,
   "data": {
     "status": "OK",
@@ -56,10 +56,10 @@
       "pid": 4048550,
       "nodeVersion": "v22.23.1",
       "startTime": "2026-08-27T16:17:35.105Z",
-      "uptimeSeconds": 11
+      "uptimeSeconds": 658
     },
-    "timestamp": "2026-08-27T16:17:45.604Z"
+    "timestamp": "2026-08-27T16:28:32.877Z"
   },
-  "requestId": "942a5757-c40e-4137-be64-210049c97770",
+  "requestId": "44f02a44-557e-4732-b3ce-e8bab67f0236",
   "error": null
 }

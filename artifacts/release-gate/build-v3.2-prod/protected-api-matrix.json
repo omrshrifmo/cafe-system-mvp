@@ -1,0 +1,281 @@
+{
+  "timestamp": "2026-08-27T16:33:21.169Z",
+  "ownerLoginSuccess": true,
+  "ownerRole": "OWNER",
+  "ownerDefaultRoute": "/portal.html",
+  "logoutRevoked": true,
+  "results": [
+    {
+      "phase": "ANONYMOUS",
+      "endpoint": "GET /api/auth/me",
+      "name": "Auth Identity",
+      "status": 401,
+      "denied": true,
+      "code": "AUTH_REQUIRED"
+    },
+    {
+      "phase": "ANONYMOUS",
+      "endpoint": "GET /api/users",
+      "name": "Staff Users List",
+      "status": 401,
+      "denied": true,
+      "code": "AUTH_REQUIRED"
+    },
+    {
+      "phase": "ANONYMOUS",
+      "endpoint": "GET /api/reports/eod",
+      "name": "EOD Financial Report",
+      "status": 401,
+      "denied": true,
+      "code": "AUTH_REQUIRED"
+    },
+    {
+      "phase": "ANONYMOUS",
+      "endpoint": "GET /api/reports/bi",
+      "name": "BI Analytics Report",
+      "status": 401,
+      "denied": true,
+      "code": "AUTH_REQUIRED"
+    },
+    {
+      "phase": "ANONYMOUS",
+      "endpoint": "GET /api/config",
+      "name": "System Hardware Config",
+      "status": 401,
+      "denied": true,
+      "code": "AUTH_REQUIRED"
+    },
+    {
+      "phase": "ANONYMOUS",
+      "endpoint": "GET /api/inventory",
+      "name": "Inventory Balances",
+      "status": 401,
+      "denied": true,
+      "code": "AUTH_REQUIRED"
+    },
+    {
+      "phase": "ANONYMOUS",
+      "endpoint": "GET /api/tables",
+      "name": "Floor Tables State",
+      "status": 401,
+      "denied": true,
+      "code": "AUTH_REQUIRED"
+    },
+    {
+      "phase": "ANONYMOUS",
+      "endpoint": "GET /api/orders",
+      "name": "Active Orders",
+      "status": 401,
+      "denied": true,
+      "code": "AUTH_REQUIRED"
+    },
+    {
+      "phase": "ANONYMOUS",
+      "endpoint": "GET /api/payroll",
+      "name": "Payroll Periods",
+      "status": 401,
+      "denied": true,
+      "code": "AUTH_REQUIRED"
+    },
+    {
+      "phase": "ANONYMOUS",
+      "endpoint": "GET /api/shareholders",
+      "name": "Shareholder Equity",
+      "status": 401,
+      "denied": true,
+      "code": "AUTH_REQUIRED"
+    },
+    {
+      "phase": "ANONYMOUS",
+      "endpoint": "GET /api/purchases",
+      "name": "Purchasing Records",
+      "status": 401,
+      "denied": true,
+      "code": "AUTH_REQUIRED"
+    },
+    {
+      "phase": "ANONYMOUS",
+      "endpoint": "GET /api/suppliers",
+      "name": "Suppliers Master",
+      "status": 401,
+      "denied": true,
+      "code": "AUTH_REQUIRED"
+    },
+    {
+      "phase": "ANONYMOUS",
+      "endpoint": "GET /api/reservations",
+      "name": "Hospitality Bookings",
+      "status": 401,
+      "denied": true,
+      "code": "AUTH_REQUIRED"
+    },
+    {
+      "phase": "ANONYMOUS",
+      "endpoint": "GET /api/quality",
+      "name": "QA Complaints",
+      "status": 401,
+      "denied": true,
+      "code": "AUTH_REQUIRED"
+    },
+    {
+      "phase": "ANONYMOUS",
+      "endpoint": "GET /api/shifts",
+      "name": "Shift Records",
+      "status": 401,
+      "denied": true,
+      "code": "AUTH_REQUIRED"
+    },
+    {
+      "phase": "ANONYMOUS",
+      "endpoint": "GET /api/audit",
+      "name": "Security Audit Ledger",
+      "status": 401,
+      "denied": true,
+      "code": "AUTH_REQUIRED"
+    },
+    {
+      "phase": "ANONYMOUS",
+      "endpoint": "POST /api/admin/emergency/request",
+      "name": "Emergency Access",
+      "status": 401,
+      "denied": true,
+      "code": "AUTH_REQUIRED"
+    },
+    {
+      "phase": "POST_LOGOUT",
+      "endpoint": "GET /api/auth/me",
+      "name": "Auth Identity",
+      "status": 401,
+      "denied": true,
+      "code": "AUTH_REQUIRED"
+    },
+    {
+      "phase": "POST_LOGOUT",
+      "endpoint": "GET /api/users",
+      "name": "Staff Users List",
+      "status": 401,
+      "denied": true,
+      "code": "AUTH_REQUIRED"
+    },
+    {
+      "phase": "POST_LOGOUT",
+      "endpoint": "GET /api/reports/eod",
+      "name": "EOD Financial Report",
+      "status": 401,
+      "denied": true,
+      "code": "AUTH_REQUIRED"
+    },
+    {
+      "phase": "POST_LOGOUT",
+      "endpoint": "GET /api/reports/bi",
+      "name": "BI Analytics Report",
+      "status": 401,
+      "denied": true,
+      "code": "AUTH_REQUIRED"
+    },
+    {
+      "phase": "POST_LOGOUT",
+      "endpoint": "GET /api/config",
+      "name": "System Hardware Config",
+      "status": 401,
+      "denied": true,
+      "code": "AUTH_REQUIRED"
+    },
+    {
+      "phase": "POST_LOGOUT",
+      "endpoint": "GET /api/inventory",
+      "name": "Inventory Balances",
+      "status": 401,
+      "denied": true,
+      "code": "AUTH_REQUIRED"
+    },
+    {
+      "phase": "POST_LOGOUT",
+      "endpoint": "GET /api/tables",
+      "name": "Floor Tables State",
+      "status": 401,
+      "denied": true,
+      "code": "AUTH_REQUIRED"
+    },
+    {
+      "phase": "POST_LOGOUT",
+      "endpoint": "GET /api/orders",
+      "name": "Active Orders",
+      "status": 401,
+      "denied": true,
+      "code": "AUTH_REQUIRED"
+    },
+    {
+      "phase": "POST_LOGOUT",
+      "endpoint": "GET /api/payroll",
+      "name": "Payroll Periods",
+      "status": 401,
+      "denied": true,
+      "code": "AUTH_REQUIRED"
+    },
+    {
+      "phase": "POST_LOGOUT",
+      "endpoint": "GET /api/shareholders",
+      "name": "Shareholder Equity",
+      "status": 401,
+      "denied": true,
+      "code": "AUTH_REQUIRED"
+    },
+    {
+      "phase": "POST_LOGOUT",
+      "endpoint": "GET /api/purchases",
+      "name": "Purchasing Records",
+      "status": 401,
+      "denied": true,
+      "code": "AUTH_REQUIRED"
+    },
+    {
+      "phase": "POST_LOGOUT",
+      "endpoint": "GET /api/suppliers",
+      "name": "Suppliers Master",
+      "status": 401,
+      "denied": true,
+      "code": "AUTH_REQUIRED"
+    },
+    {
+      "phase": "POST_LOGOUT",
+      "endpoint": "GET /api/reservations",
+      "name": "Hospitality Bookings",
+      "status": 401,
+      "denied": true,
+      "code": "AUTH_REQUIRED"
+    },
+    {
+      "phase": "POST_LOGOUT",
+      "endpoint": "GET /api/quality",
+      "name": "QA Complaints",
+      "status": 401,
+      "denied": true,
+      "code": "AUTH_REQUIRED"
+    },
+    {
+      "phase": "POST_LOGOUT",
+      "endpoint": "GET /api/shifts",
+      "name": "Shift Records",
+      "status": 401,
+      "denied": true,
+      "code": "AUTH_REQUIRED"
+    },
+    {
+      "phase": "POST_LOGOUT",
+      "endpoint": "GET /api/audit",
+      "name": "Security Audit Ledger",
+      "status": 401,
+      "denied": true,
+      "code": "AUTH_REQUIRED"
+    },
+    {
+      "phase": "POST_LOGOUT",
+      "endpoint": "POST /api/admin/emergency/request",
+      "name": "Emergency Access",
+      "status": 401,
+      "denied": true,
+      "code": "AUTH_REQUIRED"
+    }
+  ]
+}

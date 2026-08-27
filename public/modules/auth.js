@@ -185,8 +185,8 @@ function lockScreen() {
   const overlay = document.createElement('div');
   overlay.id = 'mazaj-lock-overlay';
   overlay.dir = 'rtl';
-  overlay.className = 'fixed inset-0 bg-slate-950/95 backdrop-blur-md z-[999999] flex flex-col items-center justify-center p-4 text-slate-100 select-none';
-  overlay.style.fontFamily = "'Tajawal', system-ui, sans-serif";
+  overlay.className = 'fixed inset-0 bg-slate-950/95 backdrop-blur-md z-[9999999] flex flex-col items-center justify-center p-4 text-slate-100 select-none';
+  overlay.style.cssText = 'position: fixed !important; top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important; width: 100vw !important; height: 100vh !important; z-index: 9999999 !important; background: rgba(11, 17, 32, 0.96) !important; backdrop-filter: blur(12px) !important; display: flex !important; align-items: center !important; justify-content: center !important;';
   
   const userName = currentUser ? (currentUser.name || currentUser.role) : 'المستخدم';
   const userRole = currentUser ? currentUser.role : 'كافيه مزاج';

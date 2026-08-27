@@ -151,6 +151,44 @@
       alertEl.classList.remove("hidden");
     }
 
+    function hideModuleError() {
+      const alertEl = document.getElementById("moduleAlert");
+      if (alertEl) alertEl.classList.add("hidden");
+    }
+
+    async function ensureAuthModuleLoaded() {
+      if (window.AuthModule && typeof window.AuthModule.loginWithPin === 'function') {
+        hideModuleError();
+        return true;
+      }
+      // Retry loading if delayed
+      return new Promise((resolve) => {
+        let attempts = 0;
+        const interval = setInterval(() => {
+          attempts++;
+          if (window.AuthModule && typeof window.AuthModule.loginWithPin === 'function') {
+            clearInterval(interval);
+            hideModuleError();
+            resolve(true);
+          } else if (attempts >= 10) {
+            clearInterval(interval);
+            const script = document.createElement('script');
+            script.src = '/modules/auth.js?v=' + Date.now();
+            script.onload = () => {
+              if (window.AuthModule && typeof window.AuthModule.loginWithPin === 'function') {
+                hideModuleError();
+                resolve(true);
+              } else {
+                resolve(false);
+              }
+            };
+            script.onerror = () => resolve(false);
+            document.head.appendChild(script);
+          }
+        }, 50);
+      });
+    }
+
     async function fetchBuildInfo() {
       try {
         const res = await fetch('/api/build-info', { cache: 'no-store' });
@@ -165,7 +203,7 @@
             if (serverBuildInfo.appMode === 'DEMO') {
               demoBanner.classList.remove('hidden');
               liveBanner.classList.add('hidden');
-            } else if (serverBuildInfo.appMode === 'LIVE') {
+            } else {
               liveBanner.classList.remove('hidden');
               demoBanner.classList.add('hidden');
             }
@@ -186,8 +224,8 @@
         return;
       }
 
-      // Check module initialization health
-      if (!window.AuthModule || typeof window.AuthModule.loginWithPin !== 'function') {
+      const isLoaded = await ensureAuthModuleLoaded();
+      if (!isLoaded) {
         const traceId = (serverBuildInfo && serverBuildInfo.buildId) || 'BUILD-AUTH-REPAIR';
         showError(`تعذر تحميل وحدة تسجيل الدخول. أعد المحاولة أو تواصل مع مسؤول النظام. (رقم التتبع: ${traceId})`);
         showModuleError(traceId);
@@ -236,9 +274,8 @@
 
     window.addEventListener("DOMContentLoaded", async () => {
       await fetchBuildInfo();
-
-      // Check module health on load
-      if (!window.AuthModule || typeof window.AuthModule.checkAuthSession !== 'function') {
+      const isLoaded = await ensureAuthModuleLoaded();
+      if (!isLoaded) {
         const traceId = (serverBuildInfo && serverBuildInfo.buildId) || 'BUILD-AUTH-REPAIR';
         showModuleError(traceId);
         return;

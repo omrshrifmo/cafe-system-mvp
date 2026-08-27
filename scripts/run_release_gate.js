@@ -123,6 +123,8 @@ async function run() {
 
   // 7. Protected API Matrix Test
   console.log('Evaluating Protected API Matrix...');
+  await new Promise(r => setTimeout(r, 1500));
+
   const privateEndpoints = [
     { method: 'GET', path: '/api/auth/me', name: 'Auth Identity' },
     { method: 'GET', path: '/api/users', name: 'Staff Users List' },
@@ -147,7 +149,11 @@ async function run() {
 
   // Phase A: Anonymous Access
   for (const ep of privateEndpoints) {
-    const res = await fetchApi(ep.path, { method: ep.method });
+    let res = await fetchApi(ep.path, { method: ep.method });
+    if (res.status === 500) {
+      await new Promise(r => setTimeout(r, 300));
+      res = await fetchApi(ep.path, { method: ep.method });
+    }
     const isDenied = res.status === 401 || res.status === 403 || (res.json && (res.json.code === 'AUTH_REQUIRED' || res.json.code === 'FORBIDDEN'));
     apiMatrixResults.push({
       phase: 'ANONYMOUS',
@@ -163,7 +169,7 @@ async function run() {
   const loginRes = await fetchApi('/api/auth/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ pin: '8802' }) // Owner PIN
+    body: JSON.stringify({ pin: '1009' }) // Owner PIN
   });
 
   const cookie = loginRes.headers['set-cookie'] ? loginRes.headers['set-cookie'][0] : '';

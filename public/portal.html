@@ -179,9 +179,10 @@
           return;
         }
         const data = await res.json();
-        if (data.success && data.user) {
-          currentUser = data.user;
-          localStorage.setItem('currentUser', JSON.stringify(data.user));
+        const userObj = data.user || (data.data && data.data.user) || (data.data && data.data.role ? data.data : null);
+        if (data.success && userObj) {
+          currentUser = userObj;
+          localStorage.setItem('currentUser', JSON.stringify(userObj));
         } else {
           window.location.href = '/index.html';
           return;
@@ -192,17 +193,19 @@
         else { window.location.href = '/index.html'; return; }
       }
 
-      const rawRole = currentUser.role || 'WAITER';
+      const rawRole = (currentUser && currentUser.role) || 'WAITER';
       const userRole = String(rawRole).toUpperCase().replace(/^ROLE_/, '').replace(/^R_/, '');
 
       document.getElementById('userName').textContent = currentUser.name || "مستخدم";
       document.getElementById('userRole').textContent = roleLabels[userRole] || roleLabels[rawRole] || userRole;
 
-      const tools = ALL_TOOLS.filter(t => 
-        t.roles.includes(userRole) || 
-        t.roles.includes(rawRole) ||
-        t.roles.map(r => r.toUpperCase().replace(/^ROLE_/, '').replace(/^R_/, '')).includes(userRole)
-      );
+      const tools = (userRole === 'OWNER' || userRole === 'SUPER_ADMIN')
+        ? ALL_TOOLS
+        : ALL_TOOLS.filter(t => 
+            t.roles.includes(userRole) || 
+            t.roles.includes(rawRole) ||
+            t.roles.map(r => r.toUpperCase().replace(/^ROLE_/, '').replace(/^R_/, '')).includes(userRole)
+          );
       renderTools(tools);
 
       fetchShiftStatus();

@@ -1,0 +1,10 @@
+{
+  "backup_file": "cafe-backup-2026-08-27T16-21-42-325Z.sqlite",
+  "file_path": "/home/omrshrifmo/cafe-system-mvp/backups/cafe-backup-2026-08-27T16-21-42-325Z.sqlite",
+  "size_bytes": 1347584,
+  "sha256_checksum": "5a984ef74369eff18368ecd525360ce26ff52b4b5582d6444492a48682cdf5c4",
+  "duration_ms": 57,
+  "created_at": "2026-08-27T16:21:42.382Z",
+  "engine": "SQLite WAL Hot Snapshot (VACUUM INTO)",
+  "status": "VERIFIED"
+}
