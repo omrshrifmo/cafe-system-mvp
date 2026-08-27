@@ -67,14 +67,54 @@ function createApp() {
   app.use(modeMiddleware);
   app.use(authMiddleware);
 
-  // Protect static HTML pages (Phase 1)
+  // ─────────────────────────────────────────────────────────────────────────
+  // HTML Page Routing — Public vs. Protected
+  // Public pages (no session required): index.html (login), setup.html,
+  //   manual.html, health.html.
+  // Protected pages: everything else — redirect to / if not authenticated.
+  // ─────────────────────────────────────────────────────────────────────────
+  const PUBLIC_HTML_PAGES = new Set([
+    '/index.html',
+    '/setup.html',
+    '/manual.html',
+    '/health.html',
+  ]);
+
   app.use((req, res, next) => {
-    if (req.path.endsWith('.html') && req.path !== '/' && req.path !== '/index.html') {
-      if (!req.user) {
+    if (req.path.endsWith('.html') && req.path !== '/') {
+      if (!PUBLIC_HTML_PAGES.has(req.path) && !req.user) {
         return res.redirect('/');
       }
     }
     next();
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Root Boot-Decision
+  // GET / → check onboarding_state in system_config.
+  //   UNINITIALIZED or IN_PROGRESS → redirect to /setup.html (first-run)
+  //   COMPLETE (or unknown/populated) → serve /index.html (login)
+  // ─────────────────────────────────────────────────────────────────────────
+  app.get('/', (req, res, next) => {
+    try {
+      const db = require('./db/connection');
+      db.getQuery(
+        "SELECT value FROM system_config WHERE key = 'onboarding_state' LIMIT 1",
+        []
+      ).then(row => {
+        const state = row ? row.value : null;
+        if (state === 'UNINITIALIZED' || state === 'IN_PROGRESS') {
+          return res.redirect('/setup.html');
+        }
+        // COMPLETE, LOCKED, or missing (legacy populated DB) → login page
+        next();
+      }).catch(() => {
+        // DB error → show login (safe default)
+        next();
+      });
+    } catch (e) {
+      next();
+    }
   });
 
   // Serve static assets from public/ directory with anti-stale cache controls

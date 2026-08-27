@@ -7,6 +7,7 @@ const { runTransaction } = require('../../db/transaction');
 const { setMode, getMode, MODES } = require('./modeService');
 const { verifyReauthentication, logAudit, hashPin } = require('../auth/service');
 const { publishNewPolicy, updateVenueSettings, getActivePolicy } = require('../admin/settingsService');
+const { setOnboardingState, getOnboardingState, ONBOARDING_STATES } = require('./onboardingState');
 const logger = require('../../observability/logger');
 
 const WIZARD_STEPS = [
@@ -334,9 +335,18 @@ async function finalizeSetup(payload = {}, user = null, managerPin = null) {
     }
   }
 
+  // 5. Mark onboarding as COMPLETE in the persistent DB state
+  try {
+    await setOnboardingState(ONBOARDING_STATES.COMPLETE);
+    logger.info('[setupService] finalizeSetup: onboarding_state set to COMPLETE');
+  } catch (e) {
+    logger.warn('[setupService] finalizeSetup: could not write onboarding_state:', { error: e.message });
+  }
+
   return {
     success: true,
     mode: getMode(),
+    onboarding_state: ONBOARDING_STATES.COMPLETE,
     message: mode === MODES.DEMO 
       ? 'تم إعداد بيئة التجربة (DEMO) بنجاح.' 
       : 'تم اعتماد ونشر إعدادات الكافيه للتشغيل الفعلي (LIVE) بنجاح.',

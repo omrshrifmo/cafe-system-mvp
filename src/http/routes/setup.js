@@ -6,6 +6,7 @@ const {
   finalizeSetup, 
   getReadinessChecklist 
 } = require('../../domain/system/setupService');
+const { getOnboardingState } = require('../../domain/system/onboardingState');
 const { requireAuth } = require('../middleware/auth');
 const { requirePermission } = require('../middleware/permissions');
 const { verifyReauthentication } = require('../../domain/auth/service');
@@ -25,11 +26,13 @@ const requireAuthOrOnboarding = (req, res, next) => {
 };
 
 // Setup Status & Wizard Progress
-router.get('/status', (req, res) => {
+router.get('/status', async (req, res) => {
+  const onboarding_state = await getOnboardingState().catch(() => null);
   res.json({
     success: true,
     mode: getMode(),
-    is_onboarding: getMode() === MODES.ONBOARDING
+    is_onboarding: getMode() === MODES.ONBOARDING,
+    onboarding_state: onboarding_state || 'UNKNOWN'
   });
 });
 

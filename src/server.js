@@ -15,6 +15,10 @@ async function startServer() {
     logger.info('Initializing Cafe System Database Migrations...');
     await runMigrations();
 
+    // Seed onboarding_state in system_config if missing (first-run detection)
+    const { seedOnboardingState } = require('./domain/system/onboardingState');
+    await seedOnboardingState();
+
     const app = createApp();
     const server = http.createServer(app);
 

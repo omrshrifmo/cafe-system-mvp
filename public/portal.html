@@ -25,9 +25,43 @@
     .tool-card:active {
       transform: scale(0.98);
     }
+    #portalLoadingState { display: flex; }
+    #portalErrorState { display: none; }
+    #portalContent { display: none; }
+    #swUpdateBanner { display: none; }
   </style>
 </head>
 <body class="min-h-screen flex flex-col bg-slate-950">
+
+  <!-- SW Update Banner -->
+  <div id="swUpdateBanner" class="fixed top-0 inset-x-0 z-50 bg-amber-500 text-slate-950 text-xs font-black text-center py-2 flex items-center justify-center gap-3">
+    <span>🔄 يتوفر تحديث للنظام</span>
+    <button onclick="window.location.reload()" class="bg-slate-950 text-amber-400 px-3 py-0.5 rounded-lg text-xs font-black">تحديث الآن</button>
+  </div>
+
+  <!-- Portal Loading State -->
+  <div id="portalLoadingState" class="min-h-screen flex items-center justify-center bg-slate-950">
+    <div class="text-center space-y-4">
+      <div class="w-16 h-16 mx-auto rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-3xl animate-pulse">🏠</div>
+      <p class="text-slate-400 text-sm font-bold">جاري تحميل البوابة...</p>
+    </div>
+  </div>
+
+  <!-- Portal Error State -->
+  <div id="portalErrorState" class="min-h-screen flex items-center justify-center bg-slate-950">
+    <div class="text-center space-y-4 max-w-sm mx-auto px-4">
+      <div class="w-16 h-16 mx-auto rounded-2xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-3xl">⚠️</div>
+      <p class="text-white font-black text-sm">تعذر تحميل بيانات المستخدم</p>
+      <p id="portalErrorMsg" class="text-slate-400 text-xs">انتهت صلاحية الجلسة أو حدث خطأ في الاتصال</p>
+      <div class="flex gap-3 justify-center">
+        <button onclick="window.location.replace('/index.html')" class="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs rounded-xl">تسجيل الدخول</button>
+        <button onclick="retryPortalLoad()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-xl border border-slate-700">إعادة المحاولة</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Portal Content (hidden until auth confirmed) -->
+  <div id="portalContent" class="flex flex-col min-h-screen">
 
   <!-- Page Action Header -->
   <div class="bg-slate-900/90 border-b border-slate-800 px-6 py-3.5 flex items-center justify-between sticky top-0 z-30 shadow-md">
@@ -137,9 +171,13 @@
 
   </main>
 
+  </div><!-- /portalContent -->
+
   <script>
+    'use strict';
     let currentUser = null;
     let currentShift = null;
+    let _portalInitialized = false;  // Guard: run initPortal exactly once
 
     const roleLabels = {
       SUPER_ADMIN: "مسؤول النظام الرئيسي",
@@ -180,26 +218,49 @@
     ];
 
     async function initPortal() {
+      // ── Guard: prevent duplicate initialization from multiple event listeners ──
+      if (_portalInitialized) return;
+      _portalInitialized = true;
+
+      const loadingEl = document.getElementById('portalLoadingState');
+      const errorEl = document.getElementById('portalErrorState');
+      const contentEl = document.getElementById('portalContent');
+
       try {
-        const res = await fetch('/api/auth/me');
+        const res = await fetch('/api/auth/me', {
+          credentials: 'include',
+          cache: 'no-store',
+          headers: { 'Cache-Control': 'no-cache, no-store' }
+        });
         if (!res.ok) {
-          window.location.href = '/index.html';
+          // Session expired or invalid — redirect to login, never use localStorage
+          window.location.replace('/index.html');
           return;
         }
         const data = await res.json();
         const userObj = data.user || (data.data && data.data.user) || (data.data && data.data.role ? data.data : null);
         if (data.success && userObj) {
           currentUser = userObj;
-          localStorage.setItem('currentUser', JSON.stringify(userObj));
+          // Do NOT persist auth data in localStorage — session cookie is the authority
         } else {
-          window.location.href = '/index.html';
+          window.location.replace('/index.html');
           return;
         }
       } catch (e) {
-        const cached = localStorage.getItem('currentUser');
-        if (cached) currentUser = JSON.parse(cached);
-        else { window.location.href = '/index.html'; return; }
+        // Network error — show error state with retry, never fall back to stale localStorage
+        if (loadingEl) loadingEl.style.display = 'none';
+        if (errorEl) {
+          const msgEl = document.getElementById('portalErrorMsg');
+          if (msgEl) msgEl.textContent = 'تعذر الاتصال بالخادم. تحقق من الشبكة وأعد المحاولة. (' + e.message + ')';
+          errorEl.style.display = 'flex';
+        }
+        return;
       }
+
+      // ── Auth confirmed — show portal content ──
+      if (loadingEl) loadingEl.style.display = 'none';
+      if (errorEl) errorEl.style.display = 'none';
+      if (contentEl) contentEl.style.display = 'flex';
 
       const rawRole = (currentUser && currentUser.role) || 'WAITER';
       const userRole = String(rawRole).toUpperCase().replace(/^ROLE_/, '').replace(/^R_/, '');
@@ -358,15 +419,35 @@
       }
     }
 
-    window.addEventListener('DOMContentLoaded', () => {
+    function retryPortalLoad() {
+      _portalInitialized = false;  // Allow re-run
+      const errorEl = document.getElementById('portalErrorState');
+      const loadingEl = document.getElementById('portalLoadingState');
+      if (errorEl) errorEl.style.display = 'none';
+      if (loadingEl) loadingEl.style.display = 'flex';
       initPortal();
-    });
-    window.addEventListener('load', () => {
+    }
+
+    // ── Run initPortal exactly once on DOMContentLoaded ──
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initPortal, { once: true });
+    } else {
+      // DOM already ready
       initPortal();
-    });
-    // Auto-run if DOM is already parsed
-    if (document.readyState === 'complete' || document.readyState === 'interactive') {
-      initPortal();
+    }
+
+    // ── Service Worker update notification ──
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.addEventListener('message', (event) => {
+        if (event.data && event.data.type === 'SW_UPDATED') {
+          const banner = document.getElementById('swUpdateBanner');
+          if (banner) banner.style.display = 'flex';
+        }
+      });
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        // New SW took control — safe to reload
+        window.location.reload();
+      });
     }
   </script>
 </body>

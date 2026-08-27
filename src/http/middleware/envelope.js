@@ -6,6 +6,13 @@ function envelopeMiddleware(req, res, next) {
   const originalJson = res.json;
 
   res.json = function (body) {
+    // Enforce strict no-cache on all API responses globally
+    if (!res.headersSent) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, private');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+    }
+
     const isSuccess = res.statusCode >= 200 && res.statusCode < 300;
 
     // If body is already an envelope object with 'success'

@@ -539,9 +539,33 @@
     }
 
     window.addEventListener('DOMContentLoaded', async () => {
+      // ── Server-authoritative onboarding state check ──
       try {
-        const statusRes = await fetch('/api/setup/status');
+        const statusRes = await fetch('/api/setup/status', { cache: 'no-store' });
         const statusData = statusRes.ok ? await statusRes.json() : {};
+
+        // If setup is already complete, show a locked screen unless user is an admin
+        if (statusData.onboarding_state === 'COMPLETE' || statusData.onboarding_state === 'LOCKED') {
+          // Check if we have an authenticated admin session
+          const meRes = await fetch('/api/auth/me', { credentials: 'include', cache: 'no-store' });
+          const meData = meRes.ok ? await meRes.json() : {};
+          const role = (meData.user && meData.user.role) ? meData.user.role.toUpperCase() : '';
+          const isAdmin = ['OWNER', 'SUPER_ADMIN', 'SYSTEM_ADMIN'].includes(role.replace(/^R_/, '').replace(/^ROLE_/, ''));
+          if (!isAdmin) {
+            // Show "setup complete" message — do not expose wizard
+            document.body.innerHTML = `
+              <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0b1120;font-family:Cairo,sans-serif;direction:rtl;">
+                <div style="text-align:center;max-width:420px;padding:32px;background:rgba(15,23,42,0.85);border:1px solid rgba(51,65,85,0.6);border-radius:16px;">
+                  <div style="font-size:48px;margin-bottom:16px;">✅</div>
+                  <h1 style="color:#f59e0b;font-size:20px;font-weight:900;margin-bottom:8px;">الإعداد مكتمل</h1>
+                  <p style="color:#94a3b8;font-size:14px;margin-bottom:24px;">تم إعداد النظام بنجاح. للوصول إلى معالج الإعداد، يجب تسجيل الدخول بصلاحية مالك أو مسؤول النظام.</p>
+                  <a href="/index.html" style="display:inline-block;padding:10px 24px;background:#f59e0b;color:#0b1120;font-weight:900;font-size:14px;border-radius:12px;text-decoration:none;">تسجيل الدخول</a>
+                </div>
+              </div>`;
+            return;
+          }
+        }
+
         if (statusData.mode === 'DEMO') {
           selectMode('DEMO');
         } else {
@@ -577,6 +601,7 @@
         renderStep(1);
       }
     });
+
   </script>
 </body>
 </html>

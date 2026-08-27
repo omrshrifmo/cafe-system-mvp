@@ -13,6 +13,14 @@ const { authLimiter } = require('../middleware/rate-limit');
 const { requireAuth } = require('../middleware/auth');
 const env = require('../../config/env');
 
+// All auth responses must never be cached by browser, proxy, or service worker
+router.use((req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  next();
+});
+
 router.post('/login', authLimiter, async (req, res) => {
   try {
     const pin = req.body.pin || req.body.pin_code;
