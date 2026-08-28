@@ -177,11 +177,11 @@ describe('Login Module Delivery & Auth UI Contract Gate', function() {
     assert.strictEqual(meAfter.body.code, 'AUTH_REQUIRED');
   });
 
-  it('13. /api/build-info returns current commit and SW cafe-os-v3.2-prod', async function() {
+  it('13. /api/build-info returns current commit and SW version', async function() {
     const res = await request(app).get('/api/build-info');
     assert.strictEqual(res.status, 200);
     assert.strictEqual(res.body.success, true);
-    assert.strictEqual(res.body.data.serviceWorkerVersion, 'cafe-os-v3.2-prod');
+    assert.strictEqual(res.body.data.serviceWorkerVersion, 'cafe-os-v3.3');
   });
 
   it('14. Stale service-worker cache invalidation token is present in system_config', async function() {

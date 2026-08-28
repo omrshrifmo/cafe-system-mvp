@@ -468,7 +468,7 @@
     let authenticatedUser = null;
     let appMode = 'LIVE';
     try {
-      const res = await fetch('/api/auth/me');
+      const res = await fetch('/api/auth/me', { credentials: 'include' });
       appMode = res.headers.get('X-App-Mode') || 'LIVE';
       
       if (res.status === 403) {
@@ -508,6 +508,9 @@
     }
 
     const currentUser = authenticatedUser;
+    if (window.AuthModule && typeof window.AuthModule.setCurrentUser === 'function') {
+      window.AuthModule.setCurrentUser(authenticatedUser);
+    }
     const rawRole = currentUser.role || 'WAITER';
     const userRole = String(rawRole).toUpperCase().replace(/^ROLE_/, '').replace(/^R_/, '');
     const currentShift = getActiveShiftType();
@@ -535,26 +538,16 @@
       if (matchedItem) break;
     }
 
-    const isRoleAllowed = !matchedItem || (
-      matchedItem.roles.includes(userRole) ||
-      matchedItem.roles.includes(rawRole) ||
-      matchedItem.roles.map(r => r.toUpperCase().replace(/^ROLE_/, '').replace(/^R_/, '')).includes(userRole)
-    );
-
-    // Direct access control guard: If current page requires roles that user lacks, show access denied
-    if (matchedItem && !isRoleAllowed) {
+    // Role-based Access Control Guard
+    if (matchedItem && matchedItem.roles && !matchedItem.roles.includes(userRole) && userRole !== 'SUPER_ADMIN' && userRole !== 'OWNER') {
       document.body.innerHTML = `
         <div class="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-center text-slate-200" style="font-family: 'Tajawal', sans-serif;">
-          <div class="w-16 h-16 bg-rose-500/20 text-rose-400 border border-rose-500/40 rounded-2xl flex items-center justify-center text-3xl mb-4 shadow-lg">
-            ⛔
+          <div class="w-16 h-16 bg-rose-500/20 text-rose-400 border border-rose-500/40 rounded-2xl flex items-center justify-center text-3xl mb-4 animate-bounce">
+            🚫
           </div>
-          <h1 class="text-xl font-black text-rose-300 mb-2">غير مصرح بالوصول إلى هذه الصفحة</h1>
-          <p class="text-sm text-slate-400 max-w-md mb-6">
-            دورك الوظيفي الحالي (${userRole}) لا يمتلك الصلاحية الكافية لفتح صفحة [${matchedItem.title}].
-          </p>
-          <a href="/portal.html" class="px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl text-xs transition-colors shadow-lg">
-            العودة للبوابة الرئيسية 🏠
-          </a>
+          <h1 class="text-xl font-bold mb-2">غير مصرح بالدخول</h1>
+          <p class="text-sm text-slate-400 mb-4">ليس لديك صلاحية للوصول إلى قسم (${currentPageTitle}). دورك الحالي: [${userRole}]</p>
+          <a href="/portal.html" class="px-4 py-2 bg-amber-500 text-slate-950 font-bold rounded-xl text-xs hover:bg-amber-400">العودة للبوابة الرئيسية</a>
         </div>
       `;
       setTimeout(() => { window.location.href = '/portal.html'; }, 2000);
@@ -733,8 +726,8 @@
       </footer>
     `;
 
-    // Wrap page structure cleanly (Skip on portal.html which has its own native dashboard grid layout)
-    if (document.getElementById('mazaj-app-root') || pathname.endsWith('portal.html')) return;
+    // Wrap page structure cleanly
+    if (document.getElementById('mazaj-app-root')) return;
 
     const rootContainer = document.createElement('div');
     rootContainer.id = 'mazaj-app-root';
@@ -856,6 +849,63 @@
       document.head.appendChild(script);
     }
   }
+
+  window.demoResetAction = async function() {
+    const doReset = async () => {
+      try {
+        const res = await fetch('/api/demo/reset', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+        const data = await res.json();
+        if (data.success) {
+          if (window.UIState && window.UIState.showToast) {
+            window.UIState.showToast('تمت إعادة ضبط بيئة الاختبار بنجاح ✅', 'success');
+          }
+          setTimeout(() => window.location.reload(), 800);
+        } else {
+          if (window.UIState && window.UIState.showToast) {
+            window.UIState.showToast(data.error || 'فشلت إعادة الضبط', 'error');
+          }
+        }
+      } catch (e) {
+        if (window.UIState && window.UIState.showToast) {
+          window.UIState.showToast('خطأ في الاتصال بالخادم', 'error');
+        }
+      }
+    };
+
+    if (window.UIState && typeof window.UIState.showInPageConfirm === 'function') {
+      const confirmed = await window.UIState.showInPageConfirm('هل أنت متأكد من إعادة ضبط بيئة الاختبار (DEMO)؟ ستتم استعادة البيانات الافتراضية.', 'إعادة ضبط بيئة الاختبار');
+      if (confirmed) doReset();
+    } else {
+      doReset();
+    }
+  };
+
+  window.demoExitAction = async function() {
+    const doExit = async () => {
+      try {
+        const res = await fetch('/api/demo/exit', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+        const data = await res.json();
+        if (data.success) {
+          window.location.href = '/index.html';
+        } else {
+          if (window.UIState && window.UIState.showToast) {
+            window.UIState.showToast(data.error || 'فشل الخروج من وضع التجربة', 'error');
+          }
+        }
+      } catch (e) {
+        if (window.UIState && window.UIState.showToast) {
+          window.UIState.showToast('خطأ في الاتصال بالخادم', 'error');
+        }
+      }
+    };
+
+    if (window.UIState && typeof window.UIState.showInPageConfirm === 'function') {
+      const confirmed = await window.UIState.showInPageConfirm('هل تريد الخروج من وضع التجربة والعودة إلى النظام الحقيقي؟', 'الخروج من وضع التجربة');
+      if (confirmed) doExit();
+    } else {
+      doExit();
+    }
+  };
 
   // Export functions globally
   window.MazajNav = {

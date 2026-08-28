@@ -1,0 +1,9 @@
+{
+  "test": "DEMO_RESET_IDEMPOTENCY",
+  "timestamp": "2026-08-28T20:24:47.849Z",
+  "status": "PASSED",
+  "preResetHash": "c7554fee6a7b273ab6b8fa8f10581449cd771a85d021c1fc9323c72812236fc5",
+  "postResetHash": "c7554fee6a7b273ab6b8fa8f10581449cd771a85d021c1fc9323c72812236fc5",
+  "liveDbUntouched": true,
+  "manifestVerified": true
+}

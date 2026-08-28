@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-08-27T14:22:51.506Z",
+  "generatedAt": "2026-08-28T14:22:54.748Z",
   "taskSummary": "Workspace-detected skills",
   "proposals": [
     {
@@ -25,6 +25,31 @@
       },
       "whyText": "detected: **/.github/workflows/*.yml, **/.github/**/*.md; repo stack match",
       "estimatedMinutes": 15,
+      "acceptanceRate": -1,
+      "successRate": -1,
+      "successScore": 15,
+      "trend": "new"
+    },
+    {
+      "name": "deployment-practical",
+      "reason": "Workspace files match **/docker-compose*.yml, **/.env*",
+      "confidence": 65,
+      "installed": true,
+      "matchedGlobs": [
+        "**/docker-compose*.yml",
+        "**/.env*",
+        "**/deployment/**"
+      ],
+      "confidenceBreakdown": {
+        "semanticMatch": 60,
+        "workspaceAffinity": 0,
+        "repositoryAffinity": 0,
+        "adoptionSuccess": 5,
+        "enrichment": 0,
+        "penalty": 0
+      },
+      "whyText": "detected: **/docker-compose*.yml, **/.env*",
+      "estimatedMinutes": 20,
       "acceptanceRate": -1,
       "successRate": -1,
       "successScore": 15,
@@ -120,31 +145,6 @@
       },
       "whyText": "detected: **/.claude/skills/**",
       "estimatedMinutes": 5,
-      "acceptanceRate": -1,
-      "successRate": -1,
-      "successScore": 15,
-      "trend": "new"
-    },
-    {
-      "name": "deployment-practical",
-      "reason": "Workspace files match **/docker-compose*.yml, **/.env*",
-      "confidence": 50,
-      "installed": true,
-      "matchedGlobs": [
-        "**/docker-compose*.yml",
-        "**/.env*",
-        "**/deployment/**"
-      ],
-      "confidenceBreakdown": {
-        "semanticMatch": 50,
-        "workspaceAffinity": 0,
-        "repositoryAffinity": 0,
-        "adoptionSuccess": 0,
-        "enrichment": 0,
-        "penalty": 0
-      },
-      "whyText": "detected: **/docker-compose*.yml, **/.env*",
-      "estimatedMinutes": 20,
       "acceptanceRate": -1,
       "successRate": -1,
       "successScore": 15,

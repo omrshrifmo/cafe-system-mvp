@@ -194,7 +194,8 @@
     let activeTab = 'stock';
 
     function updateClock() {
-      document.getElementById('live-clock').textContent = new Date().toLocaleTimeString('ar-EG');
+      const el = document.getElementById('live-clock');
+      if (el) el.textContent = new Date().toLocaleTimeString('ar-EG');
     }
     setInterval(updateClock, 1000);
     updateClock();

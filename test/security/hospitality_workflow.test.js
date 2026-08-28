@@ -77,7 +77,8 @@ describe('Hospitality Workflow, Table Concurrency, Waiter Assist & CRM Suite', f
         .set('Cookie', ownerCookie)
         .send({ table_number: 1, capacity: 4, custom_name: 'طاولة 1 الرئيسية', zone: 'INDOOR_1' });
 
-      // Ensure table 1 is reset to AVAILABLE
+      // Ensure table 1 is reset to AVAILABLE and any stale sessions settled
+      await runQuery(`UPDATE order_sessions SET status = 'SETTLED' WHERE table_id IN (SELECT id FROM tables WHERE table_number = 1) AND status = 'OPEN'`);
       await runQuery(`UPDATE tables SET status = 'AVAILABLE', customer_name = NULL, customer_phone = NULL, guest_count = 0 WHERE table_number = 1`);
       const initialTable = await getQuery(`SELECT version, status FROM tables WHERE table_number = 1`);
       const initialVersion = initialTable ? initialTable.version : 1;

@@ -1,0 +1,125 @@
+{
+  "matrix": [
+    {
+      "role": "SUPER_ADMIN",
+      "landing": "/portal.html",
+      "allowed": [
+        "*"
+      ],
+      "forbidden": []
+    },
+    {
+      "role": "OWNER",
+      "landing": "/portal.html",
+      "allowed": [
+        "*"
+      ],
+      "forbidden": []
+    },
+    {
+      "role": "OP_MANAGER",
+      "landing": "/portal.html",
+      "allowed": [
+        "/portal.html",
+        "/pos.html",
+        "/kds.html",
+        "/tables.html",
+        "/inventory.html",
+        "/eod.html",
+        "/reports.html",
+        "/crm.html",
+        "/reservations.html",
+        "/hr.html"
+      ],
+      "forbidden": [
+        "/settings.html"
+      ]
+    },
+    {
+      "role": "CASHIER",
+      "landing": "/pos.html",
+      "allowed": [
+        "/pos.html",
+        "/tables.html",
+        "/eod.html",
+        "/reservations.html"
+      ],
+      "forbidden": [
+        "/reports.html",
+        "/settings.html",
+        "/hr.html"
+      ]
+    },
+    {
+      "role": "BARISTA",
+      "landing": "/kds.html",
+      "allowed": [
+        "/kds.html",
+        "/barista.html"
+      ],
+      "forbidden": [
+        "/pos.html",
+        "/reports.html",
+        "/settings.html",
+        "/hr.html",
+        "/eod.html"
+      ]
+    },
+    {
+      "role": "CHEF",
+      "landing": "/kds.html",
+      "allowed": [
+        "/kds.html"
+      ],
+      "forbidden": [
+        "/pos.html",
+        "/reports.html",
+        "/settings.html",
+        "/hr.html",
+        "/eod.html"
+      ]
+    },
+    {
+      "role": "SHISHA",
+      "landing": "/kds.html",
+      "allowed": [
+        "/kds.html"
+      ],
+      "forbidden": [
+        "/pos.html",
+        "/reports.html",
+        "/settings.html",
+        "/hr.html",
+        "/eod.html"
+      ]
+    },
+    {
+      "role": "WAITER",
+      "landing": "/tables.html",
+      "allowed": [
+        "/tables.html",
+        "/reservations.html"
+      ],
+      "forbidden": [
+        "/reports.html",
+        "/settings.html",
+        "/hr.html",
+        "/eod.html"
+      ]
+    },
+    {
+      "role": "RUNNER",
+      "landing": "/runner.html",
+      "allowed": [
+        "/runner.html"
+      ],
+      "forbidden": [
+        "/pos.html",
+        "/reports.html",
+        "/settings.html",
+        "/hr.html",
+        "/eod.html"
+      ]
+    }
+  ]
+}

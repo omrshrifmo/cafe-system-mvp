@@ -256,7 +256,7 @@ router.put('/reservations/:id/status', requireAuth, async (req, res, next) => {
 });
 
 // Customer Feedback & QA
-router.get('/feedback', requireAuth, async (req, res, next) => {
+router.get(['/feedback', '/customers/feedback', '/crm/feedback'], requireAuth, async (req, res, next) => {
   try {
     const feedback = await allQuery(`SELECT * FROM customer_feedback ORDER BY created_at DESC LIMIT 50`);
     res.json({
@@ -270,12 +270,13 @@ router.get('/feedback', requireAuth, async (req, res, next) => {
   }
 });
 
-router.post('/feedback', async (req, res, next) => {
+router.post(['/feedback', '/customers/feedback', '/crm/feedback'], async (req, res, next) => {
   try {
-    const { order_id, rating, comments } = req.body;
+    const { order_id, rating, comments, comment, customer_phone, category } = req.body;
+    const finalComment = comment || comments || '';
     const resId = await runQuery(
       `INSERT INTO customer_feedback (order_id, rating, comments) VALUES (?, ?, ?)`,
-      [order_id || null, rating || 5, comments || '']
+      [order_id || null, rating || 5, finalComment]
     );
     res.json({
       success: true,

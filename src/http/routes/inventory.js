@@ -55,7 +55,7 @@ router.get('/inventory/reconciliation', requireAuth, requirePermission('inventor
 });
 
 // Purchases Lifecycle
-router.get('/purchases', requireAuth, async (req, res, next) => {
+router.get(['/purchases', '/purchases/history'], requireAuth, async (req, res, next) => {
   try {
     const purchases = await getPurchases(req.query);
     res.json({

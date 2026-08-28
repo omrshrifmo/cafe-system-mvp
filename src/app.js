@@ -33,6 +33,7 @@ const adminRoutes = require('./http/routes/admin');
 const updatesRoutes = require('./http/routes/updates');
 const auditRoutes = require('./http/routes/audit');
 const deviceRoutes = require('./http/routes/devices');
+const demoRoutes = require('./http/routes/demo');
 const { securityHeaders, strictCors, csrfProtection, blockDebugEndpoints, requireHttps } = require('./http/middleware/security');
 const { adminLimiter, healthLimiter, updateLimiter } = require('./http/middleware/rate-limit');
 const { router: healthRoutes, recordRequestMetric } = require('./http/routes/health');
@@ -117,6 +118,11 @@ function createApp() {
     }
   });
 
+  // Barista route alias to KDS
+  app.get(['/barista.html', '/barista'], (req, res) => {
+    res.sendFile(path.join(__dirname, '../public/kds.html'));
+  });
+
   // Serve static assets from public/ directory with anti-stale cache controls
   app.use(express.static(path.join(__dirname, '../public'), {
     maxAge: 0,
@@ -149,6 +155,7 @@ function createApp() {
   app.use('/api', syncRoutes);
   app.use('/api', printRoutes);
   app.use('/api/setup', setupRoutes);
+  app.use('/api/demo', demoRoutes);
   app.use('/api/admin/updates', updateLimiter, updatesRoutes);
   app.use('/api/audit', auditRoutes);
   app.use('/api/activity-ledger', auditRoutes);

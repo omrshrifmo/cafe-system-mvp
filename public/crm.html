@@ -173,7 +173,7 @@
   </div>
 
   <script>
-    const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+    let _crmUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
     let allCustomers = [];
     let selectedRating = 5;
 

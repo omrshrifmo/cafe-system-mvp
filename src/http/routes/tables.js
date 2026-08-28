@@ -67,20 +67,7 @@ router.get('/tables', requireAuth, async (req, res, next) => {
   }
 });
 
-// Get table session details and active orders
-router.get('/tables/:number/session', requireAuth, async (req, res, next) => {
-  try {
-    const details = await getTableSessionDetails(req.params.number);
-    res.json({
-      success: true,
-      data: details,
-      ...details,
-      requestId: req.id
-    });
-  } catch (err) {
-    next(err);
-  }
-});
+
 
 // Open Table Session with Full Metadata and Optimistic Lock
 router.post('/tables/open', requireAuth, requirePermission('tables:seat'), async (req, res, next) => {
@@ -291,6 +278,35 @@ router.post('/tables/move', requireAuth, requirePermission('tables:move'), async
       success: true,
       data: result,
       ...result,
+      requestId: req.id
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Get table session details and active orders (parameterized lookup at bottom)
+router.get('/tables/:number/session', requireAuth, async (req, res, next) => {
+  try {
+    const details = await getTableSessionDetails(req.params.number);
+    res.json({
+      success: true,
+      data: details,
+      ...details,
+      requestId: req.id
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/tables/:number', requireAuth, async (req, res, next) => {
+  try {
+    const details = await getTableSessionDetails(req.params.number);
+    res.json({
+      success: true,
+      data: details,
+      ...details,
       requestId: req.id
     });
   } catch (err) {

@@ -11,6 +11,7 @@ const routeRegistry = [
   
   // Public APIs
   { method: 'ALL', pathRegex: /^\/api\/setup/, permission: 'public' },
+  { method: 'ALL', pathRegex: /^\/api\/demo(\/.*)?$/, permission: 'public' },
   { method: 'GET', pathRegex: /^\/api\/build-info$/, permission: 'public' },
   { method: 'GET', pathRegex: /^\/api\/health\//, permission: 'public' },
   { method: 'POST', pathRegex: /^\/api\/health\/alerts\/acknowledge$/, permission: 'system:settings' },

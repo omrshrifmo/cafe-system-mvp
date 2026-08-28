@@ -255,7 +255,8 @@
       document.getElementById('kpi-revenue').textContent = (kpis.total_revenue || 0).toLocaleString();
       document.getElementById('kpi-orders').textContent = (kpis.total_orders || 0).toLocaleString();
       document.getElementById('kpi-aov').textContent = (kpis.aov || 0).toLocaleString();
-      document.getElementById('kpi-waste').textContent = (kpis.total_waste_cost || 0).toLocaleString();
+      const waste = kpis.total_waste_cost ?? kpis.waste_cost ?? 0;
+      document.getElementById('kpi-waste').textContent = waste.toLocaleString();
     }
 
     function renderHourlyChart(hourlyRows) {
@@ -310,9 +311,20 @@
     }
 
     function renderDepartmentChart(depts) {
-      const barista = (depts && depts.BARISTA) || 0;
-      const shisha = (depts && depts.SHISHA) || 0;
-      const kitchen = (depts && depts.KITCHEN) || 0;
+      let barista = 0, shisha = 0, kitchen = 0;
+      if (Array.isArray(depts)) {
+        depts.forEach(d => {
+          const dept = (d.department || '').toUpperCase();
+          const rev = Number(d.revenue) || 0;
+          if (dept === 'BARISTA') barista = rev;
+          else if (dept === 'SHISHA') shisha = rev;
+          else if (dept === 'KITCHEN') kitchen = rev;
+        });
+      } else if (depts && typeof depts === 'object') {
+        barista = Number(depts.BARISTA) || 0;
+        shisha = Number(depts.SHISHA) || 0;
+        kitchen = Number(depts.KITCHEN) || 0;
+      }
 
       const ctx = document.getElementById('departmentChart').getContext('2d');
       if (departmentChart) departmentChart.destroy();
@@ -355,11 +367,15 @@
         const tr = document.createElement('tr');
         tr.className = 'hover:bg-slate-900/50';
 
+        const itemName = item.item_name || item.name || 'صنف';
+        const qty = item.qty ?? item.quantity ?? item.quantity_sold ?? 0;
+        const total = Number(item.total ?? item.revenue ?? 0);
+
         tr.innerHTML = `
           <td class="py-1.5 px-2 text-slate-400 font-mono font-bold text-[11px]">${index + 1}</td>
-          <td class="py-1.5 px-2 text-white font-bold">${item.item_name}</td>
-          <td class="py-1.5 px-2 text-center font-mono font-black text-amber-400 text-xs">${item.qty}</td>
-          <td class="py-1.5 px-2 text-left font-mono font-black text-emerald-400 text-xs">${item.total.toLocaleString()} ج.م</td>
+          <td class="py-1.5 px-2 text-white font-bold">${itemName}</td>
+          <td class="py-1.5 px-2 text-center font-mono font-black text-amber-400 text-xs">${qty}</td>
+          <td class="py-1.5 px-2 text-left font-mono font-black text-emerald-400 text-xs">${total.toLocaleString()} ج.م</td>
         `;
         tbody.appendChild(tr);
       });

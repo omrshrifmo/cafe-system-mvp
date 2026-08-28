@@ -98,7 +98,7 @@ describe('UI State Contract, Accessibility & Resilient Staff UX Integration Test
     it('should verify sw.js is updated to cafe-os-v3.1 with complete asset list', () => {
       const swJs = fs.readFileSync(path.join(__dirname, '../../public/sw.js'), 'utf8');
       
-      assert.ok(swJs.includes("const CACHE_NAME = 'cafe-os-v3.2-prod'") || swJs.includes("const CACHE_NAME = 'cafe-os-v3.1'"));
+      assert.ok(swJs.includes("const CACHE_NAME = 'cafe-os-v3.3'") || swJs.includes("const CACHE_NAME = 'cafe-os-v3.2-prod'") || swJs.includes("const CACHE_NAME = 'cafe-os-v3.1'"));
       assert.ok(swJs.includes('/modules/ui-state.js'));
       assert.ok(swJs.includes('/qr-menu.html'));
       assert.ok(swJs.includes('SKIP_WAITING'));

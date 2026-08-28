@@ -226,7 +226,19 @@ async function getReservations({ date = null, status = null, limit = 50 } = {}) 
   sql += ` ORDER BY reservation_date ASC, reservation_time ASC LIMIT ?`;
   params.push(limit);
 
-  const reservations = await allQuery(sql, params);
+  const rawReservations = await allQuery(sql, params);
+  const reservations = rawReservations.map(r => {
+    const timeVal = r.reservation_time ? (r.reservation_time.length === 5 ? r.reservation_time : r.reservation_time.substring(0, 5)) : '12:00';
+    const dateVal = r.reservation_date || (r.reserved_at ? r.reserved_at.split('T')[0].split(' ')[0] : new Date().toISOString().split('T')[0]);
+    const isoReservedAt = `${dateVal}T${timeVal}:00`;
+    return {
+      ...r,
+      reservation_date: dateVal,
+      reservation_time: timeVal,
+      reserved_at: r.reserved_at || isoReservedAt,
+      party_size: r.guest_count || r.party_size || 2
+    };
+  });
 
   const stats = {
     total: reservations.length,

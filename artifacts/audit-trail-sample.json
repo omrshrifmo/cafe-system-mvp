@@ -1,0 +1,27 @@
+{
+  "sampleEntries": [
+    {
+      "id": 1,
+      "action": "AUTH_LOGIN_SUCCESS",
+      "user_id": "101",
+      "role": "SUPER_ADMIN",
+      "timestamp": "2026-08-28T20:24:47.854Z",
+      "severity": "INFO"
+    },
+    {
+      "id": 2,
+      "action": "DEMO_MODE_ACTIVATED",
+      "user_id": "101",
+      "fixture": "demo-normal.sqlite",
+      "timestamp": "2026-08-28T20:24:47.854Z",
+      "severity": "WARN"
+    },
+    {
+      "id": 3,
+      "action": "INACTIVITY_LOCK_INITIALIZED",
+      "duration_seconds": 15,
+      "timestamp": "2026-08-28T20:24:47.854Z",
+      "severity": "INFO"
+    }
+  ]
+}

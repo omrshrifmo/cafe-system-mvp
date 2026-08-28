@@ -1,0 +1,29 @@
+{
+  "timestamp": "2026-08-28T20:24:47.848Z",
+  "status": "ACTIVE_DEMO_VERIFIED",
+  "server": {
+    "pid": 2129894,
+    "nodeVersion": "v22.23.2",
+    "port": 3000,
+    "uptimeSeconds": 0.110891602
+  },
+  "provenance": {
+    "buildId": "build-ae9b9527-v2",
+    "commitSha": "ae9b95272aa679836c671f0f17fd5c928db6f4fd",
+    "branch": "main",
+    "schemaVersion": "031_device_registry_and_emergency_access.sql",
+    "appliedMigrationChecksum": "e3b791d0023007334fd9686f01b34a35",
+    "serviceWorkerVersion": "cafe-os-v3.3",
+    "serviceWorkerSha256": "4f3990430fc57081de68844225d42de7d865e6325221bff998c198c291db1cbe"
+  },
+  "database": {
+    "appMode": "DEMO",
+    "databaseIdentity": "demo-normal.sqlite",
+    "databasePath": "/home/omrshrifmo/cafe-system-mvp/fixtures/demo-normal.sqlite",
+    "fixtureId": "demo-normal.sqlite",
+    "liveDatabaseGuarded": true,
+    "liveDatabasePath": "/home/omrshrifmo/cafe-system-mvp/cafe.db",
+    "liveDatabaseMutated": false,
+    "currentSha256": "c7554fee6a7b273ab6b8fa8f10581449cd771a85d021c1fc9323c72812236fc5"
+  }
+}

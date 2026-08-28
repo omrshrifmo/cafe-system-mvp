@@ -31,7 +31,7 @@
     #swUpdateBanner { display: none; }
   </style>
 </head>
-<body class="min-h-screen flex flex-col bg-slate-950">
+<body class="bg-slate-950 text-slate-100">
 
   <!-- SW Update Banner -->
   <div id="swUpdateBanner" class="fixed top-0 inset-x-0 z-50 bg-amber-500 text-slate-950 text-xs font-black text-center py-2 flex items-center justify-center gap-3">
@@ -40,7 +40,7 @@
   </div>
 
   <!-- Portal Loading State -->
-  <div id="portalLoadingState" class="min-h-screen flex items-center justify-center bg-slate-950">
+  <div id="portalLoadingState" class="flex items-center justify-center" style="min-height: calc(100vh - 74px)">
     <div class="text-center space-y-4">
       <div class="w-16 h-16 mx-auto rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-3xl animate-pulse">🏠</div>
       <p class="text-slate-400 text-sm font-bold">جاري تحميل البوابة...</p>
@@ -48,7 +48,7 @@
   </div>
 
   <!-- Portal Error State -->
-  <div id="portalErrorState" class="min-h-screen flex items-center justify-center bg-slate-950">
+  <div id="portalErrorState" class="flex items-center justify-center" style="min-height: calc(100vh - 74px)">
     <div class="text-center space-y-4 max-w-sm mx-auto px-4">
       <div class="w-16 h-16 mx-auto rounded-2xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-3xl">⚠️</div>
       <p class="text-white font-black text-sm">تعذر تحميل بيانات المستخدم</p>
@@ -61,40 +61,14 @@
   </div>
 
   <!-- Main Portal Content (hidden until auth confirmed) -->
-  <div id="portalContent" class="flex flex-col min-h-screen">
+  <div id="portalContent" style="display:none">
 
-  <!-- Page Action Header -->
-  <div class="bg-slate-900/90 border-b border-slate-800 px-6 py-3.5 flex items-center justify-between sticky top-0 z-30 shadow-md">
-    <div class="flex items-center gap-3">
-      <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 text-xl shadow-inner">
-        🏠
-      </div>
-      <div>
-        <h1 class="text-lg font-black text-white">بوابة الأنظمة الرئيسية</h1>
-        <p class="text-xs text-slate-400">لوحة الوصول السريع لجميع أقسام وتشغيل كافيه مزاج</p>
-      </div>
-    </div>
-    <div class="flex items-center gap-3">
-      <div class="text-right bg-slate-800/80 border border-slate-700 px-3 py-1.5 rounded-xl flex items-center gap-2">
-        <span class="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse"></span>
-        <div>
-          <div id="userName" class="text-xs font-black text-amber-400">---</div>
-          <div id="userRole" class="text-[10px] text-slate-400">---</div>
-        </div>
-      </div>
-      <button onclick="window.AuthModule.lockScreen()" id="nav-lock-btn" title="قفل الشاشة مؤقتاً" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 rounded-xl text-xs font-bold cursor-pointer transition-colors flex items-center gap-1.5 shadow-sm">
-        <span>🔒</span>
-        <span class="hidden xs:inline">قفل</span>
-      </button>
-      <button onclick="window.AuthModule.logout()" id="nav-logout-btn" title="تسجيل الخروج" class="px-3 py-1.5 bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 border border-rose-500/30 rounded-xl text-xs font-bold cursor-pointer transition-colors flex items-center gap-1.5 shadow-sm">
-        <span>🚪</span>
-        <span class="hidden xs:inline">خروج</span>
-      </button>
-    </div>
-  </div>
+  <!-- Hidden placeholders so JS still sets userName/userRole without errors -->
+  <span id="userName" style="display:none"></span>
+  <span id="userRole" style="display:none"></span>
 
   <!-- Main Content Container -->
-  <main class="flex-1 max-w-7xl w-full mx-auto px-4 py-6 space-y-6">
+  <main class="max-w-7xl w-full mx-auto px-4 py-6 space-y-6">
 
     <!-- KPI Strip for Management -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -175,7 +149,8 @@
 
   <script>
     'use strict';
-    let currentUser = null;
+    // Use a portal-scoped name to avoid colliding with auth.js's global 'currentUser'
+    let _portalUser = null;
     let currentShift = null;
     let _portalInitialized = false;  // Guard: run initPortal exactly once
 
@@ -240,7 +215,7 @@
         const data = await res.json();
         const userObj = data.user || (data.data && data.data.user) || (data.data && data.data.role ? data.data : null);
         if (data.success && userObj) {
-          currentUser = userObj;
+          _portalUser = userObj;
           // Do NOT persist auth data in localStorage — session cookie is the authority
         } else {
           window.location.replace('/index.html');
@@ -262,11 +237,17 @@
       if (errorEl) errorEl.style.display = 'none';
       if (contentEl) contentEl.style.display = 'flex';
 
-      const rawRole = (currentUser && currentUser.role) || 'WAITER';
+      // Notify auth.js that we are now authenticated so the inactivity timer
+      // starts from this moment (not from page load before auth was verified).
+      if (window.AuthModule && window.AuthModule.resetInactivityTimer) {
+        window.AuthModule.resetInactivityTimer();
+      }
+
+      const rawRole = (_portalUser && _portalUser.role) || 'WAITER';
       const userRole = String(rawRole).toUpperCase().replace(/^ROLE_/, '').replace(/^R_/, '');
 
       const userNameEl = document.getElementById('userName');
-      if (userNameEl) userNameEl.textContent = currentUser.name || "مستخدم";
+      if (userNameEl) userNameEl.textContent = _portalUser.name || "مستخدم";
       const userRoleEl = document.getElementById('userRole');
       if (userRoleEl) userRoleEl.textContent = roleLabels[userRole] || roleLabels[rawRole] || userRole;
 
@@ -320,7 +301,7 @@
 
     async function fetchShiftStatus() {
       try {
-        const res = await fetch('/api/shifts/status');
+        const res = await fetch('/api/shifts/status', { credentials: 'include' });
         const data = await res.json();
         const statusText = document.getElementById('shiftStatusText');
         const clockBtn = document.getElementById('clockBtn');
@@ -345,13 +326,13 @@
     }
 
     async function toggleShift() {
-      if (!currentUser || !currentUser.id) return;
+      if (!_portalUser || !_portalUser.id) return;
       const endpoint = currentShift ? '/api/shifts/clock-out' : '/api/shifts/clock-in';
       try {
         const res = await fetch(endpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ user_id: currentUser.id })
+          body: JSON.stringify({ user_id: _portalUser.id })
         });
         const data = await res.json();
         if (data.success) {
@@ -373,7 +354,7 @@
 
     async function loadKPIs() {
       try {
-        const repRes = await fetch('/api/reports/eod');
+        const repRes = await fetch('/api/reports/eod', { credentials: 'include' });
         if (repRes.ok) {
           const d = await repRes.json();
           const rev = (d.report && d.report.total_revenue) || (d.summary && d.summary.total_revenue) || 0;
@@ -383,7 +364,7 @@
       } catch (e) {}
 
       try {
-        const tabRes = await fetch('/api/tables');
+        const tabRes = await fetch('/api/tables', { credentials: 'include' });
         if (tabRes.ok) {
           const d = await tabRes.json();
           const open = (d.tables || []).filter(t => t.status === 'OCCUPIED' || t.status === 'SEATED').length;
@@ -393,7 +374,7 @@
       } catch (e) {}
 
       try {
-        const invRes = await fetch('/api/inventory');
+        const invRes = await fetch('/api/inventory', { credentials: 'include' });
         if (invRes.ok) {
           const d = await invRes.json();
           const items = d.inventory || d.items || [];
@@ -409,7 +390,7 @@
 
     function initPortalKPIs() {
       const elevated = ['SUPER_ADMIN', 'OWNER', 'OP_MANAGER', 'ADMIN', 'MANAGER'];
-      if (currentUser && elevated.includes(currentUser.role)) {
+      if (_portalUser && elevated.includes(_portalUser.role)) {
         loadKPIs();
         setInterval(loadKPIs, 30000);
       } else {

@@ -1,0 +1,64 @@
+{
+  "version": "2.0.0",
+  "generatedAt": "2026-08-28T20:24:47.851Z",
+  "defaultDenyRegistryEnforced": true,
+  "roles": {
+    "SUPER_ADMIN": {
+      "access": "ALL_ROUTES",
+      "pin": "8801 / 9999",
+      "canRefund": true,
+      "canVoid": true,
+      "canExport": true,
+      "canManageUsers": true
+    },
+    "OWNER": {
+      "access": "ALL_ROUTES",
+      "pin": "8802 / 1009",
+      "canRefund": true,
+      "canVoid": true,
+      "canExport": true,
+      "canManageUsers": true
+    },
+    "OP_MANAGER": {
+      "access": "OPERATIONS_FULL",
+      "pin": "8803 / 1008",
+      "canRefund": true,
+      "canVoid": true,
+      "canExport": true,
+      "canManageUsers": false
+    },
+    "CASHIER": {
+      "access": "POS_CHECKOUT_DRAWER",
+      "pin": "8804 / 1007",
+      "canRefund": false,
+      "canVoid": false,
+      "blindCashOnly": true
+    },
+    "BARISTA": {
+      "access": "KDS_BEVERAGES",
+      "pin": "8805 / 1002",
+      "route": "/kds.html",
+      "alias": "/barista.html"
+    },
+    "CHEF": {
+      "access": "KDS_KITCHEN",
+      "pin": "8806 / 1005",
+      "route": "/kds.html"
+    },
+    "SHISHA": {
+      "access": "KDS_SHISHA",
+      "pin": "8807 / 1003",
+      "route": "/kds.html"
+    },
+    "WAITER": {
+      "access": "TABLES_SERVICE",
+      "pin": "8808 / 1004",
+      "route": "/tables.html"
+    },
+    "RUNNER": {
+      "access": "RUNNER_DISPATCH",
+      "pin": "8809 / 1011",
+      "route": "/runner.html"
+    }
+  }
+}

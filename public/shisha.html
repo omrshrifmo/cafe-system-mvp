@@ -258,7 +258,8 @@
     const STATION_DEPARTMENT = 'SHISHA';
 
     function updateClock() {
-      document.getElementById('live-clock').textContent = new Date().toLocaleTimeString('ar-EG');
+      const el = document.getElementById('live-clock');
+      if (el) el.textContent = new Date().toLocaleTimeString('ar-EG');
     }
     setInterval(updateClock, 1000);
     updateClock();
@@ -765,13 +766,6 @@
       } catch (e) {
         showToast('خطأ بالاتصال بالسيرفر', true);
       }
-    }
-
-      document.getElementById('pending-counter').textContent = count;
-      document.getElementById('live-tab-count').textContent = count;
-      const emptyState = document.getElementById('empty-state');
-      if (count === 0) emptyState.classList.remove('hidden');
-      else emptyState.classList.add('hidden');
     }
 
     fetchPendingOrders();

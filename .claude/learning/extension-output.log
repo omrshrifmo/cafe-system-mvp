@@ -10795,3 +10795,36 @@
 [2026-08-28T15:51:30.112Z] SKILL lint: [warning] extension-value-audit: Description is 788 chars (recommended max 500)
 [2026-08-28T15:51:30.114Z] SKILL lint: [warning] extension-value-audit (cursor): Description is 788 chars (recommended max 500)
 [2026-08-28T15:51:30.114Z] SKILL lint: [warning] extension-value-audit (kiro): Description is 788 chars (recommended max 500)
+[2026-08-28T15:51:34.096Z] Cost control hook scripts refreshed across Claude, Cursor, Kiro, and Copilot paths.
+[2026-08-28T15:51:34.102Z] SKILL lint: [warning] extension-value-audit: Description is 788 chars (recommended max 500)
+[2026-08-28T15:51:34.249Z] SKILL lint: [warning] extension-value-audit (cursor): Description is 788 chars (recommended max 500)
+[2026-08-28T15:51:34.249Z] SKILL lint: [warning] extension-value-audit (kiro): Description is 788 chars (recommended max 500)
+[2026-08-28T15:51:40.950Z] Cost control hook scripts refreshed across Claude, Cursor, Kiro, and Copilot paths.
+[2026-08-28T15:51:40.952Z] SKILL lint: [warning] extension-value-audit: Description is 788 chars (recommended max 500)
+[2026-08-28T15:51:40.958Z] SKILL lint: [warning] extension-value-audit (cursor): Description is 788 chars (recommended max 500)
+[2026-08-28T15:51:40.959Z] SKILL lint: [warning] extension-value-audit (kiro): Description is 788 chars (recommended max 500)
+[2026-08-28T15:51:43.134Z] Cost control hook scripts refreshed across Claude, Cursor, Kiro, and Copilot paths.
+[2026-08-28T15:51:43.145Z] SKILL lint: [warning] extension-value-audit: Description is 788 chars (recommended max 500)
+[2026-08-28T15:51:43.162Z] SKILL lint: [warning] extension-value-audit (cursor): Description is 788 chars (recommended max 500)
+[2026-08-28T15:51:43.163Z] SKILL lint: [warning] extension-value-audit (kiro): Description is 788 chars (recommended max 500)
+[2026-08-28T15:51:48.566Z] Cost control hook scripts refreshed across Claude, Cursor, Kiro, and Copilot paths.
+[2026-08-28T15:51:48.576Z] SKILL lint: [warning] extension-value-audit: Description is 788 chars (recommended max 500)
+[2026-08-28T15:51:48.583Z] SKILL lint: [warning] extension-value-audit (cursor): Description is 788 chars (recommended max 500)
+[2026-08-28T15:51:48.583Z] SKILL lint: [warning] extension-value-audit (kiro): Description is 788 chars (recommended max 500)
+[2026-08-28T15:51:53.600Z] Cost control hook scripts refreshed across Claude, Cursor, Kiro, and Copilot paths.
+[2026-08-28T15:51:53.618Z] SKILL lint: [warning] extension-value-audit: Description is 788 chars (recommended max 500)
+[2026-08-28T15:51:53.681Z] SKILL lint: [warning] extension-value-audit (cursor): Description is 788 chars (recommended max 500)
+[2026-08-28T15:51:53.681Z] SKILL lint: [warning] extension-value-audit (kiro): Description is 788 chars (recommended max 500)
+[2026-08-28T15:51:58.858Z] Cost control hook scripts refreshed across Claude, Cursor, Kiro, and Copilot paths.
+[2026-08-28T15:51:58.861Z] SKILL lint: [warning] extension-value-audit: Description is 788 chars (recommended max 500)
+[2026-08-28T15:51:58.869Z] SKILL lint: [warning] extension-value-audit (cursor): Description is 788 chars (recommended max 500)
+[2026-08-28T15:51:58.869Z] SKILL lint: [warning] extension-value-audit (kiro): Description is 788 chars (recommended max 500)
+[2026-08-28T15:53:55.266Z] Project profile: Solo developer — Git analysis: 3870 tracked files, 1 branch (1 local, 1 remote), 53 commits (53 last 30d), 1 author (30d), high activity, ~329 KB git objects. Remote git (https://github.com/omrshrifmo/cafe-system-mvp.git): 1 remote branch, 1 remote author (30d), via cache. Solo, low-intensity product — branch profiles with token-saving focus.
+[2026-08-28T15:53:55.870Z] Mirrored cost-discipline artifacts: cursor:adoption-funnel-summary.json, cursor:attribution-trust.json, cursor:pipeline-cycle.json, cursor:project-profile.json, cursor:remote-repo-probe.json, cursor:runs.snapshot.json, cursor:skills-catalog.json, cursor:task-active-skills.json, cursor:task-proposals-apply-state.json, cursor:task-skill-proposals.json, cursor:team-economics-cache.json, cursor:today-cost.json, kiro:adoption-funnel-summary.json, kiro:attribution-trust.json, kiro:pipeline-cycle.json, kiro:project-profile.json, kiro:remote-repo-probe.json, kiro:runs.snapshot.json, kiro:skills-catalog.json, kiro:task-active-skills.json, kiro:task-proposals-apply-state.json, kiro:task-skill-proposals.json, kiro:team-economics-cache.json, kiro:today-cost.json.
+[2026-08-28T15:53:55.871Z] Propagated focused skill set to 30 Cursor/Kiro/Copilot path(s).
+[2026-08-28T15:53:59.818Z] Filesystem MCP server: active — all agents already configured.
+[2026-08-28T15:53:59.819Z] CLI MCP server: workspace log path refreshed (1 dir(s)).
+[2026-08-28T15:53:59.821Z] CLI loop-guard hook updated.
+[2026-08-28T15:53:59.821Z] CLI MCP server: already configured — agents can connect.
+[2026-08-28T15:53:59.827Z] Dir cache guard hook updated.
+[2026-08-28T15:54:04.581Z] Attribution v2 hooks updated (claude/cursor/kiro/copilot as enabled).

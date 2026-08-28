@@ -66,13 +66,24 @@
           يوفر نظام كافيه مزاج بيئتين منفصلتين تماماً لحماية السجلات المالية والمحاسبية:
         </p>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-          <div class="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl">
-            <h4 class="font-bold text-amber-300 mb-1">🧪 وضع التجربة (DEMO MODE)</h4>
-            <p class="text-slate-300 text-[11px] leading-relaxed">بيئة معزولة تحتوي على أصناف ووصفات ومبيعات وهمية لتدريب طاقم العمل وتجربة إعدادات القائمة دون أي تأثير على السجلات الحقيقية أو الضرائب.</p>
+          <div class="p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl flex flex-col justify-between">
+            <div>
+              <h4 class="font-bold text-amber-300 mb-1">🧪 وضع التجربة (DEMO MODE)</h4>
+              <p class="text-slate-300 text-[11px] leading-relaxed mb-3">بيئة معزولة تحتوي على أصناف ووصفات ومبيعات وهمية لتدريب طاقم العمل وتجربة إعدادات القائمة دون أي تأثير على السجلات الحقيقية أو الضرائب.</p>
+            </div>
+            <button onclick="activateDemoMode()" class="w-full py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs rounded-lg transition shadow flex items-center justify-center gap-1.5 cursor-pointer">
+              <span>🚀</span>
+              <span>تشغيل بيئة الاختبار DEMO/TEST الآن</span>
+            </button>
           </div>
-          <div class="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl">
-            <h4 class="font-bold text-emerald-300 mb-1">🚀 وضع التشغيل الفعلي (LIVE PRODUCTION)</h4>
-            <p class="text-slate-300 text-[11px] leading-relaxed">بيئة التشغيل النظيفة الخالية من أي بيانات افتراضية، تبدأ بجرد افتتاحي حقيقي لربط المبيعات والمصروفات بالدفاتر المحاسبية الرسمية.</p>
+          <div class="p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-xl flex flex-col justify-between">
+            <div>
+              <h4 class="font-bold text-emerald-300 mb-1">🚀 وضع التشغيل الفعلي (LIVE PRODUCTION)</h4>
+              <p class="text-slate-300 text-[11px] leading-relaxed mb-3">بيئة التشغيل النظيفة الخالية من أي بيانات افتراضية، تبدأ بجرد افتتاحي حقيقي لربط المبيعات والمصروفات بالدفاتر المحاسبية الرسمية.</p>
+            </div>
+            <a href="/setup.html" class="w-full py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-lg transition text-center block">
+              إعداد النظام الفعلي ⚙️
+            </a>
           </div>
         </div>
       </section>
@@ -124,5 +135,28 @@
       </section>
     </div>
   </main>
+  <script src="/modules/ui-state.js"></script>
+  <script>
+    async function activateDemoMode() {
+      try {
+        const res = await fetch('/api/demo/activate', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+        const data = await res.json();
+        if (data.success) {
+          if (window.UIState && window.UIState.showToast) {
+            window.UIState.showToast('تم تفعيل وضع التجربة المعزول بنجاح! جاري التوجيه...', 'success');
+          }
+          setTimeout(() => { window.location.href = '/index.html'; }, 600);
+        } else {
+          if (window.UIState && window.UIState.showToast) {
+            window.UIState.showToast(data.error || 'تعذر تفعيل وضع التجربة', 'error');
+          }
+        }
+      } catch(e) {
+        if (window.UIState && window.UIState.showToast) {
+          window.UIState.showToast('حدث خطأ في الاتصال بالخادم', 'error');
+        }
+      }
+    }
+  </script>
 </body>
 </html>

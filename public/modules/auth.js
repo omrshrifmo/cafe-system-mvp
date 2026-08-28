@@ -6,6 +6,21 @@ let currentUser = null;
 let inactivityTimer = null;
 const INACTIVITY_LIMIT_MS = 15000; // 15 seconds
 
+// Hydrate initial user if stored from valid login
+try {
+  const cachedUserStr = localStorage.getItem('currentUser') || localStorage.getItem('user');
+  if (cachedUserStr) {
+    currentUser = JSON.parse(cachedUserStr);
+  }
+} catch (e) {}
+
+function setCurrentUser(user) {
+  currentUser = user;
+  if (user) {
+    resetInactivityTimer();
+  }
+}
+
 async function checkAuthSession() {
   try {
     const res = await fetch('/api/auth/me', { credentials: 'include' });
@@ -124,6 +139,10 @@ function resetInactivityTimer(e) {
   if (path === '/' || path.endsWith('/index.html') || path.endsWith('/setup.html') || path.endsWith('/manual.html') || path.includes('qr-menu.html')) {
     return;
   }
+
+  // Only start the inactivity timer when a user is actually authenticated.
+  // If currentUser is null (e.g. page is still loading auth), do nothing.
+  if (!currentUser) return;
 
   // Filter meaningful events: must be trusted user interaction and tab visible
   if (e) {
@@ -503,7 +522,11 @@ if (typeof window !== 'undefined' && window.fetch) {
     const response = await originalFetch.call(this, resource, init);
     if (response.status === 401) {
       const path = window.location.pathname;
-      if (path !== '/' && !path.endsWith('/index.html') && !path.endsWith('/setup.html') && !path.includes('qr-menu.html')) {
+      // Only show the stale-session modal if the user is already authenticated
+      // (currentUser is set). If currentUser is null the page is still in its
+      // initial auth check and a 401 from a sub-request must not trigger the
+      // modal — portal.html handles the unauthenticated redirect itself.
+      if (currentUser && path !== '/' && !path.endsWith('/index.html') && !path.endsWith('/setup.html') && !path.includes('qr-menu.html')) {
         clearLocalState();
         showStaleContextModal('انتهت صلاحية الجلسة أو تم تسجيل الخروج. يرجى تسجيل الدخول مجدداً.');
       }
@@ -515,6 +538,7 @@ if (typeof window !== 'undefined' && window.fetch) {
 if (typeof window !== 'undefined') {
   window.AuthModule = {
     checkAuthSession,
+    setCurrentUser,
     loginWithPin,
     verifyPinForUnlock,
     logout,
@@ -536,16 +560,19 @@ if (typeof window !== 'undefined') {
     checkAndPromptRestore
   };
   
-  
-  // Wait for the DOM to be fully loaded before starting the inactivity timer
+  // Start inactivity timer on PAGE_READY
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
+      checkAuthSession().then(() => {
+        resetInactivityTimer();
+        setTimeout(checkAndPromptRestore, 800);
+      });
+    });
+  } else {
+    checkAuthSession().then(() => {
       resetInactivityTimer();
       setTimeout(checkAndPromptRestore, 800);
     });
-  } else {
-    resetInactivityTimer();
-    setTimeout(checkAndPromptRestore, 800);
   }
 }
 

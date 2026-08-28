@@ -18,8 +18,9 @@ function getMode() {
     return currentModeCache;
   }
 
-  if (process.env.APP_MODE && MODES[process.env.APP_MODE]) {
-    currentModeCache = process.env.APP_MODE;
+  const envMode = process.env.CAFE_APP_MODE || process.env.APP_MODE;
+  if (envMode && MODES[envMode]) {
+    currentModeCache = envMode;
     return currentModeCache;
   }
 
@@ -58,9 +59,16 @@ function getDatabasePath() {
 
   const mode = getMode();
   if (mode === MODES.DEMO) {
+    if (process.env.CAFE_DB_PATH && !process.env.CAFE_DB_PATH.endsWith('cafe.db')) {
+      return process.env.CAFE_DB_PATH;
+    }
+    const demoFixture = path.join(__dirname, '../../../fixtures/demo-normal.sqlite');
+    if (fs.existsSync(demoFixture)) {
+      return demoFixture;
+    }
     return path.join(path.dirname(env.DB_PATH), 'demo.sqlite');
   }
-  return env.DB_PATH;
+  return process.env.CAFE_DB_PATH || env.DB_PATH;
 }
 
 async function setMode(newMode) {
@@ -89,3 +97,4 @@ module.exports = {
   getDatabasePath,
   setMode
 };
+

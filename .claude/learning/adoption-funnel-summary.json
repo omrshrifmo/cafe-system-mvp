@@ -1,17 +1,17 @@
 {
   "version": 1,
-  "computedAt": "2026-08-27T04:50:09.926Z",
+  "computedAt": "2026-08-28T15:54:03.346Z",
   "daysBack": 90,
   "funnel": {
     "daysBack": 90,
-    "proposed": 38,
-    "accepted": 4,
+    "proposed": 50,
+    "accepted": 5,
     "rejected": 0,
     "ignored": 0,
     "invoked": 0,
     "successful": 0,
     "reused": 0,
-    "acceptanceRatePct": 11,
+    "acceptanceRatePct": 10,
     "invocationRatePct": 0,
     "successRatePct": 0,
     "reuseRatePct": 0,
@@ -21,8 +21,8 @@
     "hasData": true
   },
   "quality": {
-    "proposed": 38,
-    "accepted": 4,
+    "proposed": 50,
+    "accepted": 5,
     "successful": 0,
     "precisionPct": 0,
     "recallPct": 0,

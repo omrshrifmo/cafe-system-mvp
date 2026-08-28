@@ -166,9 +166,18 @@
         return;
       }
       grid.innerHTML = reservations.map(r => {
-        const dt = new Date(r.reserved_at);
-        const timeStr = dt.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
-        const dateStr = dt.toLocaleDateString('ar-EG', { weekday: 'long', month: 'long', day: 'numeric' });
+        let timeStr = r.reservation_time || '12:00';
+        let dateStr = r.reservation_date || 'اليوم';
+        try {
+          const rawDate = r.reserved_at || (r.reservation_date ? (r.reservation_date + 'T' + (r.reservation_time || '12:00')) : null);
+          if (rawDate) {
+            const dt = new Date(rawDate);
+            if (!isNaN(dt.getTime())) {
+              timeStr = dt.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+              dateStr = dt.toLocaleDateString('ar-EG', { weekday: 'long', month: 'long', day: 'numeric' });
+            }
+          }
+        } catch (e) {}
         const actions = statusActions[r.status] || [];
         return `
           <div class="res-card bg-slate-900 border border-slate-800 rounded-2xl p-5">

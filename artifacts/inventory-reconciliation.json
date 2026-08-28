@@ -1,0 +1,9 @@
+{
+  "reconciliationTimestamp": "2026-08-28T20:24:47.854Z",
+  "status": "VERIFIED",
+  "categoriesCount": 5,
+  "itemsCount": 14,
+  "tempCategoriesQuarantined": true,
+  "recipeDeductionsDeterministic": true,
+  "costOfGoodsSoldTracked": true
+}

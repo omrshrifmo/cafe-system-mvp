@@ -651,13 +651,37 @@
       }
     }
 
+    const ROLE_LABELS = {
+      OWNER: 'مالك',
+      SUPER_ADMIN: 'مسؤول النظام',
+      OP_MANAGER: 'مدير العمليات',
+      OP_ASSISTANT_CASHIER: 'مساعد كاشير',
+      CASHIER: 'كاشير',
+      WAITER: 'ويتر / صالة',
+      RUNNER: 'رانر / توصيل',
+      BARISTA: 'باريستا',
+      CHEF: 'شيف / مطبخ',
+      SHISHA: 'شيشة',
+      BOM_MANAGER: 'مدير المخزون',
+      HR_PAYROLL: 'الموارد البشرية والرواتب',
+      QA: 'مراقب الجودة',
+      READ_ONLY: 'مشاهدة فقط'
+    };
+
+    function getRoleLabel(role) {
+      if (!role) return 'موظف';
+      const clean = String(role).replace(/^R_/, '').replace(/^ROLE_/, '');
+      return ROLE_LABELS[clean] || clean;
+    }
+
     // Payroll Tab Functions
     async function fetchPayroll() {
       const tbody = document.getElementById('payroll-table-body');
       tbody.innerHTML = `<tr><td colspan="8" class="p-6 text-center text-slate-500">جاري تحميل وتحديث الرواتب...</td></tr>`;
       try {
         const res = await fetch('/api/users/payroll', {
-          headers: { 'x-user-role': (JSON.parse(localStorage.getItem('user') || '{}')).role || 'OWNER' }
+          credentials: 'include',
+          headers: { 'x-user-role': (JSON.parse(localStorage.getItem('currentUser') || localStorage.getItem('user') || '{}')).role || 'OWNER' }
         });
         const data = await res.json();
         if (!data.success || !data.payroll) {
@@ -676,7 +700,7 @@
         tbody.innerHTML = data.payroll.map(p => `
           <tr class="hover:bg-slate-900/50">
             <td class="p-3 font-bold text-white">${p.name}</td>
-            <td class="p-3 text-slate-400 font-bold text-[11px]"><span class="px-2 py-0.5 bg-slate-800 rounded border border-slate-700">${p.role}</span></td>
+            <td class="p-3 text-slate-400 font-bold text-[11px]"><span class="px-2 py-0.5 bg-slate-800 rounded border border-slate-700 text-amber-300">${getRoleLabel(p.role)}</span></td>
             <td class="p-3">
               <div class="flex items-center gap-1">
                 <input type="number" id="rate-input-${p.user_id}" value="${p.hourly_rate}" step="any" min="0" class="w-16 px-2 py-1 bg-slate-900 border border-slate-700 rounded text-amber-400 font-mono font-bold text-xs" />
@@ -693,7 +717,7 @@
 
         // Populate User Select for Penalties Tab
         const select = document.getElementById('penalty-user-select');
-        select.innerHTML = `<option value="">اختر الموظف...</option>` + data.payroll.map(u => `<option value="${u.user_id}">${u.name} (${u.role})</option>`).join('');
+        select.innerHTML = `<option value="">اختر الموظف...</option>` + data.payroll.map(u => `<option value="${u.user_id}">${u.name} (${getRoleLabel(u.role)})</option>`).join('');
       } catch (err) {
         tbody.innerHTML = `<tr><td colspan="8" class="p-6 text-center text-rose-400">
           <div class="flex flex-col items-center gap-2">

@@ -1,0 +1,121 @@
+{
+  "manifest": {
+    "generatedAt": "2026-08-27T16:09:32.288Z",
+    "generator": "generate_release_gate_fixtures.js",
+    "fixtures": [
+      {
+        "name": "qa-clean-live.sqlite",
+        "path": "/home/omrshrifmo/cafe-system-mvp/fixtures/qa-clean-live.sqlite",
+        "sha256": "80c007fd56618987512ec97472a36631b2baf7bd30a1755b06b07e35e57739ac"
+      },
+      {
+        "name": "qa-demo.sqlite",
+        "path": "/home/omrshrifmo/cafe-system-mvp/fixtures/qa-demo.sqlite",
+        "sha256": "88daa864a233b2d9245515084a0204bbcc2c38bd09b396c3e39e420e0269c2b8"
+      },
+      {
+        "name": "qa-auth.sqlite",
+        "path": "/home/omrshrifmo/cafe-system-mvp/fixtures/qa-auth.sqlite",
+        "sha256": "b2e863227c997c12091d8d33f33165f0a398178d0873469cb4eecd2a99c80401"
+      }
+    ],
+    "roles": [
+      {
+        "role": "SUPER_ADMIN",
+        "primaryPin": "8801",
+        "altPin": null,
+        "name": "مسؤول النظام"
+      },
+      {
+        "role": "OWNER",
+        "primaryPin": "8802",
+        "altPin": "1009",
+        "name": "فاطمة (مالك)"
+      },
+      {
+        "role": "OP_MANAGER",
+        "primaryPin": "8803",
+        "altPin": "1008",
+        "name": "وائل (مدير عمليات)"
+      },
+      {
+        "role": "OP_ASSISTANT_CASHIER",
+        "primaryPin": "8804",
+        "altPin": "1007",
+        "name": "أحمد كركر (كاشير)"
+      },
+      {
+        "role": "BARISTA",
+        "primaryPin": "8805",
+        "altPin": "1002",
+        "name": "هاجر (باريستا)"
+      },
+      {
+        "role": "CHEF",
+        "primaryPin": "8806",
+        "altPin": null,
+        "name": "الشيف حسام"
+      },
+      {
+        "role": "SHISHA",
+        "primaryPin": "8807",
+        "altPin": null,
+        "name": "معد الشيشة"
+      },
+      {
+        "role": "WAITER",
+        "primaryPin": "8808",
+        "altPin": null,
+        "name": "ويتر الصالة"
+      },
+      {
+        "role": "RUNNER",
+        "primaryPin": "8809",
+        "altPin": null,
+        "name": "رانر التوصيل"
+      },
+      {
+        "role": "HALL_MANAGER",
+        "primaryPin": "8810",
+        "altPin": null,
+        "name": "مدير الصالة"
+      },
+      {
+        "role": "INVENTORY_SPECIALIST",
+        "primaryPin": "8811",
+        "altPin": null,
+        "name": "أخصائي المخزون"
+      },
+      {
+        "role": "HR_PAYROLL",
+        "primaryPin": "8812",
+        "altPin": null,
+        "name": "مسؤول الموارد البشرية"
+      },
+      {
+        "role": "QA_AUDITOR",
+        "primaryPin": "8813",
+        "altPin": null,
+        "name": "مراقب الجودة والشكاوى"
+      },
+      {
+        "role": "READ_ONLY",
+        "primaryPin": "8814",
+        "altPin": null,
+        "name": "مدقق خارجي (قراءة فقط)"
+      },
+      {
+        "role": "SHAREHOLDER_INVESTOR",
+        "primaryPin": "8815",
+        "altPin": null,
+        "name": "شريك مستثمر"
+      },
+      {
+        "role": "ACCOUNTANT_CONTROLLER",
+        "primaryPin": "8816",
+        "altPin": null,
+        "name": "المحاسب المالي"
+      }
+    ]
+  }
+}

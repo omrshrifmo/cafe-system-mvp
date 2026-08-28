@@ -180,6 +180,15 @@ router.post('/checkout', requireAuth, requirePermission('payments:take'), async 
   }
 });
 
+router.post('/payments/checkout', requireAuth, requirePermission('payments:take'), async (req, res, next) => {
+  try {
+    const result = await settleSession(req.body, req.user);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
 // Canonical Settle Endpoint
 router.post('/payments/settle', requireAuth, requirePermission('payments:take'), async (req, res, next) => {
   try {

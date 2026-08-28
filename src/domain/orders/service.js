@@ -146,12 +146,30 @@ async function submitOrderWithBOM(orderData, actorId = null) {
       [tableId]
     );
 
+    let validCustomerPhone = null;
+    if (customer_phone && typeof customer_phone === 'string' && customer_phone.trim()) {
+      const cleanPhone = customer_phone.trim();
+      const existingCustomer = await tx.get(`SELECT phone FROM customers WHERE phone = ?`, [cleanPhone]);
+      if (!existingCustomer) {
+        await tx.run(
+          `INSERT INTO customers (phone, name, points, total_spent, credit_balance, visit_count) VALUES (?, ?, 0, 0, 0, 1)`,
+          [cleanPhone, orderData.customer_name || 'عميل']
+        );
+      } else {
+        await tx.run(
+          `UPDATE customers SET visit_count = visit_count + 1, last_visit = datetime('now', 'localtime') WHERE phone = ?`,
+          [cleanPhone]
+        );
+      }
+      validCustomerPhone = cleanPhone;
+    }
+
     if (!session) {
       const publicRef = 'ORD-' + crypto.randomBytes(4).toString('hex').toUpperCase();
       const sRes = await tx.run(
         `INSERT INTO order_sessions (public_ref, order_type, table_id, customer_id, status, created_by)
          VALUES (?, 'DINE_IN', ?, ?, 'OPEN', ?)`,
-        [publicRef, tableId, customer_phone || null, actualWaiterId]
+        [publicRef, tableId, validCustomerPhone, actualWaiterId]
       );
       session = { id: sRes.lastID, public_ref: publicRef };
     }

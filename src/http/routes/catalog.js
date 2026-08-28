@@ -41,6 +41,8 @@ router.get(['/menu/categories', '/catalog/menu/categories'], async (req, res, ne
       `SELECT c.*, COUNT(m.id) as item_count 
        FROM menu_categories c 
        LEFT JOIN menu_items m ON c.id = m.category_id 
+       WHERE (c.is_quarantined = 0 OR c.is_quarantined IS NULL) 
+         AND c.name NOT LIKE 'temp_%'
        GROUP BY c.id 
        ORDER BY c.sort_order ASC, c.id ASC`
     );
