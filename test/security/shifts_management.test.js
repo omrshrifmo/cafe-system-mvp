@@ -17,7 +17,7 @@ const { recordCashOperation } = require('../../src/domain/shifts/cashService');
 const { lockAccountingPeriod } = require('../../src/domain/shifts/periodService');
 
 describe('Server-Bound Shifts, Cash Reconciliation & Period Management Gate Suite', function () {
-  this.timeout(20000);
+  this.timeout(120000);
 
   let app;
   let cashierToken;

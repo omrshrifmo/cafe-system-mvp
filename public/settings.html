@@ -284,7 +284,82 @@
         </div>
       </section>
 
-      <!-- Card 5: Factory Reset & Client Handover -->
+      <!-- Card 5: Users, Roles, Permissions & Staff PINs Manager -->
+      <section class="stat-card space-y-4 md:col-span-2 border-amber-500/30 bg-slate-900/90 shadow-2xl">
+        <div class="flex flex-wrap items-center justify-between border-b border-slate-800 pb-3 gap-2">
+          <div class="flex items-center gap-2">
+            <span class="text-2xl">👥</span>
+            <div>
+              <h2 class="text-base font-extrabold text-white">إدارة المستخدمين والصلاحيات والرموز السرية (Users & Staff Access)</h2>
+              <p class="text-[11px] text-slate-400">إضافة وتعديل طاقم العمل، تعيين المسميات الوظيفية، وتغيير رموز PIN وتحديد الصلاحيات</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="togglePermissionsMatrix()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-xl text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors">
+              <span>🛡️</span>
+              <span>مصفوفة الصلاحيات</span>
+            </button>
+            <button onclick="openAddUserModal()" class="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl text-xs flex items-center gap-1.5 shadow-lg cursor-pointer transition-all">
+              <span>➕</span>
+              <span>إضافة مستخدم جديد</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Users Table -->
+        <div class="overflow-x-auto rounded-xl border border-slate-800">
+          <table class="w-full text-right text-xs">
+            <thead class="bg-slate-950 text-slate-400 text-[10px]">
+              <tr>
+                <th class="p-3">#</th>
+                <th class="p-3">اسم الموظف</th>
+                <th class="p-3">الدور والمسؤولية</th>
+                <th class="p-3">القسم</th>
+                <th class="p-3">الأجر / ساعة</th>
+                <th class="p-3">الهاتف</th>
+                <th class="p-3">الحالة</th>
+                <th class="p-3 text-center">الإجراءات</th>
+              </tr>
+            </thead>
+            <tbody id="users-table-body" class="divide-y divide-slate-800 text-slate-300">
+              <tr>
+                <td colspan="8" class="p-4 text-center text-slate-500">جاري تحميل قائمة المستخدمين...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Role Permissions Matrix Collapsible Card -->
+        <div id="permissions-matrix-card" class="hidden p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-3">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+            <h3 class="text-xs font-black text-amber-400 flex items-center gap-1.5">
+              <span>🛡️</span>
+              <span>مصفوفة الصلاحيات المعتمدة للأدوار (Role Permission Matrix)</span>
+            </h3>
+            <span class="text-[10px] text-slate-400">نظام الصلاحيات الافتراضي المطبق (Default-Deny)</span>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2.5 text-[11px]">
+            <div class="p-2.5 bg-slate-900 rounded-xl border border-slate-800">
+              <span class="font-bold text-amber-400 block mb-1">👑 مالك / سوبر أدمن</span>
+              <p class="text-slate-400 text-[10px]">صلاحيات كاملة مطلقة (تقارير مالية، إعدادات، تسويات، إلغاء، واسترجاع فواتير، مستخدمين).</p>
+            </div>
+            <div class="p-2.5 bg-slate-900 rounded-xl border border-slate-800">
+              <span class="font-bold text-blue-400 block mb-1">👔 مدير التشغيل (Manager)</span>
+              <p class="text-slate-400 text-[10px]">إشراف صالة، إلغاء طلبات، إغلاق ورديات، تسوية درج الكاشير، تقارير Z.</p>
+            </div>
+            <div class="p-2.5 bg-slate-900 rounded-xl border border-slate-800">
+              <span class="font-bold text-emerald-400 block mb-1">💳 الكاشير (Cashier)</span>
+              <p class="text-slate-400 text-[10px]">فتح طاولات، تسجيل مبيعات، سداد فواتير، عد أعمى للدرج (لا يرى المتوقع).</p>
+            </div>
+            <div class="p-2.5 bg-slate-900 rounded-xl border border-slate-800">
+              <span class="font-bold text-indigo-400 block mb-1">☕ البارستا والمطبخ والشيشة</span>
+              <p class="text-slate-400 text-[10px]">استقبال طلبات KDS، تحديث حالة التحضير، إعارة خامات، تسجيل هالك ومخزون.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Card 6: Factory Reset & Client Handover -->
       <section class="stat-card space-y-4 border-rose-500/30 bg-rose-950/10">
         <div class="flex items-center gap-2 border-b border-rose-500/30 pb-3">
           <span class="text-xl">🚨</span>
@@ -311,6 +386,110 @@
     </div>
 
   </main>
+
+  <!-- Add User Modal -->
+  <div id="add-user-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-slate-900 border border-amber-500/40 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div class="flex items-center gap-2 text-amber-400">
+          <span class="text-xl">➕</span>
+          <h3 class="font-extrabold text-sm text-white">إضافة موظف / مستخدم جديد</h3>
+        </div>
+        <button onclick="closeAddUserModal()" class="text-slate-400 hover:text-white text-lg">✕</button>
+      </div>
+
+      <form onsubmit="submitAddUser(event)" class="space-y-3 text-xs">
+        <div>
+          <label class="block font-bold text-slate-300 mb-1">اسم الموظف *</label>
+          <input type="text" id="new-user-name" required placeholder="مثال: أحمد عبد الله" class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-white font-bold focus:border-amber-500 focus:outline-none" />
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block font-bold text-slate-300 mb-1">الدور الوظيفي *</label>
+            <select id="new-user-role" required class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-white font-bold focus:border-amber-500 focus:outline-none">
+              <option value="CASHIER" selected>كاشير (CASHIER)</option>
+              <option value="BARISTA">باريستا (BARISTA)</option>
+              <option value="CHEF">شيف مطبخ (CHEF)</option>
+              <option value="SHISHA">مسؤول شيشة (SHISHA)</option>
+              <option value="WAITER">ويتر / صالة (WAITER)</option>
+              <option value="RUNNER">رانر توصيل (RUNNER)</option>
+              <option value="OP_MANAGER">مدير تشغيل (OP_MANAGER)</option>
+              <option value="OWNER">مالك (OWNER)</option>
+              <option value="SUPER_ADMIN">مسؤول نظام (SUPER_ADMIN)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-bold text-slate-300 mb-1">القسم *</label>
+            <select id="new-user-dept" required class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-white font-bold focus:border-amber-500 focus:outline-none">
+              <option value="BARISTA" selected>باريستا ومشروبات</option>
+              <option value="KITCHEN">مطبخ وساندوتشات</option>
+              <option value="SHISHA">شيشة ومعسلات</option>
+              <option value="FLOOR">صالة وخدمة</option>
+              <option value="MANAGEMENT">إدارة</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block font-bold text-slate-300 mb-1">رمز PIN للدخول (4 أرقام) *</label>
+            <input type="password" id="new-user-pin" required maxlength="6" placeholder="••••" class="w-full px-3 py-2 bg-slate-950 border border-amber-500/60 rounded-xl text-center text-amber-400 font-mono font-black text-sm tracking-widest focus:border-amber-500 focus:outline-none" />
+          </div>
+          <div>
+            <label class="block font-bold text-slate-300 mb-1">الأجر بالساعة (ج.م)</label>
+            <input type="number" step="1" min="0" id="new-user-rate" value="25" class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-white font-mono focus:border-amber-500 focus:outline-none" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-300 mb-1">رقم الهاتف</label>
+          <input type="text" id="new-user-phone" placeholder="010xxxxxxxx" class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-white focus:border-amber-500 focus:outline-none" />
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+          <button type="button" onclick="closeAddUserModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl text-xs">
+            إلغاء
+          </button>
+          <button type="submit" class="px-5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl text-xs flex items-center gap-1.5 shadow-lg">
+            <span>💾 حفظ الموظف</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Change PIN Modal -->
+  <div id="change-pin-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-slate-900 border border-amber-500/40 rounded-2xl max-w-sm w-full p-6 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div class="flex items-center gap-2 text-amber-400">
+          <span class="text-xl">🔑</span>
+          <h3 class="font-extrabold text-sm text-white">تغيير رمز PIN</h3>
+        </div>
+        <button onclick="closeChangePinModal()" class="text-slate-400 hover:text-white text-lg">✕</button>
+      </div>
+
+      <form onsubmit="submitChangePin(event)" class="space-y-3 text-xs">
+        <input type="hidden" id="change-pin-user-id" />
+        <p class="text-slate-300" id="change-pin-user-desc">تغيير الرمز السري للموظف</p>
+
+        <div>
+          <label class="block font-bold text-slate-300 mb-1">رمز PIN الجديد (4 أرقام على الأقل) *</label>
+          <input type="password" id="change-pin-input" required maxlength="6" placeholder="••••" class="w-full px-3 py-2 bg-slate-950 border border-amber-500/60 rounded-xl text-center text-amber-400 font-mono font-black text-base tracking-widest focus:border-amber-500 focus:outline-none" />
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+          <button type="button" onclick="closeChangePinModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl text-xs">
+            إلغاء
+          </button>
+          <button type="submit" class="px-5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl text-xs flex items-center gap-1.5 shadow-lg">
+            <span>🔒 حفظ الرمز الجديد</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
 
   <!-- Apply Update Confirmation & PIN Modal -->
   <div id="apply-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 z-50 hidden">
@@ -722,7 +901,188 @@
       }
     }
 
-    window.addEventListener('DOMContentLoaded', loadSettings);
+    // ── Users & Access Management Functions ──
+    const ROLE_LABELS = {
+      'SUPER_ADMIN': { ar: '👑 مسؤول نظام', cls: 'bg-amber-500/20 text-amber-300 border-amber-500/40' },
+      'OWNER': { ar: '👑 مالك', cls: 'bg-amber-500/20 text-amber-300 border-amber-500/40' },
+      'OP_MANAGER': { ar: '👔 مدير تشغيل', cls: 'bg-blue-500/20 text-blue-300 border-blue-500/40' },
+      'CASHIER': { ar: '💳 كاشير', cls: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' },
+      'BARISTA': { ar: '☕ باريستا', cls: 'bg-orange-500/20 text-orange-300 border-orange-500/40' },
+      'CHEF': { ar: '🥪 شيف مطبخ', cls: 'bg-rose-500/20 text-rose-300 border-rose-500/40' },
+      'SHISHA': { ar: '💨 شيشة', cls: 'bg-purple-500/20 text-purple-300 border-purple-500/40' },
+      'WAITER': { ar: '🍽️ ويتر', cls: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40' },
+      'RUNNER': { ar: '🏃 رانر', cls: 'bg-teal-500/20 text-teal-300 border-teal-500/40' }
+    };
+
+    function togglePermissionsMatrix() {
+      const el = document.getElementById('permissions-matrix-card');
+      if (el) el.classList.toggle('hidden');
+    }
+
+    async function loadUsers() {
+      const tbody = document.getElementById('users-table-body');
+      if (!tbody) return;
+
+      try {
+        const res = await fetch('/api/users');
+        const data = await res.json();
+        if (data.success && Array.isArray(data.users)) {
+          if (data.users.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" class="p-4 text-center text-slate-500">لا يوجد موظفون مسجلون حالياً</td></tr>';
+            return;
+          }
+
+          tbody.innerHTML = data.users.map(u => {
+            const rInfo = ROLE_LABELS[u.role] || { ar: u.role, cls: 'bg-slate-800 text-slate-300 border-slate-700' };
+            const isActive = u.is_active !== 0;
+            return `
+              <tr class="hover:bg-slate-800/40 transition-colors border-b border-slate-800/60">
+                <td class="p-3 font-mono text-slate-500 font-bold">#${u.id}</td>
+                <td class="p-3 font-black text-white flex items-center gap-2">
+                  <span class="w-2 h-2 rounded-full ${isActive ? 'bg-emerald-500' : 'bg-slate-600'}"></span>
+                  <span>${u.name}</span>
+                </td>
+                <td class="p-3">
+                  <span class="px-2 py-0.5 rounded-lg border text-[10px] font-bold ${rInfo.cls}">${rInfo.ar}</span>
+                </td>
+                <td class="p-3 text-slate-400 font-medium">${u.department || '—'}</td>
+                <td class="p-3 font-mono text-emerald-400 font-bold">${u.hourly_rate ? u.hourly_rate + ' ج.م' : '—'}</td>
+                <td class="p-3 font-mono text-slate-400 text-[11px]">${u.phone || '—'}</td>
+                <td class="p-3">
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-black ${isActive ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/10 text-rose-400 border border-rose-500/30'}">
+                    ${isActive ? 'نشط 🟢' : 'معطل 🔴'}
+                  </span>
+                </td>
+                <td class="p-3 text-center">
+                  <div class="flex items-center justify-center gap-1.5">
+                    <button onclick="openChangePinModal(${u.id}, '${u.name}')" title="تغيير رمز PIN" class="p-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-lg text-xs font-bold cursor-pointer transition-colors">
+                      🔑 PIN
+                    </button>
+                    <button onclick="toggleUserActive(${u.id}, ${isActive ? 1 : 0})" title="${isActive ? 'تعطيل الحساب' : 'تفعيل الحساب'}" class="p-1.5 ${isActive ? 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30' : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'} rounded-lg text-xs font-bold cursor-pointer transition-colors">
+                      ${isActive ? '⏸️' : '▶️'}
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            `;
+          }).join('');
+        } else {
+          tbody.innerHTML = '<tr><td colspan="8" class="p-4 text-center text-rose-400">فشل تحميل قائمة المستخدمين (تأكد من تسجيل الدخول كمسؤول)</td></tr>';
+        }
+      } catch (err) {
+        tbody.innerHTML = '<tr><td colspan="8" class="p-4 text-center text-rose-400">خطأ في الاتصال بالخادم</td></tr>';
+      }
+    }
+
+    function openAddUserModal() {
+      document.getElementById('new-user-name').value = '';
+      document.getElementById('new-user-pin').value = '';
+      document.getElementById('new-user-phone').value = '';
+      document.getElementById('add-user-modal').classList.remove('hidden');
+    }
+
+    function closeAddUserModal() {
+      document.getElementById('add-user-modal').classList.add('hidden');
+    }
+
+    async function submitAddUser(e) {
+      e.preventDefault();
+      const payload = {
+        name: document.getElementById('new-user-name').value.trim(),
+        role: document.getElementById('new-user-role').value,
+        department: document.getElementById('new-user-dept').value,
+        pin: document.getElementById('new-user-pin').value.trim(),
+        hourly_rate: parseFloat(document.getElementById('new-user-rate').value) || 0,
+        phone: document.getElementById('new-user-phone').value.trim()
+      };
+
+      if (!payload.name || !payload.pin || payload.pin.length < 4) {
+        showToast('يرجى كتابة اسم الموظف ورمز PIN من 4 أرقام', true);
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/users', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast(`تمت إضافة الموظف (${payload.name}) بنجاح! 🎉`);
+          closeAddUserModal();
+          loadUsers();
+        } else {
+          showToast(data.error || 'فشل إضافة الموظف', true);
+        }
+      } catch (err) {
+        showToast('خطأ بالاتصال بالسيرفر', true);
+      }
+    }
+
+    function openChangePinModal(userId, userName) {
+      document.getElementById('change-pin-user-id').value = userId;
+      document.getElementById('change-pin-user-desc').textContent = `تغيير الرمز السري للموظف: ${userName} (#${userId})`;
+      document.getElementById('change-pin-input').value = '';
+      document.getElementById('change-pin-modal').classList.remove('hidden');
+    }
+
+    function closeChangePinModal() {
+      document.getElementById('change-pin-modal').classList.add('hidden');
+    }
+
+    async function submitChangePin(e) {
+      e.preventDefault();
+      const userId = document.getElementById('change-pin-user-id').value;
+      const newPin = document.getElementById('change-pin-input').value.trim();
+
+      if (!newPin || newPin.length < 4) {
+        showToast('رمز PIN يجب أن يتكون من 4 أرقام على الأقل', true);
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/users/${userId}/pin`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pin: newPin })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast(data.message || 'تم تحديث رمز PIN بنجاح! 🔒');
+          closeChangePinModal();
+        } else {
+          showToast(data.error || 'فشل تحديث رمز PIN', true);
+        }
+      } catch (err) {
+        showToast('خطأ بالاتصال بالسيرفر', true);
+      }
+    }
+
+    async function toggleUserActive(userId, currentActive) {
+      const newStatus = currentActive ? 0 : 1;
+      try {
+        const res = await fetch(`/api/users/${userId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ is_active: newStatus })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast(newStatus ? 'تم تفعيل حساب الموظف 🟢' : 'تم تعطيل حساب الموظف 🔴');
+          loadUsers();
+        } else {
+          showToast(data.error || 'فشل تغيير حالة الموظف', true);
+        }
+      } catch (err) {
+        showToast('خطأ بالاتصال بالسيرفر', true);
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      loadSettings();
+      loadUsers();
+    });
   </script>
 </body>
 </html>

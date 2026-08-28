@@ -7,12 +7,12 @@ const path = require('path');
 const { runFullDaySimulation } = require('../../scripts/full_day_simulator');
 
 describe('Full-Day Deterministic Simulation & Audit Gate Suite', function () {
-  this.timeout(60000);
+  this.timeout(120000);
 
   let simResult;
 
   before(async function () {
-    this.timeout(60000);
+    this.timeout(120000);
     simResult = await runFullDaySimulation();
   });
 

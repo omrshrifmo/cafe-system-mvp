@@ -16,6 +16,9 @@ describe('Payments & Checkout Integration Tests', () => {
     // Clean test tables 7
     const { runQuery } = require('../../src/db/connection');
     await runQuery(`UPDATE order_sessions SET status = 'SETTLED' WHERE table_id IN (SELECT id FROM tables WHERE table_number = 7)`);
+    await runQuery(`UPDATE system_config SET value = 'true' WHERE key = 'apply_taxes'`);
+    await runQuery(`UPDATE system_config SET value = '14' WHERE key = 'vat_percent'`);
+    await runQuery(`UPDATE system_config SET value = '12' WHERE key = 'service_percent'`);
 
     const cRes = await request(app)
       .post('/api/auth/login')

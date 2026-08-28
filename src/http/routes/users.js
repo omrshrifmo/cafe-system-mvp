@@ -68,6 +68,68 @@ router.post('/users', requireAuth, requirePermission('users:write'), async (req,
   }
 });
 
+// Update User Profile / Role / Department
+router.put('/users/:id', requireAuth, requirePermission('users:write'), async (req, res, next) => {
+  try {
+    const { name, role, department, hourly_rate, phone, is_active } = req.body;
+    const user = await getQuery(`SELECT id FROM users WHERE id = ?`, [req.params.id]);
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'المستخدم غير موجود' });
+    }
+
+    await runQuery(
+      `UPDATE users 
+       SET name = COALESCE(?, name),
+           role = COALESCE(?, role),
+           department = COALESCE(?, department),
+           hourly_rate = COALESCE(?, hourly_rate),
+           phone = COALESCE(?, phone),
+           is_active = COALESCE(?, is_active),
+           updated_at = datetime('now', 'localtime')
+       WHERE id = ?`,
+      [
+        name !== undefined ? String(name).trim() : null,
+        role !== undefined ? String(role).trim() : null,
+        department !== undefined ? String(department).trim() : null,
+        hourly_rate !== undefined ? Number(hourly_rate) : null,
+        phone !== undefined ? String(phone).trim() : null,
+        is_active !== undefined ? (is_active ? 1 : 0) : null,
+        req.params.id
+      ]
+    );
+
+    res.json({ success: true, message: 'تم تحديث بيانات الموظف بنجاح' });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Update / Reset User PIN Code
+router.post('/users/:id/pin', requireAuth, requirePermission('users:write'), async (req, res, next) => {
+  try {
+    const { pin, new_pin } = req.body;
+    const rawPin = new_pin || pin;
+    if (!rawPin || String(rawPin).trim().length < 4) {
+      return res.status(400).json({ success: false, error: 'رمز PIN الجديد يجب أن يتكون من 4 أرقام على الأقل' });
+    }
+
+    const user = await getQuery(`SELECT id, name FROM users WHERE id = ?`, [req.params.id]);
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'المستخدم غير موجود' });
+    }
+
+    const pinHash = await bcrypt.hash(String(rawPin).trim(), 10);
+    await runQuery(
+      `UPDATE users SET pin_hash = ?, updated_at = datetime('now', 'localtime') WHERE id = ?`,
+      [pinHash, req.params.id]
+    );
+
+    res.json({ success: true, message: `تم تحديث الرمز السري للموظف (${user.name}) بنجاح 🔒` });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.put('/users/:id/rate', requireAuth, async (req, res, next) => {
   try {
     const { hourly_rate } = req.body;

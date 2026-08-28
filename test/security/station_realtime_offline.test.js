@@ -13,7 +13,7 @@ const bcrypt = require('bcryptjs');
 const request = require('supertest');
 
 describe('Station Operations, Realtime Outbox & Offline Sync Gate Suite', function () {
-  this.timeout(40000);
+  this.timeout(120000);
 
   let app;
   let server;

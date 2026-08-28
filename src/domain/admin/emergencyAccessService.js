@@ -150,31 +150,32 @@ async function getActiveEmergencySessions(venueId = 'V_DEFAULT') {
      JOIN v3_users u ON e.user_id = u.id
      WHERE (e.venue_id = ? OR e.venue_id IS NULL)
        AND e.terminated_at IS NULL
-       AND e.expires_at > datetime('now', 'localtime')
      ORDER BY e.started_at DESC`,
     [venueId]
   );
 
   const now = Date.now();
-  return rows.map(r => {
-    const expireTime = new Date(r.expires_at).getTime();
-    const remainingSeconds = Math.max(0, Math.floor((expireTime - now) / 1000));
-    return {
-      id: r.id,
-      venueId: r.venue_id,
-      userId: r.user_id,
-      userName: r.user_name,
-      role: r.role_id,
-      ticketRef: r.ticket_ref,
-      reason: r.reason,
-      scope: r.scope,
-      startedAt: r.started_at,
-      expiresAt: r.expires_at,
-      remainingSeconds,
-      ipAddress: r.ip_address,
-      isActive: remainingSeconds > 0
-    };
-  });
+  return rows
+    .map(r => {
+      const expireTime = new Date(r.expires_at).getTime();
+      const remainingSeconds = Math.max(0, Math.floor((expireTime - now) / 1000));
+      return {
+        id: r.id,
+        venueId: r.venue_id,
+        userId: r.user_id,
+        userName: r.user_name,
+        role: r.role_id,
+        ticketRef: r.ticket_ref,
+        reason: r.reason,
+        scope: r.scope,
+        startedAt: r.started_at,
+        expiresAt: r.expires_at,
+        remainingSeconds,
+        ipAddress: r.ip_address,
+        isActive: remainingSeconds > 0
+      };
+    })
+    .filter(r => r.isActive);
 }
 
 /**

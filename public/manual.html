@@ -44,14 +44,16 @@
   <main class="w-full max-w-5xl grid grid-cols-1 md:grid-cols-4 gap-6">
     <!-- Sidebar Navigation -->
     <aside class="md:col-span-1 glass rounded-2xl p-4 h-fit sticky top-6 space-y-2 text-xs">
-      <h2 class="font-bold text-amber-400 mb-3 px-2">فهرس الدليل</h2>
+      <h2 class="font-bold text-amber-400 mb-3 px-2">فهرس الدليل التشغيلي</h2>
       <a href="#sec-intro" class="block p-2 rounded-lg hover:bg-slate-800 text-slate-300 font-semibold transition-colors">1. المقدمة وأوضاع التشغيل</a>
       <a href="#sec-auth" class="block p-2 rounded-lg hover:bg-slate-800 text-slate-300 font-semibold transition-colors">2. الأمان وقفل الخمول</a>
       <a href="#sec-pos" class="block p-2 rounded-lg hover:bg-slate-800 text-slate-300 font-semibold transition-colors">3. نقطة البيع والطلبات</a>
-      <a href="#sec-kds" class="block p-2 rounded-lg hover:bg-slate-800 text-slate-300 font-semibold transition-colors">4. شاشات المطبخ والبار KDS</a>
+      <a href="#sec-kds" class="block p-2 rounded-lg hover:bg-slate-800 text-slate-300 font-semibold transition-colors">4. شاشات تحضير KDS</a>
       <a href="#sec-bom" class="block p-2 rounded-lg hover:bg-slate-800 text-slate-300 font-semibold transition-colors">5. المخزون والوصفات والكثافة</a>
-      <a href="#sec-shifts" class="block p-2 rounded-lg hover:bg-slate-800 text-slate-300 font-semibold transition-colors">6. الورديات والجرد الأعمى</a>
-      <a href="#sec-offline" class="block p-2 rounded-lg hover:bg-slate-800 text-slate-300 font-semibold transition-colors">7. العمل دون اتصال والمزامنة</a>
+      <a href="#sec-shifts" class="block p-2 rounded-lg hover:bg-slate-800 text-slate-300 font-semibold transition-colors">6. الورديات والجرد الأعمى (EOD)</a>
+      <a href="#sec-offline" class="block p-2 rounded-lg hover:bg-slate-800 text-slate-300 font-semibold transition-colors">7. وضع العمل بدون إنترنت</a>
+      <a href="#sec-hardware" class="block p-2 rounded-lg hover:bg-slate-800 text-slate-300 font-semibold transition-colors">8. الطابعات الحرارية والدرج</a>
+      <a href="#sec-sop" class="block p-2 rounded-lg hover:bg-slate-800 text-slate-300 font-semibold transition-colors">9. دليل الأدوار التشغيلية (SOPs)</a>
     </aside>
 
     <!-- Content Sections -->
@@ -114,14 +116,40 @@
         <ul class="space-y-2 text-xs text-slate-300 list-disc list-inside leading-relaxed">
           <li><strong>طرق الدفع المتعددة:</strong> نقدي (Cash)، بطاقات بنكية (Visa/MasterCard)، دفع مقسم (Split Payment).</li>
           <li><strong>عرض الضريبة:</strong> يمكن تهيئة الفاتورة لإظهار سطر الضريبة منفصلاً أو تضمينه في السعر حسب السياسة المعتمدة، مع بقاء الحسابات المحاسبية دقيقة.</li>
+          <li><strong>إرسال الطلبات للمطبخ والبار (KDS):</strong> عند الضغط على "إرسال للتحضير"، يتم توجيه كل صنف فورياً للمحطة المختصة به (باريستا، مطبخ، شيشة).</li>
         </ul>
       </section>
 
       <!-- Section 4 -->
+      <section id="sec-kds" class="glass rounded-2xl p-6 shadow-xl space-y-3">
+        <h3 class="text-base font-black text-amber-400 flex items-center gap-2">
+          <span>☕</span>
+          <span>4. شاشات العرض والتحضير (Kitchen Display System - KDS)</span>
+        </h3>
+        <p class="text-xs text-slate-300 leading-relaxed">
+          تتيح شاشات KDS استقبال وإدارة الطلبات في الوقت الفعلي لكل قسم:
+        </p>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-[11px]">
+          <div class="p-3 bg-slate-900 border border-amber-500/30 rounded-xl">
+            <h4 class="font-bold text-amber-400 mb-1">☕ شاشة البارستا</h4>
+            <p class="text-slate-400">تحضير القهوة والمشروبات الساخنة والباردة، عرض مقادير الوصفة، وإعارة الخامات بين المحطات.</p>
+          </div>
+          <div class="p-3 bg-slate-900 border border-rose-500/30 rounded-xl">
+            <h4 class="font-bold text-rose-400 mb-1">🍳 شاشة المطبخ</h4>
+            <p class="text-slate-400">تجهيز الوجبات والساندوتشات والحلويات مع توقيت الطهي وتنبيهات التأخير الصوتي والمرئي.</p>
+          </div>
+          <div class="p-3 bg-slate-900 border border-purple-500/30 rounded-xl">
+            <h4 class="font-bold text-purple-400 mb-1">💨 شاشة الشيشة</h4>
+            <p class="text-slate-400">متابعة أنواع المعسل وتجديد الفحم وتنبيهات وقت الجلوس الممتد للطاولات.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 5 -->
       <section id="sec-bom" class="glass rounded-2xl p-6 shadow-xl space-y-3">
         <h3 class="text-base font-black text-amber-400 flex items-center gap-2">
           <span>⚖️</span>
-          <span>4. إدارة المخزون وتحويل كثافة السوائل</span>
+          <span>5. إدارة المخزون وتحويل كثافة السوائل (BOM)</span>
         </h3>
         <p class="text-xs text-slate-300 leading-relaxed">
           عند وزن السوائل بميزان الجرامات، يمنع النظام التحويل العشوائي (1 جرام = 1 مل) للسوائل المختلفة، ويشترط ملف كثافة معتمد:
@@ -132,6 +160,74 @@
         <p class="text-[11px] text-slate-400">
           أمثلة الكثافة المعتمدة: الحليب كامل الدسم = 1.03 جم/مل | سيرب السكر = 1.30 جم/مل | الزيت = 0.92 جم/مل | الماء = 1.00 جم/مل.
         </p>
+      </section>
+
+      <!-- Section 6 -->
+      <section id="sec-shifts" class="glass rounded-2xl p-6 shadow-xl space-y-3">
+        <h3 class="text-base font-black text-amber-400 flex items-center gap-2">
+          <span>📊</span>
+          <span>6. الورديات والجرد الأعمى وتقفيل اليوم (EOD)</span>
+        </h3>
+        <p class="text-xs text-slate-300 leading-relaxed">
+          يطبق النظام بروتوكول الأمان المالي العالي <strong>Blind Cash Count</strong> عند إغلاق الوردية:
+        </p>
+        <ul class="space-y-2 text-xs text-slate-300 list-disc list-inside leading-relaxed">
+          <li><strong>العد الأعمى:</strong> يدخل الكاشير النقدية الفعلية الموجودة بالدرج دون معرفة المبيعات المتوقعة مسبقاً.</li>
+          <li><strong>احتساب الفروقات:</strong> يقوم النظام تلقائياً بحساب العجز أو الزيادة وتوثيقها في سجل الرقابة المالية.</li>
+          <li><strong>تقرير Z النهائي:</strong> إغلاق اليومية وترحيل المبيعات والمصروفات للدفاتر الرسمية مع طباعة إيصال التقفيل.</li>
+        </ul>
+      </section>
+
+      <!-- Section 7 -->
+      <section id="sec-offline" class="glass rounded-2xl p-6 shadow-xl space-y-3">
+        <h3 class="text-base font-black text-amber-400 flex items-center gap-2">
+          <span>📡</span>
+          <span>7. استمرارية العمل دون اتصال بالإنترنت (Offline Mode)</span>
+        </h3>
+        <p class="text-xs text-slate-300 leading-relaxed">
+          يعمل النظام محلياً بالكامل عبر Service Worker و IndexedDB في حال انقطاع شبكة الإنترنت أو السيرفر:
+        </p>
+        <ul class="space-y-2 text-xs text-slate-300 list-disc list-inside leading-relaxed">
+          <li>يتم تخزين الفواتير في طابور الأوفلاين المشفر محلياً مع توليد UUID مؤقت لكل فاتورة.</li>
+          <li>عند عودة الاتصال، يتم ترحيل الطابور تلقائياً دون أي تكرار أو فقدان للبيانات المالية.</li>
+        </ul>
+      </section>
+
+      <!-- Section 8 -->
+      <section id="sec-hardware" class="glass rounded-2xl p-6 shadow-xl space-y-3">
+        <h3 class="text-base font-black text-amber-400 flex items-center gap-2">
+          <span>🖨️</span>
+          <span>8. الطابعات الحرارية والدرج الإلكتروني (ESC/POS)</span>
+        </h3>
+        <p class="text-xs text-slate-300 leading-relaxed">
+          يدعم النظام كافة طابعات الفواتير الحرارية (Epson, Xprinter, Bixolon, Sunmi) عبر بروتوكول TCP/IP أو USB:
+        </p>
+        <ul class="space-y-2 text-xs text-slate-300 list-disc list-inside leading-relaxed">
+          <li>منفذ الاتصال الافتراضي: <code>9100</code> مع ضبط IP الطابعة من صفحة <a href="/settings.html" class="text-amber-400 underline">الإعدادات</a>.</li>
+          <li>الفتح التلقائي للدرج: إرسال نبضة ESC/POS لفتح درج النقدية فور تأكيد استلام النقدية.</li>
+        </ul>
+      </section>
+
+      <!-- Section 9 -->
+      <section id="sec-sop" class="glass rounded-2xl p-6 shadow-xl space-y-3">
+        <h3 class="text-base font-black text-amber-400 flex items-center gap-2">
+          <span>📋</span>
+          <span>9. دليل إجراءات التشغيل القياسية (SOPs) لكل دور</span>
+        </h3>
+        <div class="space-y-3 text-xs">
+          <div class="p-3 bg-slate-900 border border-slate-800 rounded-xl">
+            <h4 class="font-bold text-emerald-400 mb-1">💳 إجراءات الكاشير اليومية</h4>
+            <p class="text-slate-400 leading-relaxed">تسجيل الحضور في بداية الوردية، استلام عهدة الصندوق، تدقيق طلبات الصالة والدليفري، وتطبيق العد الأعمى عند التسليم.</p>
+          </div>
+          <div class="p-3 bg-slate-900 border border-slate-800 rounded-xl">
+            <h4 class="font-bold text-amber-400 mb-1">☕ إجراءات الباريستا والشيف</h4>
+            <p class="text-slate-400 leading-relaxed">فحص مخزون المحطة الافتتاحي، استلام تذاكر KDS والالتزام بمقادير الوصفة، وتسجيل أي إعارة أو هالك فوراً على الشاشة.</p>
+          </div>
+          <div class="p-3 bg-slate-900 border border-slate-800 rounded-xl">
+            <h4 class="font-bold text-blue-400 mb-1">👔 إجراءات مدير التشغيل والمالك</h4>
+            <p class="text-slate-400 leading-relaxed">متابعة مؤشرات BI المباشرة، اعتماد تسويات الورديات وفروقات النقدية، إدارة الموردين، وإدخال فواتير المشتريات.</p>
+          </div>
+        </div>
       </section>
     </div>
   </main>

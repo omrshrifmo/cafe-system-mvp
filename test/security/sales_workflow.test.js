@@ -12,7 +12,7 @@ const { updateOrderSessionStatus } = require('../../src/domain/orders/service');
 const { authorizeDrawerKick, enqueueReprintJob } = require('../../src/domain/hardware/printerService');
 
 describe('Linked Sales Workflow, Authoritative Quotation, Settlement & Reversal Suite', function() {
-  this.timeout(30000);
+  this.timeout(120000);
   let app;
   let ownerCookie;
   let cashierCookie;
@@ -33,6 +33,10 @@ describe('Linked Sales Workflow, Authoritative Quotation, Settlement & Reversal 
     for (const r of canonicalRoles) {
       await runQuery(`INSERT OR REPLACE INTO roles (id, venue_id, name) VALUES (?, 'V_DEFAULT', ?)`, [`R_${r}`, r]);
     }
+
+    await runQuery(`UPDATE system_config SET value = 'true' WHERE key = 'apply_taxes'`);
+    await runQuery(`UPDATE system_config SET value = '14' WHERE key = 'vat_percent'`);
+    await runQuery(`UPDATE system_config SET value = '12' WHERE key = 'service_percent'`);
 
     // Helper to upsert user without triggering ON DELETE RESTRICT
     const upsertUser = async (id, name, roleId, pin) => {

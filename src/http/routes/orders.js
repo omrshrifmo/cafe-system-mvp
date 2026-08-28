@@ -20,7 +20,12 @@ router.get('/orders', async (req, res, next) => {
   try {
     const dept = req.query.department || null;
     const orders = await getPendingOrdersByDepartment(dept);
-    res.json(orders);
+    res.json({
+      success: true,
+      orders,
+      data: { orders },
+      requestId: req.id
+    });
   } catch (err) {
     next(err);
   }
@@ -29,9 +34,14 @@ router.get('/orders', async (req, res, next) => {
 // Get recently delivered BOH orders (optionally filtered by department)
 router.get('/orders/past', async (req, res, next) => {
   try {
-    const dept = req.query.department || null;
+    const dept = req.query.department || req.query.category || null;
     const orders = await getPastOrdersByDepartment(dept);
-    res.json(orders);
+    res.json({
+      success: true,
+      orders,
+      data: { orders },
+      requestId: req.id
+    });
   } catch (err) {
     next(err);
   }

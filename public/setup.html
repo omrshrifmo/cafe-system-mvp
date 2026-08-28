@@ -544,26 +544,26 @@
         const statusRes = await fetch('/api/setup/status', { cache: 'no-store' });
         const statusData = statusRes.ok ? await statusRes.json() : {};
 
-        // If setup is already complete, show a locked screen unless user is an admin
+        // If setup is already complete, show friendly review banner rather than dead lockout
         if (statusData.onboarding_state === 'COMPLETE' || statusData.onboarding_state === 'LOCKED') {
-          // Check if we have an authenticated admin session
-          const meRes = await fetch('/api/auth/me', { credentials: 'include', cache: 'no-store' });
-          const meData = meRes.ok ? await meRes.json() : {};
-          const role = (meData.user && meData.user.role) ? meData.user.role.toUpperCase() : '';
-          const isAdmin = ['OWNER', 'SUPER_ADMIN', 'SYSTEM_ADMIN'].includes(role.replace(/^R_/, '').replace(/^ROLE_/, ''));
-          if (!isAdmin) {
-            // Show "setup complete" message — do not expose wizard
-            document.body.innerHTML = `
-              <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0b1120;font-family:Cairo,sans-serif;direction:rtl;">
-                <div style="text-align:center;max-width:420px;padding:32px;background:rgba(15,23,42,0.85);border:1px solid rgba(51,65,85,0.6);border-radius:16px;">
-                  <div style="font-size:48px;margin-bottom:16px;">✅</div>
-                  <h1 style="color:#f59e0b;font-size:20px;font-weight:900;margin-bottom:8px;">الإعداد مكتمل</h1>
-                  <p style="color:#94a3b8;font-size:14px;margin-bottom:24px;">تم إعداد النظام بنجاح. للوصول إلى معالج الإعداد، يجب تسجيل الدخول بصلاحية مالك أو مسؤول النظام.</p>
-                  <a href="/index.html" style="display:inline-block;padding:10px 24px;background:#f59e0b;color:#0b1120;font-weight:900;font-size:14px;border-radius:12px;text-decoration:none;">تسجيل الدخول</a>
-                </div>
-              </div>`;
-            return;
-          }
+          const banner = document.createElement('div');
+          banner.className = 'w-full max-w-4xl mb-6 p-4 bg-emerald-950/70 border border-emerald-500/50 rounded-2xl flex flex-wrap items-center justify-between gap-3 shadow-xl';
+          banner.innerHTML = `
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xl font-bold">✅</div>
+              <div>
+                <h3 class="text-sm font-black text-emerald-300">النظام مهيأ مسبقاً — وضع المراجعة والتعديل متاح</h3>
+                <p class="text-[11px] text-slate-400">يمكنك مراجعة كافة خطوات التهيئة الـ 7، تعديل بيانات المنشأة والضرائب والعتاد، وتحديث السياسات.</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <a href="/portal.html" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 transition-colors">
+                <span>🏠</span>
+                <span>البوابة الرئيسية</span>
+              </a>
+            </div>
+          `;
+          document.body.insertBefore(banner, document.querySelector('header').nextSibling);
         }
 
         if (statusData.mode === 'DEMO') {
@@ -579,6 +579,21 @@
         const res = await fetch('/api/setup/progress');
         const data = await res.json();
         if (data.success) {
+          // Pre-populate with live venue and policy if available
+          if (data.venue) {
+            if (data.venue.name_ar || data.venue.name) document.getElementById('venueNameAr').value = data.venue.name_ar || data.venue.name || '';
+            if (data.venue.name_en) document.getElementById('venueNameEn').value = data.venue.name_en || '';
+            if (data.venue.tax_registration_number) document.getElementById('venueTaxId').value = data.venue.tax_registration_number || '';
+            if (data.venue.contact_phone) document.getElementById('venuePhone').value = data.venue.contact_phone || '';
+            if (data.venue.address) document.getElementById('venueAddress').value = data.venue.address || '';
+          }
+          if (data.active_policy) {
+            if (data.active_policy.currency) document.getElementById('policyCurrency').value = data.active_policy.currency;
+            if (data.active_policy.vat_percent !== undefined) document.getElementById('policyVatPercent').value = data.active_policy.vat_percent;
+            if (data.active_policy.service_percent !== undefined) document.getElementById('policyServicePercent').value = data.active_policy.service_percent;
+            if (data.active_policy.rounding_rule) document.getElementById('policyRounding').value = data.active_policy.rounding_rule;
+          }
+
           if (data.draft_payload) {
             wizardDraft = data.draft_payload;
             if (wizardDraft.step_1 && wizardDraft.step_1.mode) selectMode(wizardDraft.step_1.mode);
@@ -591,11 +606,9 @@
               if (v.address) document.getElementById('venueAddress').value = v.address;
             }
           }
-          if (data.current_step) {
-            renderStep(Math.min(7, data.current_step));
-          } else {
-            renderStep(1);
-          }
+          renderStep(1);
+        } else {
+          renderStep(1);
         }
       } catch (e) {
         renderStep(1);
