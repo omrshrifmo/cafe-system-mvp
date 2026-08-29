@@ -94,8 +94,12 @@ async function quoteSession(sessionIdOrTableNumber) {
 }
 
 async function settleSession(checkoutPayload, actor = null) {
-  const { table_number, payments = [], customer_phone, points_redeemed = 0, tip_amount = 0, discount_amount = 0, discount_percent = 0, cashier_name } = checkoutPayload;
+  const { table_number, customer_phone, points_redeemed = 0, tip_amount = 0, discount_amount = 0, discount_percent = 0, cashier_name } = checkoutPayload;
   const tNum = parseInt(table_number, 10) || 0;
+  const rawPayments = Array.isArray(checkoutPayload.payments) && checkoutPayload.payments.length > 0
+    ? checkoutPayload.payments
+    : [{ method: checkoutPayload.payment_method || 'CASH', amount: (checkoutPayload.amount_tendered_minor ? checkoutPayload.amount_tendered_minor / 100 : (checkoutPayload.amount || 100)) }];
+  const payments = rawPayments;
 
   return runTransaction(async (tx) => {
     // 0. Strict Lock: Check if order, order_item, or session is already settled/closed
@@ -159,7 +163,9 @@ async function settleSession(checkoutPayload, actor = null) {
     }
 
     let session = null;
-    if (table) {
+    if (targetSessionId) {
+      session = await tx.get(`SELECT * FROM order_sessions WHERE id = ?`, [targetSessionId]);
+    } else if (table) {
       session = await tx.get(
         `SELECT * FROM order_sessions WHERE table_id = ? AND status IN ('OPEN', 'PENDING_PAYMENT') ORDER BY id DESC LIMIT 1`,
         [table.id]

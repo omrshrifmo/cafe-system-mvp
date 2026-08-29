@@ -57,6 +57,11 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
+  // Only intercept same-origin requests to allow native browser handling of CDNs & external fonts
+  if (url.origin !== self.location.origin) {
+    return;
+  }
+
   // NEVER cache API, authentication, WebSocket or dynamic mutations
   if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/ws') || event.request.method !== 'GET') {
     return;

@@ -62,13 +62,15 @@ router.post('/orders', requireAuth, async (req, res, next) => {
 });
 
 // Update KDS status (ACCEPTED, READY, DELIVERED)
-router.put('/orders/:id/status', requireAuth, async (req, res, next) => {
+router.all('/orders/:id/status', requireAuth, async (req, res, next) => {
+  if (req.method !== 'PUT' && req.method !== 'PATCH') return next();
   try {
     const { status } = req.body;
     const result = await updateKdsStatus(req.params.id, status, req.user);
     res.json({
       success: true,
-      result
+      result,
+      data: result
     });
   } catch (err) {
     next(err);
@@ -80,7 +82,7 @@ router.post('/orders/:id/cancel-request', requireAuth, async (req, res, next) =>
   try {
     const { reason } = req.body;
     const result = await requestOrderCancellation(req.params.id, req.user ? req.user.id : null, reason);
-    res.json(result);
+    res.json({ success: true, result, data: result });
   } catch (err) {
     next(err);
   }
@@ -91,7 +93,7 @@ router.post('/orders/request-cancel', requireAuth, async (req, res, next) => {
     const { order_id, id, reason } = req.body;
     const targetId = order_id || id;
     const result = await requestOrderCancellation(targetId, req.user ? req.user.id : null, reason);
-    res.json(result);
+    res.json({ success: true, result, data: result });
   } catch (err) {
     next(err);
   }
@@ -100,9 +102,10 @@ router.post('/orders/request-cancel', requireAuth, async (req, res, next) => {
 // Resolve order cancellation handshake (Barista / Chef / Shiash / Manager)
 router.post('/orders/:id/cancel-resolve', requireAuth, async (req, res, next) => {
   try {
-    const { approved } = req.body;
-    const result = await resolveOrderCancellation(req.params.id, approved === true, req.user ? req.user.id : null);
-    res.json(result);
+    const { approved, approve } = req.body;
+    const isApproved = approved === true || approve === true;
+    const result = await resolveOrderCancellation(req.params.id, isApproved, req.user ? req.user.id : null);
+    res.json({ success: true, result, data: result });
   } catch (err) {
     next(err);
   }
@@ -110,10 +113,11 @@ router.post('/orders/:id/cancel-resolve', requireAuth, async (req, res, next) =>
 
 router.post('/orders/cancel-resolve', requireAuth, async (req, res, next) => {
   try {
-    const { order_id, id, approved } = req.body;
+    const { order_id, id, approved, approve } = req.body;
     const targetId = order_id || id;
-    const result = await resolveOrderCancellation(targetId, approved === true, req.user ? req.user.id : null);
-    res.json(result);
+    const isApproved = approved === true || approve === true;
+    const result = await resolveOrderCancellation(targetId, isApproved, req.user ? req.user.id : null);
+    res.json({ success: true, result, data: result });
   } catch (err) {
     next(err);
   }
