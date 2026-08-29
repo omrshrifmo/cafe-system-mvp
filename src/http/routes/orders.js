@@ -75,11 +75,22 @@ router.put('/orders/:id/status', requireAuth, async (req, res, next) => {
   }
 });
 
-// Request order cancellation (Waiter)
+// Request order cancellation (Waiter) - supports both /orders/:id/cancel-request and /orders/request-cancel
 router.post('/orders/:id/cancel-request', requireAuth, async (req, res, next) => {
   try {
     const { reason } = req.body;
     const result = await requestOrderCancellation(req.params.id, req.user ? req.user.id : null, reason);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/orders/request-cancel', requireAuth, async (req, res, next) => {
+  try {
+    const { order_id, id, reason } = req.body;
+    const targetId = order_id || id;
+    const result = await requestOrderCancellation(targetId, req.user ? req.user.id : null, reason);
     res.json(result);
   } catch (err) {
     next(err);
@@ -91,6 +102,17 @@ router.post('/orders/:id/cancel-resolve', requireAuth, async (req, res, next) =>
   try {
     const { approved } = req.body;
     const result = await resolveOrderCancellation(req.params.id, approved === true, req.user ? req.user.id : null);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/orders/cancel-resolve', requireAuth, async (req, res, next) => {
+  try {
+    const { order_id, id, approved } = req.body;
+    const targetId = order_id || id;
+    const result = await resolveOrderCancellation(targetId, approved === true, req.user ? req.user.id : null);
     res.json(result);
   } catch (err) {
     next(err);

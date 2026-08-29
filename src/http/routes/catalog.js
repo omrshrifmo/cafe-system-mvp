@@ -8,12 +8,35 @@ const { requirePermission } = require('../middleware/permissions');
 const { requireAuth } = require('../middleware/auth');
 const { allQuery, runQuery } = require('../../db/connection');
 
-// Get canonical hierarchical menu for POS, QR, and KDS
+// Get canonical hierarchical & flat menu for POS, QR, and KDS
 router.get(['/menu', '/catalog', '/catalog/menu'], async (req, res, next) => {
   try {
     const menu = await getMenu();
+    const flatItems = [];
+    (menu || []).forEach(cat => {
+      (cat.items || []).forEach(it => {
+        const numPrice = Number(it.price) || (it.price_minor ? it.price_minor / 100 : 0);
+        flatItems.push({
+          id: String(it.id),
+          item_id: String(it.id),
+          name: it.name,
+          name_en: it.name_en || null,
+          price: numPrice,
+          price_minor: it.price_minor || Math.round(numPrice * 100),
+          category: it.department || cat.name || 'BARISTA',
+          category_id: cat.id,
+          category_name: cat.name,
+          icon: cat.icon || '☕',
+          color: cat.color,
+          is_available: it.is_available !== 0
+        });
+      });
+    });
+
     res.json({
       success: true,
+      data: flatItems,
+      items: flatItems,
       menu
     });
   } catch (err) {
@@ -25,8 +48,31 @@ router.get(['/menu', '/catalog', '/catalog/menu'], async (req, res, next) => {
 router.get(['/public/menu', '/public/catalog/menu'], async (req, res, next) => {
   try {
     const menu = await getMenu();
+    const flatItems = [];
+    (menu || []).forEach(cat => {
+      (cat.items || []).forEach(it => {
+        const numPrice = Number(it.price) || (it.price_minor ? it.price_minor / 100 : 0);
+        flatItems.push({
+          id: String(it.id),
+          item_id: String(it.id),
+          name: it.name,
+          name_en: it.name_en || null,
+          price: numPrice,
+          price_minor: it.price_minor || Math.round(numPrice * 100),
+          category: it.department || cat.name || 'BARISTA',
+          category_id: cat.id,
+          category_name: cat.name,
+          icon: cat.icon || '☕',
+          color: cat.color,
+          is_available: it.is_available !== 0
+        });
+      });
+    });
+
     res.json({
       success: true,
+      data: flatItems,
+      items: flatItems,
       menu
     });
   } catch (err) {

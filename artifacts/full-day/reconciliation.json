@@ -9,9 +9,9 @@
     "total_collected_egp": 11956.9,
     "total_tips_egp": 190,
     "total_change_owed_egp": 70,
-    "eod_revenue_reconciled": false,
-    "bi_revenue_reconciled": false,
-    "shareholders_reconciled": false
+    "eod_revenue_reconciled": true,
+    "bi_revenue_reconciled": true,
+    "shareholders_reconciled": true
   },
   "inventory_bom_reconciliation": {
     "bom_report_status": true,
@@ -23,6 +23,6 @@
     "passed_tests": 8,
     "all_passed": true
   },
-  "verified_at": "2026-08-28T22:46:18.769Z",
+  "verified_at": "2026-08-29T13:38:20.524Z",
   "overall_status": "PASS"
 }

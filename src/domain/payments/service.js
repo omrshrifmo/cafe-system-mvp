@@ -98,6 +98,60 @@ async function settleSession(checkoutPayload, actor = null) {
   const tNum = parseInt(table_number, 10) || 0;
 
   return runTransaction(async (tx) => {
+    // 0. Strict Lock: Check if order, order_item, or session is already settled/closed
+    const targetOrderId = checkoutPayload.order_id || checkoutPayload.id;
+    const targetSessionId = checkoutPayload.session_id;
+
+    if (targetOrderId) {
+      const existingOrder = await tx.get(`SELECT id, status FROM orders WHERE id = ?`, [targetOrderId]);
+      if (existingOrder && ['CLOSED', 'PAID', 'SETTLED', 'VOIDED', 'VOID'].includes(existingOrder.status)) {
+        const err = new Error("Order already settled");
+        err.status = 409;
+        err.statusCode = 409;
+        err.code = "ORDER_ALREADY_SETTLED";
+        throw err;
+      }
+
+      const existingOrderItem = await tx.get(`SELECT id, session_id, status FROM order_items WHERE id = ?`, [targetOrderId]);
+      if (existingOrderItem) {
+        if (['CLOSED', 'PAID', 'SETTLED', 'VOIDED', 'VOID'].includes(existingOrderItem.status)) {
+          const err = new Error("Order already settled");
+          err.status = 409;
+          err.statusCode = 409;
+          err.code = "ORDER_ALREADY_SETTLED";
+          throw err;
+        }
+        const parentSession = await tx.get(`SELECT id, status FROM order_sessions WHERE id = ?`, [existingOrderItem.session_id]);
+        if (parentSession && ['CLOSED', 'PAID', 'SETTLED', 'VOIDED', 'VOID'].includes(parentSession.status)) {
+          const err = new Error("Order already settled");
+          err.status = 409;
+          err.statusCode = 409;
+          err.code = "ORDER_ALREADY_SETTLED";
+          throw err;
+        }
+      }
+
+      const existingSessionDirect = await tx.get(`SELECT id, status FROM order_sessions WHERE id = ?`, [targetOrderId]);
+      if (existingSessionDirect && ['CLOSED', 'PAID', 'SETTLED', 'VOIDED', 'VOID'].includes(existingSessionDirect.status)) {
+        const err = new Error("Order already settled");
+        err.status = 409;
+        err.statusCode = 409;
+        err.code = "ORDER_ALREADY_SETTLED";
+        throw err;
+      }
+    }
+
+    if (targetSessionId) {
+      const existingSession = await tx.get(`SELECT id, status FROM order_sessions WHERE id = ?`, [targetSessionId]);
+      if (existingSession && ['CLOSED', 'PAID', 'SETTLED', 'VOIDED', 'VOID'].includes(existingSession.status)) {
+        const err = new Error("Order already settled");
+        err.status = 409;
+        err.statusCode = 409;
+        err.code = "ORDER_ALREADY_SETTLED";
+        throw err;
+      }
+    }
+
     // 1. Resolve table & active session
     let table = null;
     if (tNum > 0) {
@@ -110,6 +164,14 @@ async function settleSession(checkoutPayload, actor = null) {
         `SELECT * FROM order_sessions WHERE table_id = ? AND status IN ('OPEN', 'PENDING_PAYMENT') ORDER BY id DESC LIMIT 1`,
         [table.id]
       );
+    }
+
+    if (session && ['CLOSED', 'PAID', 'SETTLED', 'VOIDED', 'VOID'].includes(session.status)) {
+      const err = new Error("Order already settled");
+      err.status = 409;
+      err.statusCode = 409;
+      err.code = "ORDER_ALREADY_SETTLED";
+      throw err;
     }
 
     // 2. Fetch session items & calculate authoritative bill
@@ -228,8 +290,14 @@ async function settleSession(checkoutPayload, actor = null) {
       customerResult = await tx.get(`SELECT * FROM customers WHERE phone = ?`, [cleanPhone]);
     }
 
-    // 6. Close Session & Table
+    // 6. Close Session & Table Cleanly
+    if (targetOrderId) {
+      await tx.run(`UPDATE orders SET status = 'CLOSED' WHERE id = ?`, [targetOrderId]);
+      await tx.run(`UPDATE order_items SET status = 'SETTLED', updated_at = datetime('now', 'localtime') WHERE id = ?`, [targetOrderId]);
+    }
+
     if (session) {
+      await tx.run(`UPDATE order_items SET status = 'SETTLED', updated_at = datetime('now', 'localtime') WHERE session_id = ?`, [session.id]);
       const activePol = await tx.get(`SELECT version FROM v3_policies ORDER BY version DESC LIMIT 1`);
       const polVer = activePol ? activePol.version : 1;
 
@@ -243,8 +311,32 @@ async function settleSession(checkoutPayload, actor = null) {
 
     if (table) {
       await tx.run(
-        `UPDATE tables SET status = 'PAID', paid_at = datetime('now', 'localtime') WHERE id = ?`,
+        `UPDATE tables 
+         SET status = 'AVAILABLE',
+             custom_name = NULL,
+             customer_name = NULL,
+             customer_phone = NULL,
+             guest_count = 0,
+             seated_at = NULL,
+             first_ordered_at = NULL,
+             last_ordered_at = NULL,
+             check_requested_at = NULL,
+             paid_at = datetime('now', 'localtime'),
+             vacated_at = datetime('now', 'localtime')
+         WHERE id = ?`,
         [table.id]
+      );
+
+      await tx.run(
+        `UPDATE v3_tables 
+         SET status = 'AVAILABLE',
+             active_order_id = NULL,
+             active_reservation_id = NULL,
+             customer_context_json = NULL,
+             version = version + 1,
+             updated_at = datetime('now', 'localtime')
+         WHERE table_number = ?`,
+        [tNum]
       );
     }
 

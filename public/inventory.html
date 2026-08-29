@@ -228,7 +228,7 @@
       try {
         const res = await fetch('/api/inventory');
         const data = await res.json();
-        const items = Array.isArray(data) ? data : (data.inventory || data.items || []);
+        const items = Array.isArray(data) ? data : (data.inventory || data.items || data.data || []);
         if (Array.isArray(items)) {
           renderInventory(items);
         }
@@ -249,28 +249,30 @@
       let cBarista = 0, cShisha = 0, cKitchen = 0;
 
       items.forEach(item => {
-        const rawStock = Number(item.current_stock) || 0;
+        const rawStock = (item.current_stock !== undefined && item.current_stock !== null) 
+          ? Number(item.current_stock) 
+          : ((item.current_stock_microunits !== undefined) ? Number(item.current_stock_microunits) / 1000000 : 0);
         const stock = rawStock % 1 === 0 ? rawStock : parseFloat(rawStock.toFixed(2));
         const unit = item.unit || 'وحدة';
-        const dept = (item.department || 'BARISTA').toUpperCase();
+        const dept = String(item.department || item.category || 'BARISTA').toUpperCase();
 
         const card = document.createElement('div');
-        card.className = 'bg-slate-950 p-2.5 rounded-xl border border-slate-800 flex items-center justify-between';
+        card.className = 'bg-slate-950 p-2.5 rounded-xl border border-slate-800 flex items-center justify-between hover:border-amber-500/40 transition-colors shadow-sm';
         card.innerHTML = `
           <div>
             <h4 class="font-bold text-white text-xs">${item.name}</h4>
-            <span class="text-[10px] text-slate-500">ID: #${item.id}</span>
+            <span class="text-[10px] text-slate-500 font-mono">ID: #${item.id}</span>
           </div>
           <div class="text-right">
             <span class="text-sm font-black font-mono text-amber-400">${stock}</span>
-            <span class="text-[10px] text-slate-400 font-bold">${unit}</span>
+            <span class="text-[10px] text-slate-400 font-bold mr-1">${unit}</span>
           </div>
         `;
 
-        if (dept === 'SHISHA') {
+        if (dept.includes('SHISHA') || dept.includes('شيشة')) {
           shishaGrid.appendChild(card);
           cShisha++;
-        } else if (dept === 'KITCHEN') {
+        } else if (dept.includes('KITCHEN') || dept.includes('مطبخ')) {
           kitchenGrid.appendChild(card);
           cKitchen++;
         } else {

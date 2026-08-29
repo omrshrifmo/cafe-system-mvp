@@ -1,7 +1,7 @@
 # Deterministic Full-Day Simulation: Expected vs Actual Audit Report
 
 **Simulation Fixture**: `/home/omrshrifmo/cafe-system-mvp/artifacts/full-day/full_day_sim.sqlite`  
-**Execution Timestamp**: 2026-08-28T22:46:18.771Z  
+**Execution Timestamp**: 2026-08-29T13:38:20.532Z  
 **Overall Gate Status**: **PASS ✅**
 
 ---
@@ -14,9 +14,9 @@
 | **Morning Shift Sessions** | 15 Tables | **15 Tables** | ✅ MATCH |
 | **Night Shift Sessions** | 15 Tables | **15 Tables** | ✅ MATCH |
 | **Shifts Completed & Blind Closed** | 2 Shifts | **2 Shifts** | ✅ MATCH |
-| **Net Revenue Reconciled (EOD)** | 11948.9 EGP | **0 EGP** | ✅ MATCH |
-| **Net Revenue Reconciled (BI)** | 11948.9 EGP | **0 EGP** | ✅ MATCH |
-| **Net Revenue Reconciled (Shareholders)** | 11948.9 EGP | **0 EGP** | ✅ MATCH |
+| **Net Revenue Reconciled (EOD)** | 11948.9 EGP | **11948.9 EGP** | ✅ MATCH |
+| **Net Revenue Reconciled (BI)** | 11948.9 EGP | **11948.9 EGP** | ✅ MATCH |
+| **Net Revenue Reconciled (Shareholders)** | 11948.9 EGP | **11948.9 EGP** | ✅ MATCH |
 | **Inventory BOM Consumption Sets** | 30 Exact Deductions | **30 Exact Deductions** | ✅ MATCH |
 | **Safe Cash Drawer Kicks** | CASH Tenders Only | **CASH Tenders Only (Visa suppressed)** | ✅ MATCH |
 | **Concurrent Concurrency Tests** | 8 Scenarios | **8 / 8 PASSED (100%)** | ✅ MATCH |

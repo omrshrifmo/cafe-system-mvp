@@ -11,13 +11,15 @@ const { requirePermission } = require('../middleware/permissions');
 const { runQuery, getQuery } = require('../../db/connection');
 const env = require('../../config/env');
 
-// Public non-sensitive cafe branding info for guest QR
+// Public non-sensitive cafe branding info & tax parameters for POS / QR
 router.get('/config/public', async (req, res, next) => {
   try {
     const cafeName = await getQuery(`SELECT value FROM system_config WHERE key = 'cafe_name'`);
     const currency = await getQuery(`SELECT value FROM system_config WHERE key = 'currency'`);
     const headerNote = await getQuery(`SELECT value FROM system_config WHERE key = 'header_note'`);
     const footerNote = await getQuery(`SELECT value FROM system_config WHERE key = 'footer_note'`);
+    const vatPercent = await getQuery(`SELECT value FROM system_config WHERE key = 'vat_percent'`);
+    const servicePercent = await getQuery(`SELECT value FROM system_config WHERE key = 'service_percent'`);
 
     res.json({
       success: true,
@@ -25,7 +27,10 @@ router.get('/config/public', async (req, res, next) => {
         cafe_name: cafeName ? cafeName.value : 'كافيه مزاج',
         currency: currency ? currency.value : 'ج.م',
         header_note: headerNote ? headerNote.value : '',
-        footer_note: footerNote ? footerNote.value : ''
+        footer_note: footerNote ? footerNote.value : '',
+        vat_percent: vatPercent ? Number(vatPercent.value) : 14,
+        service_percent: servicePercent ? Number(servicePercent.value) : 12,
+        apply_taxes: true
       }
     });
   } catch (err) {
@@ -33,8 +38,8 @@ router.get('/config/public', async (req, res, next) => {
   }
 });
 
-// Full operational configuration - strictly requires authentication
-router.get('/config', requireAuth, async (req, res, next) => {
+// Full operational configuration - strictly requires system:settings
+router.get('/config', requireAuth, requirePermission('system:settings'), async (req, res, next) => {
   try {
     const config = await getSystemTaxConfig();
     res.json({

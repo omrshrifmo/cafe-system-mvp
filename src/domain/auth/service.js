@@ -62,25 +62,43 @@ async function authenticateWithPin(pin, ip = null, userAgent = null, deviceId = 
   }
 
   // Fetch all users to check active state, locks, and PIN matches
-  const users = await allQuery(`SELECT id, venue_id, name, role_id, pin_hash, is_active, failed_attempts, locked_until FROM v3_users`);
+  let users = await allQuery(`SELECT id, venue_id, name, role_id, pin_hash, is_active, failed_attempts, locked_until FROM v3_users`);
+  if (!users || users.length === 0) {
+    const legacyUsers = await allQuery(`SELECT id, name, role, pin_hash FROM users`);
+    users = (legacyUsers || []).map(u => ({
+      id: String(u.id),
+      venue_id: 'V_DEFAULT',
+      name: u.name,
+      role_id: 'R_' + (u.role || '').toUpperCase(),
+      pin_hash: u.pin_hash,
+      is_active: 1,
+      failed_attempts: 0,
+      locked_until: null
+    }));
+  }
   let matchedUser = null;
   let isLockedOut = false;
   let isDisabled = false;
 
-  for (const user of users) {
-    if (user.pin_hash && (await verifyPin(cleanPin, user.pin_hash))) {
-      if (user.is_active === 0) {
-        isDisabled = true;
-        matchedUser = user;
-        break;
+  const matches = await Promise.all(
+    users.map(async (u) => {
+      if (!u.pin_hash) return null;
+      try {
+        const isMatch = await verifyPin(cleanPin, u.pin_hash);
+        return isMatch ? u : null;
+      } catch (e) {
+        return null;
       }
-      if (user.locked_until && new Date(user.locked_until).getTime() > Date.now()) {
-        isLockedOut = true;
-        matchedUser = user;
-        break;
-      }
-      matchedUser = user;
-      break;
+    })
+  );
+
+  const matchedUsers = matches.filter(Boolean);
+  if (matchedUsers.length > 0) {
+    matchedUser = matchedUsers[0];
+    if (matchedUser.is_active === 0) {
+      isDisabled = true;
+    } else if (matchedUser.locked_until && new Date(matchedUser.locked_until).getTime() > Date.now()) {
+      isLockedOut = true;
     }
   }
 

@@ -222,32 +222,32 @@ async function generateFullDayFixture(targetDir = FIXTURES_DIR, filename = 'full
   }
 
   const pinUsers = [
-    { id: '1', name: 'عمر (مدير النظام)', role: 'R_SUPER_ADMIN', pin: '1001' },
-    { id: '2', name: 'فاطمة (المالك)', role: 'R_OWNER', pin: '1009' },
-    { id: '3', name: 'وائل (مدير العمليات)', role: 'R_OP_MANAGER', pin: '1008' },
-    { id: '4', name: 'أحمد كركر (كاشير رئيسي)', role: 'R_OP_ASSISTANT_CASHIER', pin: '1007' },
-    { id: '5', name: 'سارة محمود (كاشير مسائي)', role: 'R_CASHIER', pin: '1006' },
-    { id: '6', name: 'الشيف مصطفى (رئيس المطبخ)', role: 'R_CHEF', pin: '1005' },
-    { id: '7', name: 'هاجر / بيبو (باريستا)', role: 'R_BARISTA', pin: '1002' },
-    { id: '8', name: 'عماد فحم (معلم الشيشة)', role: 'R_SHISHA', pin: '1003' },
-    { id: '9', name: 'كريم (كابتن صالة)', role: 'R_HALL_MANAGER', pin: '1004' },
-    { id: '10', name: 'علي (ويتر)', role: 'R_WAITER', pin: '1010' },
-    { id: '11', name: 'حسن سريع (مساعد صالة / رانر)', role: 'R_RUNNER', pin: '1011' },
-    { id: '12', name: 'مدحت مالي (محاسب)', role: 'R_OP_MANAGER', pin: '1012' },
+    { id: '1', name: 'عمر (مدير النظام)', role: 'R_SUPER_ADMIN', pin: '9001' },
+    { id: '2', name: 'فاطمة (المالك)', role: 'R_OWNER', pin: '9009' },
+    { id: '3', name: 'وائل (مدير العمليات)', role: 'R_OP_MANAGER', pin: '9008' },
+    { id: '4', name: 'أحمد كركر (كاشير رئيسي)', role: 'R_OP_ASSISTANT_CASHIER', pin: '9007' },
+    { id: '5', name: 'سارة محمود (كاشير مسائي)', role: 'R_CASHIER', pin: '9006' },
+    { id: '6', name: 'الشيف مصطفى (رئيس المطبخ)', role: 'R_CHEF', pin: '9005' },
+    { id: '7', name: 'هاجر / بيبو (باريستا)', role: 'R_BARISTA', pin: '9002' },
+    { id: '8', name: 'عماد فحم (معلم الشيشة)', role: 'R_SHISHA', pin: '9003' },
+    { id: '9', name: 'كريم (كابتن صالة)', role: 'R_HALL_MANAGER', pin: '9004' },
+    { id: '10', name: 'علي (ويتر)', role: 'R_WAITER', pin: '9010' },
+    { id: '11', name: 'حسن سريع (مساعد صالة / رانر)', role: 'R_RUNNER', pin: '9011' },
+    { id: '12', name: 'مدحت مالي (محاسب)', role: 'R_OP_MANAGER', pin: '9012' },
 
-    // Legacy migration IDs
-    { id: '35', name: 'أحمد (جوكر/ويتر)', role: 'R_JOKER', pin: '1001' },
-    { id: '36', name: 'هاجر/بيبو (باريستا)', role: 'R_BARISTA', pin: '1002' },
+    // Mazaj Production Staff Hierarchy (PIN 1001 - 1012)
+    { id: '35', name: 'أحمد (ويتر/جوكر)', role: 'R_WAITER', pin: '1001' },
+    { id: '36', name: 'هاجر بيبو (باريستا)', role: 'R_BARISTA', pin: '1002' },
     { id: '37', name: 'أسماء (مسؤول شيشة)', role: 'R_SHISHA', pin: '1003' },
-    { id: '38', name: 'شيف المطبخ', role: 'R_CHEF', pin: '1005' },
-    { id: '39', name: 'أمل (ويتر)', role: 'R_WAITER', pin: '1004' },
-    { id: '40', name: 'إبراهيم (مدير صالة)', role: 'R_HALL_MANAGER', pin: '1008' },
+    { id: '38', name: 'الشيف (شيف المطبخ)', role: 'R_CHEF', pin: '1004' },
+    { id: '39', name: 'أمل (ويتر)', role: 'R_WAITER', pin: '1005' },
+    { id: '40', name: 'إبراهيم (مدير صالة)', role: 'R_HALL_MANAGER', pin: '1006' },
     { id: '41', name: 'أحمد كركر (كاشير)', role: 'R_OP_ASSISTANT_CASHIER', pin: '1007' },
     { id: '42', name: 'وائل (مدير عمليات)', role: 'R_OP_MANAGER', pin: '1008' },
     { id: '43', name: 'فاطمة (مالك)', role: 'R_OWNER', pin: '1009' },
-    { id: '44', name: 'وائل 2 (مالك)', role: 'R_OWNER', pin: '1009' },
-    { id: '45', name: 'عمر (مسؤول نظام)', role: 'R_SUPER_ADMIN', pin: '1001' },
-    { id: '46', name: 'شعراوي (مدير تكاليف BOM)', role: 'R_BOM_MANAGER', pin: '1008' },
+    { id: '44', name: 'وائل 2 (مالك)', role: 'R_OWNER', pin: '1010' },
+    { id: '45', name: 'عمر (مسؤول نظام)', role: 'R_SUPER_ADMIN', pin: '1011' },
+    { id: '46', name: 'شعراوي (مدير تكاليف BOM)', role: 'R_BOM_MANAGER', pin: '1012' },
 
     // Role-matrix test users (PIN 8801 - 8814)
     { id: '101', name: 'سوبر أدمن', role: 'R_SUPER_ADMIN', pin: '8801' },
@@ -266,14 +266,14 @@ async function generateFullDayFixture(targetDir = FIXTURES_DIR, filename = 'full
     { id: '114', name: 'مستخدم تقارير للقراءة فقط', role: 'R_READ_ONLY', pin: '8814' },
 
     // Station test users
-    { id: '201', name: 'Barista User', role: 'R_BARISTA', pin: '1002' },
-    { id: '202', name: 'Chef User', role: 'R_CHEF', pin: '1005' },
-    { id: '203', name: 'Runner User', role: 'R_RUNNER', pin: '1011' },
-    { id: '204', name: 'Manager User', role: 'R_OP_MANAGER', pin: '1008' },
+    { id: '201', name: 'Barista User', role: 'R_BARISTA', pin: '9201' },
+    { id: '202', name: 'Chef User', role: 'R_CHEF', pin: '9202' },
+    { id: '203', name: 'Runner User', role: 'R_RUNNER', pin: '9203' },
+    { id: '204', name: 'Manager User', role: 'R_OP_MANAGER', pin: '9204' },
 
     // Shifts test users
-    { id: '301', name: 'كاشير الصباح', role: 'R_OP_ASSISTANT_CASHIER', pin: '1007' },
-    { id: '302', name: 'مالك الكافيه', role: 'R_OWNER', pin: '1009' }
+    { id: '301', name: 'كاشير الصباح', role: 'R_OP_ASSISTANT_CASHIER', pin: '9301' },
+    { id: '302', name: 'مالك الكافيه', role: 'R_OWNER', pin: '9302' }
   ];
 
   for (const u of pinUsers) {

@@ -60,7 +60,7 @@ const routeRegistry = [
   // HR / Payroll / Staff / Attendance / Penalties / Tips / Allowances
   { method: 'ALL', pathRegex: /^\/api\/hr(\/.*)?$/, permission: 'authenticated' },
   { method: 'ALL', pathRegex: /^\/api\/payroll(\/.*)?$/, permission: 'authenticated' },
-  { method: 'ALL', pathRegex: /^\/api\/users(\/.*)?$/, permission: 'authenticated' },
+  { method: 'ALL', pathRegex: /^\/api\/users(\/.*)?$/, permission: 'users:read' },
   { method: 'ALL', pathRegex: /^\/api\/attendance(\/.*)?$/, permission: 'authenticated' },
   { method: 'ALL', pathRegex: /^\/api\/staff(\/.*)?$/, permission: 'authenticated' },
   { method: 'ALL', pathRegex: /^\/api\/penalties(\/.*)?$/, permission: 'authenticated' },
@@ -85,6 +85,7 @@ const routeRegistry = [
   { method: 'ALL', pathRegex: /^\/api\/devices(\/.*)?$/, permission: 'system:settings' },
   { method: 'POST', pathRegex: /^\/api\/admin\/emergency\/request$/, permission: 'authenticated' },
   { method: 'POST', pathRegex: /^\/api\/admin\/emergency\/terminate$/, permission: 'authenticated' },
+  { method: 'GET', pathRegex: /^\/api\/config\/public$/, permission: 'public' },
   { method: 'ALL', pathRegex: /^\/api\/config/, permission: 'system:settings' },
   { method: 'ALL', pathRegex: /^\/api\/admin/, permission: 'system:settings' },
   { method: 'ALL', pathRegex: /^\/api\/print/, permission: 'authenticated' }

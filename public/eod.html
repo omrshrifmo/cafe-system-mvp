@@ -259,6 +259,7 @@
 
     function selectShiftFilter(shift) {
       activeShiftFilter = shift;
+      localStorage.setItem('active_shift_type', shift);
       ['ALL', 'MORNING', 'NIGHT'].forEach(s => {
         const btn = document.getElementById(`shift-btn-${s}`);
         if (btn) {
@@ -358,11 +359,12 @@
         const user = JSON.parse(localStorage.getItem('currentUser') || localStorage.getItem('user') || '{}');
 
         try {
-          const res = await fetch('/api/drawer/declare-extended', {
+          const res = await fetch('/api/shifts/declare-cash-extended', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               shift_type: shift,
+              shift_id: (currentReportData && currentReportData.shift_id) || activeShiftFilter,
               opening_cash: openingCash,
               actual_cash: actualCash,
               user_id: user.id || null,

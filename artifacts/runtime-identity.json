@@ -1,11 +1,11 @@
 {
-  "timestamp": "2026-08-28T20:24:47.848Z",
+  "timestamp": "2026-08-29T10:28:36.983Z",
   "status": "ACTIVE_DEMO_VERIFIED",
   "server": {
-    "pid": 2129894,
+    "pid": 3264858,
     "nodeVersion": "v22.23.2",
     "port": 3000,
-    "uptimeSeconds": 0.110891602
+    "uptimeSeconds": 0.109112674
   },
   "provenance": {
     "buildId": "build-ae9b9527-v2",
@@ -24,6 +24,6 @@
     "liveDatabaseGuarded": true,
     "liveDatabasePath": "/home/omrshrifmo/cafe-system-mvp/cafe.db",
     "liveDatabaseMutated": false,
-    "currentSha256": "c7554fee6a7b273ab6b8fa8f10581449cd771a85d021c1fc9323c72812236fc5"
+    "currentSha256": "3ce8a0d503297b384de1bd86f3ad41acd217fe4fc9721158a835a8cc138ceeb0"
   }
 }

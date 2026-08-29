@@ -170,21 +170,15 @@ router.get('/receipts/:sessionId', requireAuth, async (req, res, next) => {
   }
 });
 
-// Settle Checkout
-router.post('/checkout', requireAuth, requirePermission('payments:take'), async (req, res, next) => {
+// Settle Checkout with Strict Double-Billing Prevention
+router.post(['/checkout', '/payments/checkout'], requireAuth, requirePermission('payments:take'), async (req, res, next) => {
   try {
     const result = await settleSession(req.body, req.user);
     res.json(result);
   } catch (err) {
-    next(err);
-  }
-});
-
-router.post('/payments/checkout', requireAuth, requirePermission('payments:take'), async (req, res, next) => {
-  try {
-    const result = await settleSession(req.body, req.user);
-    res.json(result);
-  } catch (err) {
+    if (err.statusCode === 409 || err.status === 409 || err.code === 'ORDER_ALREADY_SETTLED' || err.message === 'Order already settled') {
+      return res.status(409).json({ success: false, error: err.message || 'Order already settled', code: 'ORDER_ALREADY_SETTLED' });
+    }
     next(err);
   }
 });

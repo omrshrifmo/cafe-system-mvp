@@ -10828,3 +10828,15 @@
 [2026-08-28T15:53:59.821Z] CLI MCP server: already configured — agents can connect.
 [2026-08-28T15:53:59.827Z] Dir cache guard hook updated.
 [2026-08-28T15:54:04.581Z] Attribution v2 hooks updated (claude/cursor/kiro/copilot as enabled).
+[2026-08-29T09:54:03.213Z] Extension updated 1.0.147 -> 1.0.148. Reload the window when convenient to activate.
+[2026-08-29T09:56:21.111Z] CLI MCP server disabled for Claude Code.
+[2026-08-29T09:56:21.112Z] CLI MCP server disabled for Cursor.
+[2026-08-29T09:56:21.112Z] CLI MCP server disabled for Kiro.
+[2026-08-29T09:56:21.112Z] CLI MCP server disabled for GitHub Copilot.
+[2026-08-29T09:56:21.115Z] CLI MCP server disabled and removed.
+[2026-08-29T09:56:27.454Z] CLI MCP server copied to /home/omrshrifmo/.claude/mcp-servers/cli/index.js
+[2026-08-29T09:56:27.457Z] CLI MCP server configured for Claude Code.
+[2026-08-29T09:56:27.458Z] CLI MCP server configured for Cursor.
+[2026-08-29T09:56:27.458Z] CLI MCP server configured for Kiro.
+[2026-08-29T09:56:27.458Z] CLI MCP server configured for GitHub Copilot.
+[2026-08-29T09:56:27.459Z] Enabled CLI MCP server for: claude, cursor, kiro, copilot.

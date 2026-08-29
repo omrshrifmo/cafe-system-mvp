@@ -100,11 +100,11 @@
         <p class="text-slate-500 text-xs">جميع طلبات البارستا جاهزة ومسلّمة!</p>
       </div>
 
-      <div id="orders-grid" class="grid grid-cols-1 md:grid-cols-3 gap-3 w-full flex-1 min-h-[500px]">
+      <div id="orders-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 w-full flex-1 min-h-[500px]">
         <!-- Lane 1: Pending (جديد) -->
         <div class="bg-slate-900/70 border border-amber-500/30 rounded-2xl p-3 flex flex-col">
           <div class="text-xs font-black text-amber-400 mb-2 border-b border-amber-500/20 pb-2 flex items-center justify-between">
-            <span class="flex items-center gap-1.5"><span>🟡</span> طلبات جديدة (معلقة)</span>
+            <span class="flex items-center gap-1.5"><span>🟡</span> طلبات جديدة (PENDING)</span>
             <span id="count-pending" class="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-mono text-[10px] font-black">0</span>
           </div>
           <div id="lane-pending" class="space-y-3 overflow-y-auto flex-1 pr-1"></div>
@@ -113,19 +113,28 @@
         <!-- Lane 2: In Preparation (جاري التجهيز) -->
         <div class="bg-slate-900/70 border border-blue-500/30 rounded-2xl p-3 flex flex-col">
           <div class="text-xs font-black text-blue-400 mb-2 border-b border-blue-500/20 pb-2 flex items-center justify-between">
-            <span class="flex items-center gap-1.5"><span>⏳</span> قيد التجهيز والتحضير</span>
+            <span class="flex items-center gap-1.5"><span>⏳</span> جاري التجهيز (ACCEPTED)</span>
             <span id="count-accepted" class="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 font-mono text-[10px] font-black">0</span>
           </div>
           <div id="lane-accepted" class="space-y-3 overflow-y-auto flex-1 pr-1"></div>
         </div>
 
-        <!-- Lane 3: Ready for Pickup (جاهز للاستلام والتسليم) -->
+        <!-- Lane 3: Ready for Pickup (جاهز للاستلام) -->
         <div class="bg-slate-900/70 border border-emerald-500/30 rounded-2xl p-3 flex flex-col">
           <div class="text-xs font-black text-emerald-400 mb-2 border-b border-emerald-500/20 pb-2 flex items-center justify-between">
-            <span class="flex items-center gap-1.5"><span>☕</span> جاهز للتسليم للويتر/العميل</span>
+            <span class="flex items-center gap-1.5"><span>☕</span> جاهز للاستلام (READY)</span>
             <span id="count-ready" class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-mono text-[10px] font-black">0</span>
           </div>
           <div id="lane-ready" class="space-y-3 overflow-y-auto flex-1 pr-1"></div>
+        </div>
+
+        <!-- Lane 4: Delivered (تم التسليم) -->
+        <div class="bg-slate-900/70 border border-purple-500/30 rounded-2xl p-3 flex flex-col">
+          <div class="text-xs font-black text-purple-400 mb-2 border-b border-purple-500/20 pb-2 flex items-center justify-between">
+            <span class="flex items-center gap-1.5"><span>✅</span> تم التسليم (DELIVERED)</span>
+            <span id="count-delivered" class="px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-mono text-[10px] font-black">0</span>
+          </div>
+          <div id="lane-delivered" class="space-y-3 overflow-y-auto flex-1 pr-1"></div>
         </div>
       </div>
     </section>
@@ -500,18 +509,17 @@
       const lanePending = document.getElementById('lane-pending');
       const laneAccepted = document.getElementById('lane-accepted');
       const laneReady = document.getElementById('lane-ready');
+      const laneDelivered = document.getElementById('lane-delivered');
 
       lanePending.innerHTML = '';
       laneAccepted.innerHTML = '';
       laneReady.innerHTML = '';
+      if (laneDelivered) laneDelivered.innerHTML = '';
 
-      let cPending = 0, cAccepted = 0, cReady = 0;
+      let cPending = 0, cAccepted = 0, cReady = 0, cDelivered = 0;
 
       ordersMap.forEach(order => {
         const status = (order.kds_status || order.status || 'PENDING').toUpperCase();
-        // Skip completed/delivered orders from live 3 lanes
-        if (status === 'DELIVERED' || status === 'COMPLETED') return;
-
         const card = createKdsCard(order, status);
 
         if (status === 'PENDING') {
@@ -523,16 +531,20 @@
         } else if (status === 'READY') {
           laneReady.appendChild(card);
           cReady++;
+        } else if (status === 'DELIVERED' || status === 'COMPLETED') {
+          if (laneDelivered) laneDelivered.appendChild(card);
+          cDelivered++;
         }
       });
 
       document.getElementById('count-pending').textContent = cPending;
       document.getElementById('count-accepted').textContent = cAccepted;
       document.getElementById('count-ready').textContent = cReady;
+      if (document.getElementById('count-delivered')) document.getElementById('count-delivered').textContent = cDelivered;
 
-      const totalActive = cPending + cAccepted + cReady;
-      document.getElementById('pending-counter').textContent = totalActive;
-      document.getElementById('live-tab-count').textContent = totalActive;
+      const totalActive = cPending + cAccepted + cReady + cDelivered;
+      document.getElementById('pending-counter').textContent = cPending + cAccepted + cReady;
+      document.getElementById('live-tab-count').textContent = cPending + cAccepted + cReady;
 
       const emptyState = document.getElementById('empty-state');
       const ordersGrid = document.getElementById('orders-grid');

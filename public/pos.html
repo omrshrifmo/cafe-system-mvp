@@ -1402,53 +1402,102 @@
       }
     }
 
-    // Fetch Dynamic Menu
+    // Fetch Dynamic Menu with Explicit UI States
     async function fetchMenu() {
       const grid = document.getElementById('menu-grid');
       if (grid) {
-        grid.innerHTML = '<div class="col-span-full py-8 text-center text-slate-400 font-bold text-xs">جاري تحميل قائمة الطعام والمشروبات... ☕</div>';
+        grid.innerHTML = `
+          <div class="col-span-full py-12 flex flex-col items-center justify-center gap-3 text-slate-400 font-bold text-xs">
+            <div class="w-8 h-8 border-3 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+            <span>جاري تحميل قائمة المشروبات والمأكولات... ☕</span>
+          </div>
+        `;
       }
       try {
         const response = await fetch('/api/menu');
-        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: تعذر جلب قائمة الطعام من الخادم`);
+        }
+        const resData = await response.json();
 
-        if (response.ok && data.success && data.menu) {
+        if (resData && resData.success) {
+          const rawItems = resData.data || resData.items || resData.menu || [];
           let flatItems = [];
-          if (Array.isArray(data.menu)) {
-            data.menu.forEach(catOrItem => {
+
+          if (Array.isArray(rawItems)) {
+            rawItems.forEach(catOrItem => {
               if (catOrItem && catOrItem.items && Array.isArray(catOrItem.items)) {
                 catOrItem.items.forEach(it => {
                   if (it) {
+                    const priceVal = (it.price !== undefined && it.price !== null)
+                      ? Number(it.price)
+                      : (it.price_minor ? Number(it.price_minor) / 100 : 0);
                     flatItems.push({
-                      ...it,
+                      id: String(it.id),
+                      item_id: String(it.id),
+                      name: it.name || it.menu_item_name || 'بدون اسم',
                       menu_item_name: it.name || it.menu_item_name || 'بدون اسم',
                       category: it.department || catOrItem.name || 'BARISTA',
-                      price: (it.price !== undefined) ? it.price : (it.price_minor ? (it.price_minor / 100).toFixed(2) : 0)
+                      price: priceVal,
+                      price_minor: it.price_minor || Math.round(priceVal * 100),
+                      icon: it.icon || catOrItem.icon || getItemIcon(it.name || '', it.department || catOrItem.name),
+                      is_available: it.is_available !== 0
                     });
                   }
                 });
               } else if (catOrItem) {
+                const priceVal = (catOrItem.price !== undefined && catOrItem.price !== null)
+                  ? Number(catOrItem.price)
+                  : (catOrItem.price_minor ? Number(catOrItem.price_minor) / 100 : 0);
                 flatItems.push({
-                  ...catOrItem,
+                  id: String(catOrItem.id),
+                  item_id: String(catOrItem.id),
+                  name: catOrItem.name || catOrItem.menu_item_name || 'بدون اسم',
                   menu_item_name: catOrItem.name || catOrItem.menu_item_name || 'بدون اسم',
                   category: catOrItem.department || catOrItem.category || 'BARISTA',
-                  price: (catOrItem.price !== undefined) ? catOrItem.price : (catOrItem.price_minor ? (catOrItem.price_minor / 100).toFixed(2) : 0)
+                  price: priceVal,
+                  price_minor: catOrItem.price_minor || Math.round(priceVal * 100),
+                  icon: catOrItem.icon || getItemIcon(catOrItem.name || '', catOrItem.category),
+                  is_available: catOrItem.is_available !== 0
                 });
               }
             });
           }
-          menuItems = flatItems;
+
+          menuItems = flatItems.filter(it => it.is_available);
           renderMenuGrid();
         } else {
+          const errMsg = (resData && resData.error) || 'تعذر جلب قائمة الطعام';
           if (grid) {
-            grid.innerHTML = '<div class="col-span-full py-8 text-center text-rose-400 font-bold text-xs">تعذر جلب القائمة <button onclick="fetchMenu()" class="mr-2 px-3 py-1 bg-amber-500 text-slate-950 rounded-lg text-xs font-bold">إعادة المحاولة</button></div>';
+            grid.innerHTML = `
+              <div class="col-span-full py-10 flex flex-col items-center justify-center gap-3 text-center text-rose-400 font-bold text-xs">
+                <span>⚠️ ${errMsg}</span>
+                <button onclick="fetchMenu()" class="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl text-xs shadow-md cursor-pointer transition-all">
+                  🔄 إعادة المحاولة
+                </button>
+              </div>
+            `;
           }
-          showToast('فشل في جلب قائمة الطعام', false);
+          if (window.UIState && window.UIState.showApiError) {
+            window.UIState.showApiError(errMsg);
+          } else {
+            showToast(errMsg, false);
+          }
         }
       } catch (err) {
         console.error('Failed to fetch menu:', err);
         if (grid) {
-          grid.innerHTML = '<div class="col-span-full py-8 text-center text-rose-400 font-bold text-xs">خطأ بالاتصال بالسيرفر <button onclick="fetchMenu()" class="mr-2 px-3 py-1 bg-amber-500 text-slate-950 rounded-lg text-xs font-bold">إعادة المحاولة</button></div>';
+          grid.innerHTML = `
+            <div class="col-span-full py-10 flex flex-col items-center justify-center gap-3 text-center text-rose-400 font-bold text-xs">
+              <span>⚠️ خطأ في الاتصال بالخادم لجلب قائمة الأصناف</span>
+              <button onclick="fetchMenu()" class="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl text-xs shadow-md cursor-pointer transition-all">
+                🔄 إعادة المحاولة
+              </button>
+            </div>
+          `;
+        }
+        if (window.UIState && window.UIState.showApiError) {
+          window.UIState.showApiError(err);
         }
       }
     }
@@ -1654,33 +1703,61 @@
       renderCartUI();
     }
 
-    // Custom Item Modal
+    // Custom Item Modal Lifecycle & Submission
     function openCustomItemModal() {
-      document.getElementById('custom-item-modal').classList.remove('hidden');
-      document.getElementById('custom-name-input').focus();
+      const modal = document.getElementById('custom-item-modal');
+      if (modal) {
+        modal.classList.remove('hidden');
+        modal.setAttribute('aria-hidden', 'false');
+      }
+      const nameInput = document.getElementById('custom-name-input');
+      if (nameInput) {
+        nameInput.value = '';
+        setTimeout(() => nameInput.focus(), 50);
+      }
+      const priceInput = document.getElementById('custom-price-input');
+      if (priceInput) priceInput.value = '';
     }
 
     function closeCustomItemModal() {
-      document.getElementById('custom-item-modal').classList.add('hidden');
-      document.getElementById('custom-name-input').value = '';
-      document.getElementById('custom-price-input').value = '';
+      const modal = document.getElementById('custom-item-modal');
+      if (modal) {
+        modal.classList.add('hidden');
+        modal.setAttribute('aria-hidden', 'true');
+      }
+      const nameInput = document.getElementById('custom-name-input');
+      if (nameInput) nameInput.value = '';
+      const priceInput = document.getElementById('custom-price-input');
+      if (priceInput) priceInput.value = '';
     }
 
     function submitCustomItem(e) {
-      if (e) e.preventDefault();
-      const name = document.getElementById('custom-name-input').value.trim();
-      const price = Number(document.getElementById('custom-price-input').value) || 0;
+      if (e && typeof e.preventDefault === 'function') e.preventDefault();
+      const nameInput = document.getElementById('custom-name-input');
+      const priceInput = document.getElementById('custom-price-input');
+      const name = nameInput ? nameInput.value.trim() : '';
+      const parsedPrice = priceInput ? parseFloat(priceInput.value) : 0;
+      const validPrice = (!isNaN(parsedPrice) && parsedPrice >= 0) ? parsedPrice : 0;
 
       if (!name) {
-        showToast('يرجى كتابة اسم الصنف المخصص', false);
+        if (window.UIState && window.UIState.alert) {
+          window.UIState.alert('يرجى إدخال اسم الصنف المخصص');
+        } else {
+          showToast('يرجى كتابة اسم الصنف المخصص', false);
+        }
         return;
       }
 
+      const customId = `custom_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
       cart.push({
+        id: customId,
+        item_id: customId,
         item_name: name,
+        name: name,
         category: 'BARISTA',
         icon: '✨',
-        price: Math.max(0, price),
+        price: validPrice,
+        price_minor: Math.round(validPrice * 100),
         quantity: 1,
         sugar_level: 'مظبوط',
         roast_type: 'افتراضي'
@@ -1688,7 +1765,7 @@
 
       closeCustomItemModal();
       renderCartUI();
-      showToast(`تمت إضافة "${name}" للفاتورة`, true);
+      showToast(`تمت إضافة "${name}" (${validPrice} ج.م) للفاتورة بنجاح ✨`, true);
     }
 
     // Render Ticket UI (Active Table Orders + New Cart Items)

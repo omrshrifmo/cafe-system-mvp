@@ -248,7 +248,7 @@ router.get('/shifts/me', requireAuth, async (req, res, next) => {
   }
 });
 
-router.post('/shifts/declare-cash-extended', requireAuth, async (req, res, next) => {
+router.post(['/shifts/declare-cash-extended', '/shifts/declare-cash', '/drawer/declare-extended', '/hr/declare-cash'], requireAuth, async (req, res, next) => {
   try {
     const payload = {
       user_id: req.user.id,

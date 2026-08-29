@@ -1,5 +1,6 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
+const bcrypt = require('bcryptjs');
 
 // Database file path
 const dbPath = path.join(__dirname, 'cafe.db');
@@ -77,6 +78,19 @@ db.serialize(() => {
     });
   });
 
+  // Order Payments Table (Split payment: CASH, INSTAPAY, WALLET, VISA, CREDIT, with Tips)
+  db.run(`
+    CREATE TABLE IF NOT EXISTS order_payments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      order_id INTEGER,
+      method TEXT NOT NULL,
+      amount REAL DEFAULT 0,
+      tip_amount REAL DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(order_id) REFERENCES orders(id) ON DELETE CASCADE
+    )
+  `);
+
   // Performance Indexes for Database Scalability & Concurrency
   db.run(`CREATE INDEX IF NOT EXISTS idx_orders_created_at ON orders(created_at)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_orders_kds_status ON orders(kds_status)`);
@@ -107,30 +121,61 @@ db.serialize(() => {
     )
   `);
 
-  // Order Payments Table (Split payment: CASH, INSTAPAY, WALLET, VISA, CREDIT, with Tips)
-  db.run(`
-    CREATE TABLE IF NOT EXISTS order_payments (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      order_id INTEGER,
-      method TEXT NOT NULL,
-      amount REAL DEFAULT 0,
-      tip_amount REAL DEFAULT 0,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY(order_id) REFERENCES orders(id) ON DELETE CASCADE
-    )
-  `);
-
   // Users Table (RBAC System)
   db.run(`
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
       role TEXT NOT NULL,
-      pin_code TEXT UNIQUE NOT NULL,
+      pin_hash TEXT NOT NULL,
       hourly_rate REAL DEFAULT 0
     )
   `);
   db.run(`ALTER TABLE users ADD COLUMN hourly_rate REAL DEFAULT 0`, () => {});
+
+  // Safe migration: Detect legacy pin_code and migrate to bcrypt pin_hash
+  db.all(`PRAGMA table_info(users)`, [], (err, cols) => {
+    if (err || !cols) return;
+    const colNames = cols.map(c => c.name);
+    const hasPinCode = colNames.includes('pin_code');
+    const hasPinHash = colNames.includes('pin_hash');
+
+    if (hasPinCode) {
+      if (!hasPinHash) {
+        db.run(`ALTER TABLE users ADD COLUMN pin_hash TEXT`, (alterErr) => {
+          if (!alterErr) migrateLegacyPins();
+        });
+      } else {
+        migrateLegacyPins();
+      }
+    }
+  });
+
+  function migrateLegacyPins() {
+    db.all(`SELECT id, pin_code, pin_hash FROM users`, [], (err, rows) => {
+      if (err || !rows || rows.length === 0) {
+        try {
+          db.run(`ALTER TABLE users DROP COLUMN pin_code`, () => {});
+        } catch (e) {}
+        return;
+      }
+      const stmt = db.prepare(`UPDATE users SET pin_hash = ? WHERE id = ?`);
+      rows.forEach(r => {
+        if (r.pin_code) {
+          const isHash = r.pin_code.startsWith('$2a$') || r.pin_code.startsWith('$2b$');
+          const hash = isHash ? r.pin_code : bcrypt.hashSync(String(r.pin_code).trim(), 10);
+          stmt.run(hash, r.id);
+        }
+      });
+      stmt.finalize(() => {
+        try {
+          db.run(`ALTER TABLE users DROP COLUMN pin_code`, () => {
+            console.log('✅ Migrated legacy pin_code to bcrypt pin_hash and dropped plain-text column.');
+          });
+        } catch (e) {}
+      });
+    });
+  }
 
   // Penalties Table (خصومات وجزاءات الموظفين)
   db.run(`
@@ -216,26 +261,34 @@ db.serialize(() => {
   db.run(`
     CREATE TABLE IF NOT EXISTS staff_allowances (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      role TEXT UNIQUE NOT NULL,
+      role TEXT UNIQUE,
       daily_drink_quota INTEGER DEFAULT 2,
       daily_meal_quota INTEGER DEFAULT 1,
       monthly_budget REAL DEFAULT 500
     )
   `, () => {
-    const roles = [
-      { role: 'BARISTA', drinks: 3, meals: 1 },
-      { role: 'SHIASH', drinks: 3, meals: 1 },
-      { role: 'CHEF', drinks: 2, meals: 2 },
-      { role: 'WAITER', drinks: 2, meals: 1 },
-      { role: 'OP_ASSISTANT_CASHIER', drinks: 2, meals: 1 },
-      { role: 'OP_MANAGER', drinks: 4, meals: 2 },
-      { role: 'HALL_MANAGER', drinks: 3, meals: 1 },
-      { role: 'MANAGER', drinks: 4, meals: 2 },
-      { role: 'OWNER', drinks: 10, meals: 5 },
-      { role: 'ADMIN', drinks: 10, meals: 5 }
-    ];
-    roles.forEach(r => {
-      db.run(`INSERT OR IGNORE INTO staff_allowances (role, daily_drink_quota, daily_meal_quota) VALUES (?, ?, ?)`, [r.role, r.drinks, r.meals]);
+    db.run(`ALTER TABLE staff_allowances ADD COLUMN role TEXT`, () => {
+      db.run(`ALTER TABLE staff_allowances ADD COLUMN daily_drink_quota INTEGER DEFAULT 2`, () => {
+        db.run(`ALTER TABLE staff_allowances ADD COLUMN daily_meal_quota INTEGER DEFAULT 1`, () => {
+          db.run(`ALTER TABLE staff_allowances ADD COLUMN monthly_budget REAL DEFAULT 500`, () => {
+            const roles = [
+              { role: 'BARISTA', drinks: 3, meals: 1 },
+              { role: 'SHIASH', drinks: 3, meals: 1 },
+              { role: 'CHEF', drinks: 2, meals: 2 },
+              { role: 'WAITER', drinks: 2, meals: 1 },
+              { role: 'OP_ASSISTANT_CASHIER', drinks: 2, meals: 1 },
+              { role: 'OP_MANAGER', drinks: 4, meals: 2 },
+              { role: 'HALL_MANAGER', drinks: 3, meals: 1 },
+              { role: 'MANAGER', drinks: 4, meals: 2 },
+              { role: 'OWNER', drinks: 10, meals: 5 },
+              { role: 'ADMIN', drinks: 10, meals: 5 }
+            ];
+            roles.forEach(r => {
+              db.run(`INSERT OR IGNORE INTO staff_allowances (role, daily_drink_quota, daily_meal_quota) VALUES (?, ?, ?)`, [r.role, r.drinks, r.meals], () => {});
+            });
+          });
+        });
+      });
     });
   });
 
@@ -487,7 +540,7 @@ db.serialize(() => {
     )
   `);
 
-  // Inventory Table (BOM Raw Materials)
+  // Inventory Table / View (BOM Raw Materials Canonical Bridge)
   db.run(`
     CREATE TABLE IF NOT EXISTS inventory (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -500,6 +553,17 @@ db.serialize(() => {
   db.run(`ALTER TABLE inventory ADD COLUMN min_stock_level REAL DEFAULT 0`, () => {});
   db.run(`ALTER TABLE inventory ADD COLUMN unit_cost REAL DEFAULT 0`, () => {});
   db.run(`ALTER TABLE inventory ADD COLUMN supplier_id INTEGER`, () => {});
+
+  // Create authoritative view bridge if inventory_items exists
+  db.run(`
+    CREATE VIEW IF NOT EXISTS inventory_v_bridge AS
+    SELECT id, name, category as department, unit,
+           (current_stock_microunits / 1000000.0) as current_stock,
+           min_limit as min_stock_level,
+           (cost_per_unit_minor / 100.0) as unit_cost,
+           default_supplier_id as supplier_id
+    FROM inventory_items
+  `, () => {});
 
   // Recipes Table (BOM Relationships)
   db.run(`
@@ -747,19 +811,19 @@ function seedDatabaseIfEmpty() {
  */
 function seedUsersIfEmpty() {
   const staffList = [
-    // Official Cafe Mazaj Staff PINs
+    // Official Cafe Mazaj Staff PINs (1001 - 1012)
     ['أحمد (ويتر/جوكر)', 'WAITER', '1001'],
-    ['هاجر/بيبو (باريستا)', 'BARISTA', '1002'],
-    ['أسماء (مسؤول شيشة)', 'SHIASH', '1003'],
-    ['شيف المطبخ', 'CHEF', '1004'],
+    ['هاجر بيبو (باريستا)', 'BARISTA', '1002'],
+    ['أسماء (مسؤول شيشة)', 'SHISHA', '1003'],
+    ['الشيف (شيف المطبخ)', 'CHEF', '1004'],
     ['أمل (ويتر)', 'WAITER', '1005'],
     ['إبراهيم (مدير صالة)', 'HALL_MANAGER', '1006'],
     ['أحمد كركر (كاشير)', 'OP_ASSISTANT_CASHIER', '1007'],
     ['وائل (مدير عمليات)', 'OP_MANAGER', '1008'],
     ['فاطمة (مالك)', 'OWNER', '1009'],
-    ['وائل (مالك)', 'OWNER', '1010'],
-    ['عمر (مسؤول نظام)', 'ADMIN', '1011'],
-    ['شعراوي (مدير تكاليف BOM)', 'OP_MANAGER', '1012'],
+    ['وائل 2 (مالك)', 'OWNER', '1010'],
+    ['عمر (مسؤول نظام)', 'SUPER_ADMIN', '1011'],
+    ['شعراوي (مدير تكاليف BOM)', 'BOM_MANAGER', '1012'],
     // Universal Default PINs
     ['باريستا', 'BARISTA', '1111'],
     ['معد شيشة', 'SHIASH', '2222'],
@@ -773,12 +837,13 @@ function seedUsersIfEmpty() {
   ];
 
   db.serialize(() => {
-    const stmt = db.prepare(`INSERT OR IGNORE INTO users (name, role, pin_code) VALUES (?, ?, ?)`);
+    const stmt = db.prepare(`INSERT OR IGNORE INTO users (name, role, pin_hash) VALUES (?, ?, ?)`);
     staffList.forEach(([name, role, pin]) => {
-      stmt.run(name, role, pin);
+      const hash = bcrypt.hashSync(String(pin), 10);
+      stmt.run(name, role, hash);
     });
     stmt.finalize(() => {
-      console.log('✅ Users table seeded with Cafe Mazaj production staff and standard RBAC roles.');
+      console.log('✅ Users table seeded with Cafe Mazaj production staff and standard RBAC roles (bcrypt hashed).');
     });
   });
 }
@@ -1153,9 +1218,28 @@ function getPendingOrders() {
  */
 function getInventory() {
   return new Promise((resolve, reject) => {
-    const sql = `SELECT id, name, current_stock, unit, department FROM inventory ORDER BY id ASC`;
+    const sql = `
+      SELECT i.id, i.name, 
+             COALESCE(SUM(l.quantity_delta_microunits), i.current_stock_microunits, 0) / 1000000.0 as current_stock,
+             i.unit, 
+             i.category as department,
+             i.cost_per_unit_minor / 100.0 as unit_cost,
+             i.min_limit as min_stock_level,
+             i.default_supplier_id as supplier_id
+      FROM inventory_items i
+      LEFT JOIN inventory_ledger l ON i.id = l.inventory_item_id
+      WHERE i.is_active = 1
+      GROUP BY i.id
+      ORDER BY i.name ASC
+    `;
     db.all(sql, [], (err, rows) => {
-      if (err) return reject(err);
+      if (err) {
+        // Fallback to legacy inventory table if inventory_items does not exist
+        return db.all(`SELECT id, name, current_stock, unit, department FROM inventory ORDER BY id ASC`, [], (err2, rows2) => {
+          if (err2) return reject(err);
+          resolve(rows2 || []);
+        });
+      }
       resolve(rows || []);
     });
   });
@@ -1166,60 +1250,107 @@ function getInventory() {
  */
 function saveOrderPayments(orderId, tableNumber, payments = [], tipAmount = 0, taxBreakdown = {}) {
   return new Promise((resolve, reject) => {
-    db.serialize(() => {
-      const subtotal = Number(taxBreakdown.subtotal) || 0;
-      const serviceAmount = Number(taxBreakdown.service_amount) || 0;
-      const vatAmount = Number(taxBreakdown.vat_amount) || 0;
-      const discountAmount = Number(taxBreakdown.discount_amount) || 0;
-      const totalAmount = Number(taxBreakdown.total_amount) || 0;
-      const currency = taxBreakdown.currency || 'ج.م';
-
-      const insertSql = `
-        INSERT INTO order_payments (
-          order_id, method, amount, tip_amount, 
-          subtotal, service_amount, vat_amount, discount_amount, total_amount, currency
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `;
-      let pending = payments.length;
-      let insertErr = null;
-      const tipNum = Number(tipAmount) || 0;
-
-      if (pending === 0) {
-        if (tableNumber > 0) {
-          db.run(`UPDATE table_sessions SET status = 'CLOSED' WHERE table_number = ?`, [tableNumber]);
-          db.run(`UPDATE orders SET status = 'CLOSED' WHERE table_number = ?`, [tableNumber]);
+    // 1. Strict status check for already settled orders
+    if (orderId) {
+      db.get(`SELECT id, status FROM orders WHERE id = ?`, [orderId], (err, existingOrder) => {
+        if (err) return reject(err);
+        if (existingOrder && ['CLOSED', 'PAID', 'SETTLED', 'VOIDED', 'VOID'].includes(existingOrder.status)) {
+          const conflictErr = new Error("Order already settled");
+          conflictErr.statusCode = 409;
+          conflictErr.code = "ORDER_ALREADY_SETTLED";
+          return reject(conflictErr);
         }
-        if (tipNum > 0 || totalAmount > 0) {
-          db.run(insertSql, [orderId || null, 'CASH', totalAmount, tipNum, subtotal, serviceAmount, vatAmount, discountAmount, totalAmount, currency]);
-        }
-        return resolve(true);
-      }
+        executePaymentSave();
+      });
+    } else {
+      executePaymentSave();
+    }
 
-      payments.forEach((p, idx) => {
-        const m = (p.method || 'CASH').toUpperCase();
-        const amt = Number(p.amount) || 0;
-        const entryTip = (idx === 0) ? tipNum : 0;
-        const entrySub = (idx === 0) ? subtotal : 0;
-        const entrySrv = (idx === 0) ? serviceAmount : 0;
-        const entryVat = (idx === 0) ? vatAmount : 0;
-        const entryDisc = (idx === 0) ? discountAmount : 0;
-        const entryTot = (idx === 0) ? (totalAmount || amt) : amt;
+    function executePaymentSave() {
+      db.serialize(() => {
+        const subtotal = Number(taxBreakdown.subtotal) || 0;
+        const serviceAmount = Number(taxBreakdown.service_amount) || 0;
+        const vatAmount = Number(taxBreakdown.vat_amount) || 0;
+        const discountAmount = Number(taxBreakdown.discount_amount) || 0;
+        const totalAmount = Number(taxBreakdown.total_amount) || 0;
+        const currency = taxBreakdown.currency || 'ج.م';
 
-        db.run(insertSql, [orderId || null, m, amt, entryTip, entrySub, entrySrv, entryVat, entryDisc, entryTot, currency], (err) => {
-          if (err && !insertErr) insertErr = err;
-          pending--;
+        const insertSql = `
+          INSERT INTO order_payments (
+            order_id, method, amount, tip_amount, 
+            subtotal, service_amount, vat_amount, discount_amount, total_amount, currency
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `;
+        let pending = payments.length;
+        let insertErr = null;
+        const tipNum = Number(tipAmount) || 0;
 
-          if (pending === 0) {
-            if (insertErr) return reject(insertErr);
-            if (tableNumber > 0) {
-              db.run(`UPDATE table_sessions SET status = 'CLOSED' WHERE table_number = ?`, [tableNumber]);
-              db.run(`UPDATE orders SET status = 'CLOSED' WHERE table_number = ?`, [tableNumber]);
-            }
-            resolve(true);
+        function sanitizeTableAndClose() {
+          if (orderId) {
+            db.run(`UPDATE orders SET status = 'CLOSED' WHERE id = ?`, [orderId]);
           }
+          if (tableNumber > 0) {
+            db.run(`UPDATE table_sessions SET status = 'CLOSED' WHERE table_number = ?`, [tableNumber]);
+            db.run(`UPDATE orders SET status = 'CLOSED' WHERE table_number = ?`, [tableNumber]);
+            db.run(`
+              UPDATE tables 
+              SET status = 'AVAILABLE',
+                  custom_name = NULL,
+                  customer_name = NULL,
+                  customer_phone = NULL,
+                  guest_count = 0,
+                  seated_at = NULL,
+                  first_ordered_at = NULL,
+                  last_ordered_at = NULL,
+                  check_requested_at = NULL,
+                  paid_at = datetime('now', 'localtime'),
+                  vacated_at = datetime('now', 'localtime')
+              WHERE table_number = ?
+            `, [tableNumber]);
+            db.run(`
+              UPDATE v3_tables 
+              SET status = 'AVAILABLE',
+                  active_order_id = NULL,
+                  active_reservation_id = NULL,
+                  customer_context_json = NULL,
+                  version = version + 1,
+                  updated_at = datetime('now', 'localtime')
+              WHERE table_number = ?
+            `, [tableNumber]);
+          }
+        }
+
+        if (pending === 0) {
+          sanitizeTableAndClose();
+          if (tipNum > 0 || totalAmount > 0) {
+            db.run(insertSql, [orderId || null, 'CASH', totalAmount, tipNum, subtotal, serviceAmount, vatAmount, discountAmount, totalAmount, currency]);
+          }
+          return resolve(true);
+        }
+
+        payments.forEach((p, idx) => {
+          const m = (p.method || 'CASH').toUpperCase();
+          const amt = Number(p.amount) || 0;
+          const entryTip = (idx === 0) ? tipNum : 0;
+          const entrySub = (idx === 0) ? subtotal : 0;
+          const entrySrv = (idx === 0) ? serviceAmount : 0;
+          const entryVat = (idx === 0) ? vatAmount : 0;
+          const entryDisc = (idx === 0) ? discountAmount : 0;
+          const entryTot = (idx === 0) ? (totalAmount || amt) : amt;
+
+          db.run(insertSql, [orderId || null, m, amt, entryTip, entrySub, entrySrv, entryVat, entryDisc, entryTot, currency], (err) => {
+            if (err && !insertErr) insertErr = err;
+            pending--;
+
+            if (pending === 0) {
+              if (insertErr) return reject(insertErr);
+              sanitizeTableAndClose();
+              resolve(true);
+            }
+          });
         });
       });
-    });
+    }
   });
 }
 
@@ -1602,11 +1733,17 @@ function getBIData(dateRange = 'today') {
  */
 function loginWithPin(pinCode) {
   return new Promise((resolve, reject) => {
-    const pin = String(pinCode).trim();
-    db.get(`SELECT id, name, role, pin_code FROM users WHERE pin_code = ?`, [pin], (err, row) => {
+    const pin = String(pinCode || '').trim();
+    if (!pin) return resolve(null);
+    db.all(`SELECT id, name, role, pin_hash, hourly_rate FROM users`, [], (err, rows) => {
       if (err) return reject(err);
-      if (!row) return resolve(null);
-      resolve(row);
+      if (!rows || rows.length === 0) return resolve(null);
+      for (const row of rows) {
+        if (row.pin_hash && bcrypt.compareSync(pin, row.pin_hash)) {
+          return resolve(row);
+        }
+      }
+      resolve(null);
     });
   });
 }
@@ -1765,9 +1902,10 @@ function getTotalTipsPool() {
  */
 async function voidOrder(orderId, managerPin) {
   return new Promise((resolve, reject) => {
-    const checkPinSql = `SELECT * FROM users WHERE pin_code = ? AND role IN ('OWNER', 'OP_MANAGER', 'MANAGER', 'ADMIN')`;
-    db.get(checkPinSql, [managerPin], (err, user) => {
+    const checkPinSql = `SELECT * FROM users WHERE role IN ('OWNER', 'OP_MANAGER', 'MANAGER', 'ADMIN')`;
+    db.all(checkPinSql, [], (err, users) => {
       if (err) return reject(err);
+      const user = (users || []).find(u => u.pin_hash && bcrypt.compareSync(String(managerPin).trim(), u.pin_hash));
       if (!user) {
         return resolve({ success: false, error: 'رمز PIN غير مصرح به لإلغاء الطلبات (يلزم مدير عمليات/مالك)' });
       }
@@ -2085,7 +2223,7 @@ async function getPayrollData(startDate = null, endDate = null) {
       try {
         const payrollList = [];
         for (const user of users) {
-          // 1. Calculate Total Hours from Shifts
+          // 1. Calculate Total Hours from Shifts (Safely bounded per shift)
           let shiftSql = `SELECT clock_in, clock_out FROM shifts WHERE user_id = ?`;
           const shiftParams = [user.id];
           if (startDate) {
@@ -2106,7 +2244,9 @@ async function getPayrollData(startDate = null, endDate = null) {
             const startMs = new Date(s.clock_in).getTime();
             const endMs = s.clock_out ? new Date(s.clock_out).getTime() : Date.now();
             if (!isNaN(startMs) && !isNaN(endMs) && endMs > startMs) {
-              totalHours += (endMs - startMs) / (1000 * 60 * 60);
+              const rawDuration = (endMs - startMs) / (1000 * 60 * 60);
+              // Cap at 24 hours max per single shift session to avoid runaway unclosed shifts
+              totalHours += Math.min(24, Math.max(0, rawDuration));
             }
           }
 
@@ -2115,8 +2255,8 @@ async function getPayrollData(startDate = null, endDate = null) {
           const baseSalary = totalHours * hourlyRate;
 
           // 3. Advances
-          let advSql = `SELECT COALESCE(SUM(amount), 0) as total FROM employee_advances WHERE employee_name = ?`;
-          const advParams = [user.name];
+          let advSql = `SELECT COALESCE(SUM(amount), 0) as total FROM employee_advances WHERE employee_name = ? OR employee_id = ?`;
+          const advParams = [user.name, user.id];
           if (startDate) {
             advSql += ` AND date(issued_at) >= date(?)`;
             advParams.push(startDate);
@@ -2146,8 +2286,10 @@ async function getPayrollData(startDate = null, endDate = null) {
           });
           const totalPenalties = parseFloat(penRow.total) || 0;
 
-          // 5. Net Salary
-          const netSalary = baseSalary - totalAdvances - totalPenalties;
+          // 5. Net Salary & Carried Debt (Floored at 0 for payable net pay)
+          const rawNetSalary = baseSalary - totalAdvances - totalPenalties;
+          const payableNetSalary = Math.max(0, rawNetSalary);
+          const carriedDebt = rawNetSalary < 0 ? Math.round(Math.abs(rawNetSalary) * 100) / 100 : 0;
 
           payrollList.push({
             user_id: user.id,
@@ -2158,7 +2300,8 @@ async function getPayrollData(startDate = null, endDate = null) {
             base_salary: Math.round(baseSalary * 100) / 100,
             total_advances: Math.round(totalAdvances * 100) / 100,
             total_penalties: Math.round(totalPenalties * 100) / 100,
-            net_salary: Math.round(netSalary * 100) / 100
+            carried_debt: carriedDebt,
+            net_salary: Math.round(payableNetSalary * 100) / 100
           });
         }
         resolve(payrollList);
@@ -2787,8 +2930,9 @@ function getAllUsers() {
 
 function createUser(name, role, pinCode, hourlyRate) {
   return new Promise((resolve, reject) => {
-    const sql = `INSERT INTO users (name, role, pin_code, hourly_rate) VALUES (?, ?, ?, ?)`;
-    db.run(sql, [name, role, pinCode, Number(hourlyRate)||0], function(err) {
+    const pinHash = bcrypt.hashSync(String(pinCode).trim(), 10);
+    const sql = `INSERT INTO users (name, role, pin_hash, hourly_rate) VALUES (?, ?, ?, ?)`;
+    db.run(sql, [name, role, pinHash, Number(hourlyRate)||0], function(err) {
       if (err) return reject(err);
       logAudit(null, 'CREATE_USER', 'users', this.lastID, null, { name, role });
       resolve({ id: this.lastID, name, role });
@@ -2798,9 +2942,10 @@ function createUser(name, role, pinCode, hourlyRate) {
 
 function updateUser(id, fields) {
   return new Promise((resolve, reject) => {
-    const { name, role, pin_code, hourly_rate } = fields;
-    const sql = `UPDATE users SET name=COALESCE(?,name), role=COALESCE(?,role), pin_code=COALESCE(?,pin_code), hourly_rate=COALESCE(?,hourly_rate) WHERE id=?`;
-    db.run(sql, [name||null, role||null, pin_code||null, hourly_rate!=null?hourly_rate:null, id], function(err) {
+    const { name, role, pin_code, pin_hash, hourly_rate } = fields;
+    const finalHash = pin_hash || (pin_code ? bcrypt.hashSync(String(pin_code).trim(), 10) : null);
+    const sql = `UPDATE users SET name=COALESCE(?,name), role=COALESCE(?,role), pin_hash=COALESCE(?,pin_hash), hourly_rate=COALESCE(?,hourly_rate) WHERE id=?`;
+    db.run(sql, [name||null, role||null, finalHash, hourly_rate!=null?hourly_rate:null, id], function(err) {
       if (err) return reject(err);
       logAudit(null, 'UPDATE_USER', 'users', id, null, { name, role });
       resolve({ success: true, id });
