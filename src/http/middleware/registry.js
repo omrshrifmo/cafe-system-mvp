@@ -20,11 +20,15 @@ const routeRegistry = [
 
   // Basic Authenticated User Endpoints
   { method: 'GET', pathRegex: /^\/api\/auth\/me$/, permission: 'authenticated' },
-  { method: 'POST', pathRegex: /^\/api\/auth\/(unlock|verify-pin|rotate-pin|revoke-all|ping)$/, permission: 'authenticated' },
+  { method: 'POST', pathRegex: /^\/api\/auth\/(unlock|verify-pin|rotate-pin|change-pin|revoke-all|ping)$/, permission: 'authenticated' },
   { method: 'ALL', pathRegex: /^\/api\/auth\/(caffeine|checkpoint)$/, permission: 'authenticated' },
   { method: 'ALL', pathRegex: /^\/api\/auth\/sessions(\/.*)?$/, permission: 'authenticated' },
-  { method: 'ALL', pathRegex: /^\/api\/system\/(backup|restore|factory-reset)$/, permission: 'authenticated' },
+  { method: 'POST', pathRegex: /^\/api\/(system|setup)\/initialize$/, permission: 'public' },
+  { method: 'ALL', pathRegex: /^\/api\/system\/(backup|restore|factory-reset|initialize)$/, permission: 'authenticated' },
   { method: 'ALL', pathRegex: /^\/api\/(backup|restore)$/, permission: 'authenticated' },
+  { method: 'GET', pathRegex: /^\/api\/(notifications|inventory)\/low-stock$/, permission: 'authenticated' },
+  { method: 'GET', pathRegex: /^\/api\/export\/(sales|inventory|orders|templates?\/.*)$/, permission: 'authenticated' },
+  { method: 'POST', pathRegex: /^\/api\/import\/(menu|master)$/, permission: 'menu:write' },
   
   // Menu & Catalog (Public Read, Write requires menu:write)
   { method: 'GET', pathRegex: /^\/api\/(menu|catalog)(\/.*)?$/, permission: 'public' },
@@ -71,10 +75,10 @@ const routeRegistry = [
   { method: 'ALL', pathRegex: /^\/api\/(allowances|staff-allowances)(\/.*)?$/, permission: 'authenticated' },
   { method: 'ALL', pathRegex: /^\/api\/adjustments(\/.*)?$/, permission: 'authenticated' },
   
-  // CRM / Hospitality / Quality / Complaints / Audit / Activity Ledger
+  // CRM / Hospitality / Quality / Complaints / Audit / Activity Ledger / HACCP
   { method: 'ALL', pathRegex: /^\/api\/(crm|customers)(\/.*)?$/, permission: 'crm:read' },
   { method: 'ALL', pathRegex: /^\/api\/reservations(\/.*)?$/, permission: 'reservations:read' },
-  { method: 'ALL', pathRegex: /^\/api\/(quality|qa|complaints)(\/.*)?$/, permission: 'authenticated' },
+  { method: 'ALL', pathRegex: /^\/api\/(quality|qa|complaints|haccp)(\/.*)?$/, permission: 'authenticated' },
   { method: 'ALL', pathRegex: /^\/api\/(audit|activity-ledger)(\/.*)?$/, permission: 'authenticated' },
   
   // Realtime & Sync & Stations

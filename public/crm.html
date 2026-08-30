@@ -216,8 +216,21 @@
 
     function renderCustomers(customers) {
       const tbody = document.getElementById('customersTableBody');
-      if (!customers.length) {
-        tbody.innerHTML = `<tr><td colspan="6" class="text-center py-12 text-slate-500">لا يوجد عملاء</td></tr>`;
+      if (!customers || !customers.length) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="6" class="py-12 px-4 text-center">
+              <div class="max-w-md mx-auto p-6 rounded-2xl bg-slate-900 border border-slate-700 shadow-xl space-y-3">
+                <div class="text-4xl">👥</div>
+                <h4 class="text-sm font-black text-white">سجل العملاء فارغ</h4>
+                <p class="text-xs text-slate-400">لم يتم تسجيل أي عملاء حتى الآن. ابدأ بإضافة العميل الأول لتفعيل برامج الولاء والنقاط.</p>
+                <button onclick="openAddModal()" class="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl text-xs shadow-lg cursor-pointer transition-all">
+                  ➕ إضافة أول عميل
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
         return;
       }
       tbody.innerHTML = customers.map(c => {

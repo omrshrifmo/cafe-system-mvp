@@ -2,10 +2,15 @@
   "name": "cafe-system-mvp",
   "version": "2.0.0",
   "description": "Production-grade, offline-first MENA Arabic RTL Cafe ERP System",
-  "main": "src/server.js",
+  "main": "main.js",
   "scripts": {
     "start": "node src/server.js",
     "dev": "node src/server.js",
+    "electron:start": "electron .",
+    "electron:dev": "electron .",
+    "compile:bytecode": "node build.js",
+    "dist:win": "node build.js && electron-builder --win --x64",
+    "pack": "electron-builder --dir",
     "db:migrate": "node src/db/cli.js migrate",
     "db:status": "node src/db/cli.js status",
     "db:backup": "node src/db/cli.js backup",
@@ -28,6 +33,54 @@
     "audit:production": "node -e 'console.log(\"Production Security & RBAC Audit... Passed 0 vulnerabilities detected.\")'",
     "test:coverage": "NODE_ENV=test c8 mocha \"test/**/*.test.js\" --timeout 15000 --exit"
   },
+  "build": {
+    "appId": "com.mazaj.os",
+    "productName": "Mazaj OS",
+    "directories": {
+      "output": "dist_installer"
+    },
+    "files": [
+      "main.js",
+      "dist_bytecode/**/*",
+      "public/**/*",
+      "src/**/*",
+      "package.json",
+      "node_modules/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "bin",
+        "to": "bin",
+        "filter": [
+          "*"
+        ]
+      },
+      {
+        "from": "cafe.db",
+        "to": "cafe.db"
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "public/icons/icon-512x512.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Mazaj OS",
+      "artifactName": "MazajOS-Setup-${version}.${ext}",
+      "runAfterFinish": true
+    }
+  },
   "keywords": [
     "pos",
     "kds",
@@ -40,13 +93,15 @@
   "license": "UNLICENSED",
   "type": "commonjs",
   "dependencies": {
-    "bcrypt": "^6.0.0",
+    "axios": "^1.20.0",
     "bcryptjs": "^3.0.3",
+    "bytenode": "^1.6.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "csv-parser": "^3.2.1",
     "express": "^5.2.1",
     "express-rate-limit": "^8.6.2",
+    "jsonwebtoken": "^9.0.3",
     "multer": "^2.2.0",
     "multicast-dns": "^7.2.5",
     "node-thermal-printer": "^4.6.1",
@@ -57,6 +112,8 @@
   },
   "devDependencies": {
     "c8": "^12.0.0",
+    "electron": "^44.0.0",
+    "electron-builder": "^26.15.3",
     "eslint": "^10.9.0",
     "mocha": "^11.8.0",
     "supertest": "^7.2.2"

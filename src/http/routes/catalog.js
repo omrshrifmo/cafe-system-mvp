@@ -151,6 +151,11 @@ router.get(['/menu/items', '/catalog/menu/items'], async (req, res, next) => {
     const items = await allQuery(
       `SELECT m.id, m.category_id, m.name, m.name_en, m.description, m.department, 
               m.is_available, m.is_featured, m.sort_order, m.sku, m.lifecycle_state, m.publication_version,
+              COALESCE(m.has_sugar_options, 0) as has_sugar_options,
+              COALESCE(m.has_roast_options, 0) as has_roast_options,
+              m.available_flavors,
+              COALESCE(m.is_surprise_mix, 0) as is_surprise_mix,
+              m.prep_instructions,
               c.name as category_name, c.icon as category_icon,
               COALESCE(p.amount_minor, 0) as price_minor,
               (COALESCE(p.amount_minor, 0) / 100.0) as price,
@@ -162,7 +167,19 @@ router.get(['/menu/items', '/catalog/menu/items'], async (req, res, next) => {
     );
     res.json({
       success: true,
-      items
+      items: items.map(it => {
+        let flavors = [];
+        try {
+          flavors = it.available_flavors ? (typeof it.available_flavors === 'string' ? JSON.parse(it.available_flavors) : it.available_flavors) : [];
+        } catch (e) { flavors = []; }
+        return {
+          ...it,
+          available_flavors: flavors,
+          has_sugar_options: Boolean(it.has_sugar_options),
+          has_roast_options: Boolean(it.has_roast_options),
+          is_surprise_mix: Boolean(it.is_surprise_mix)
+        };
+      })
     });
   } catch (err) {
     next(err);
@@ -171,7 +188,11 @@ router.get(['/menu/items', '/catalog/menu/items'], async (req, res, next) => {
 
 router.post(['/menu/items', '/catalog/menu/items'], requireAuth, requirePermission('menu:write'), async (req, res, next) => {
   try {
-    const { sku, name, name_en, category_id, department = 'BARISTA', price_minor, price, description, is_featured = 0, sort_order = 0, instructions } = req.body;
+    const { 
+      sku, name, name_en, category_id, department = 'BARISTA', price_minor, price, 
+      description, is_featured = 0, sort_order = 0, instructions,
+      has_sugar_options = 0, has_roast_options = 0, available_flavors, is_surprise_mix = 0, prep_instructions
+    } = req.body;
     
     if (!name || !name.trim()) {
       return res.status(400).json({ success: false, error: 'اسم الصنف مطلوب' });
@@ -184,7 +205,8 @@ router.post(['/menu/items', '/catalog/menu/items'], requireAuth, requirePermissi
       sku, name, name_en, category_id, department, 
       priceMinor: computedPriceMinor, 
       description, is_featured, sort_order, 
-      author_id: req.user ? req.user.id : null
+      author_id: req.user ? req.user.id : null,
+      has_sugar_options, has_roast_options, available_flavors, is_surprise_mix, prep_instructions
     });
 
     if (instructions) {
@@ -216,7 +238,11 @@ router.post(['/menu/items/:id/publish', '/catalog/menu/items/:id/publish'], requ
 router.put('/menu/items/:id', requireAuth, requirePermission('menu:write'), async (req, res, next) => {
   try {
     const itemId = req.params.id;
-    const { sku, name, name_en, category_id, department, price_minor, price, description, is_available, is_featured, sort_order } = req.body;
+    const { 
+      sku, name, name_en, category_id, department, price_minor, price, description, 
+      is_available, is_featured, sort_order,
+      has_sugar_options, has_roast_options, available_flavors, is_surprise_mix, prep_instructions
+    } = req.body;
 
     if (is_available !== undefined && name === undefined && price === undefined && price_minor === undefined) {
       await runQuery(`UPDATE menu_items SET is_available = ?, updated_at = datetime('now', 'localtime') WHERE id = ?`, [is_available ? 1 : 0, itemId]);
@@ -231,6 +257,10 @@ router.put('/menu/items/:id', requireAuth, requirePermission('menu:write'), asyn
       }
     }
 
+    const flavorsStr = available_flavors !== undefined 
+      ? (available_flavors ? (typeof available_flavors === 'string' ? available_flavors : JSON.stringify(available_flavors)) : null)
+      : undefined;
+
     await runQuery(
       `UPDATE menu_items SET
          sku = COALESCE(?, sku),
@@ -242,9 +272,22 @@ router.put('/menu/items/:id', requireAuth, requirePermission('menu:write'), asyn
          is_available = COALESCE(?, is_available),
          is_featured = COALESCE(?, is_featured),
          sort_order = COALESCE(?, sort_order),
+         has_sugar_options = COALESCE(?, has_sugar_options),
+         has_roast_options = COALESCE(?, has_roast_options),
+         available_flavors = COALESCE(?, available_flavors),
+         is_surprise_mix = COALESCE(?, is_surprise_mix),
+         prep_instructions = COALESCE(?, prep_instructions),
          updated_at = datetime('now', 'localtime')
        WHERE id = ?`,
-      [sku, category_id, name, name_en, description, department, is_available, is_featured, sort_order, itemId]
+      [
+        sku, category_id, name, name_en, description, department, is_available, is_featured, sort_order,
+        has_sugar_options !== undefined ? (has_sugar_options ? 1 : 0) : null,
+        has_roast_options !== undefined ? (has_roast_options ? 1 : 0) : null,
+        flavorsStr,
+        is_surprise_mix !== undefined ? (is_surprise_mix ? 1 : 0) : null,
+        prep_instructions,
+        itemId
+      ]
     );
 
     if (price !== undefined || price_minor !== undefined) {

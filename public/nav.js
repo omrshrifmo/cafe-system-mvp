@@ -40,13 +40,15 @@
       items: [
         { title: 'العملاء والولاء (CRM)', path: '/crm.html', icon: '👥', roles: [...ALL_PRIVILEGED, 'HALL_MANAGER', 'CASHIER'] },
         { title: 'الموارد البشرية والرواتب', path: '/hr.html', icon: '💼', roles: [...ALL_PRIVILEGED, 'HR_PAYROLL'] },
-        { title: 'معايير الجودة والـ QA', path: '/qa.html', icon: '🛡️', roles: [...ALL_PRIVILEGED, 'BOM_MANAGER', 'QA'] }
+        { title: 'معايير الجودة والـ QA', path: '/qa.html', icon: '🛡️', roles: [...ALL_PRIVILEGED, 'BOM_MANAGER', 'QA'] },
+        { title: 'سلامة الغذاء والنظافة (HACCP)', path: '/haccp.html', icon: '🌡️', roles: [...ALL_PRIVILEGED, 'BOM_MANAGER', 'QA', 'BARISTA', 'CHEF'] }
       ]
     },
     {
       groupTitle: 'التقارير والإدارة المالية',
       items: [
         { title: 'إعدادات النظام والضرائب', path: '/settings.html', icon: '⚙️', roles: ['SUPER_ADMIN', 'OWNER'] },
+        { title: 'المصروفات والعهد (Expenses)', path: '/expenses.html', icon: '💸', roles: [...ALL_PRIVILEGED, 'CASHIER', 'HR_PAYROLL'] },
         { title: 'تقفيل الوردية (EOD)', path: '/eod.html', icon: '📊', roles: [...ALL_PRIVILEGED, 'CASHIER'] },
         { title: 'مؤشرات الأداء (BI)', path: '/bi.html', icon: '📈', roles: [...ALL_PRIVILEGED, 'READ_ONLY'] },
         { title: 'حسابات الشركاء', path: '/shareholders.html', icon: '💎', roles: ['SUPER_ADMIN', 'OWNER'] },
@@ -92,6 +94,78 @@
       }
       return null;
     };
+
+    // Global 402 Payment Required License Interception
+    if (window.fetch) {
+      const originalFetch = window.fetch;
+      window.fetch = async function (...args) {
+        const response = await originalFetch.apply(this, args);
+        if (response.status === 402) {
+          try {
+            const clone = response.clone();
+            const data = await clone.json();
+            showLicenseExpiredOverlay(data);
+          } catch (e) {
+            showLicenseExpiredOverlay({});
+          }
+        }
+        return response;
+      };
+    }
+  }
+
+  function showLicenseExpiredOverlay(details = {}) {
+    if (typeof document === 'undefined') return;
+    if (document.getElementById('mazaj-license-expired-overlay')) return;
+
+    const overlay = document.createElement('div');
+    overlay.id = 'mazaj-license-expired-overlay';
+    overlay.className = 'fixed inset-0 z-[9999999] bg-slate-950/95 backdrop-blur-md flex items-center justify-center p-6 text-slate-100 select-none';
+    overlay.dir = 'rtl';
+    overlay.style.fontFamily = "'Tajawal', system-ui, sans-serif";
+
+    overlay.innerHTML = `
+      <div class="max-w-lg w-full bg-slate-900 border-2 border-rose-600 rounded-3xl p-8 shadow-2xl text-center space-y-6">
+        <div class="w-20 h-20 bg-rose-500/20 border-2 border-rose-500/50 rounded-3xl flex items-center justify-center text-4xl mx-auto shadow-inner">
+          🔒
+        </div>
+
+        <div class="space-y-2">
+          <h2 class="text-xl font-black text-rose-400">انتهت صلاحية ترخيص الاشتراك</h2>
+          <p class="text-xs text-slate-300 leading-relaxed font-medium">
+            توقف خادم النظام عن معالجة العمليات نظراً لانتهاء فترة صلاحية الاشتراك التجاري لهذا الجهاز.
+          </p>
+        </div>
+
+        <div class="p-4 bg-slate-950 rounded-2xl border border-slate-800 text-right space-y-2 text-xs">
+          <div class="flex justify-between items-center text-slate-400">
+            <span>معرف عتاد الجهاز (Hardware ID):</span>
+            <span class="font-mono font-bold text-amber-400">${details.hardware_id || 'LOCAL-MAC-NODE'}</span>
+          </div>
+          <div class="flex justify-between items-center text-slate-400">
+            <span>حالة الترخيص:</span>
+            <span class="font-bold text-rose-400">ملغي / منتهي الصلاحية (Expired)</span>
+          </div>
+          <div class="flex justify-between items-center text-slate-400">
+            <span>إجراء التفعيل:</span>
+            <span class="font-bold text-emerald-400">تجديد الاشتراك عبر الدعم الفني</span>
+          </div>
+        </div>
+
+        <div class="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-300 text-xs font-bold leading-relaxed">
+          📞 يرجى التواصل مع فريق المبيعات والدعم الفني لتجديد الترخيص الفوري:<br>
+          <span class="font-mono text-sm tracking-wider text-white">support@mazajcafe.com | +20 100 000 0000</span>
+        </div>
+
+        <div class="pt-2">
+          <button onclick="window.location.reload()" class="w-full py-3 bg-rose-600 hover:bg-rose-500 text-white font-black text-xs rounded-xl shadow-lg cursor-pointer transition-all">
+            🔄 إعادة فحص حالة الترخيص بعد السداد
+          </button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
   }
 
   // Auto-Register PWA Service Worker with Update Prompt
@@ -607,16 +681,17 @@
             <span>مقعد: ${(typeof localStorage !== 'undefined' && localStorage.getItem('cafe_seat_id')) || 'POS-01'}</span>
           </div>
 
-          <div class="px-2 md:px-2.5 py-1 bg-slate-950 rounded-lg text-[11px] font-bold text-slate-300 border border-slate-800 flex items-center gap-1.5">
+          <button onclick="window.MazajNav.showChangePinModal()" id="nav-profile-badge" title="تغيير رمز PIN للمستخدم الحالي" class="px-2 md:px-2.5 py-1 bg-slate-950 hover:bg-slate-800 rounded-lg text-[11px] font-bold text-slate-300 border border-slate-800 flex items-center gap-1.5 cursor-pointer transition-colors">
             <span>👤</span>
             <span class="text-white max-w-[80px] sm:max-w-[100px] truncate">${currentUser.name || 'مستخدم'}</span>
             <span class="text-amber-400 text-[10px] font-mono font-black">(${userRole})</span>
-          </div>
+            <span class="text-[9px] text-amber-500/90 ml-0.5">🔑</span>
+          </button>
 
-          <button onclick="window.MazajNav.showNotificationsModal()" id="nav-notifications-btn" title="التنبيهات والإشعارات الأمنية" class="px-2 md:px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 rounded-lg text-[11px] font-bold cursor-pointer transition-colors flex items-center gap-1 relative">
+          <button onclick="window.MazajNav.showLowStockDropdown()" id="nav-notifications-btn" title="تنبيهات نقص المخزون والإشعارات" class="px-2 md:px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 rounded-lg text-[11px] font-bold cursor-pointer transition-colors flex items-center gap-1 relative">
             <span>🔔</span>
             <span class="hidden sm:inline">الإشعارات</span>
-            <span id="nav-notifications-badge" class="hidden bg-rose-500 text-white rounded-full px-1.5 py-0.2 text-[9px] font-black animate-pulse">0</span>
+            <span id="nav-notifications-badge" class="hidden bg-rose-600 text-white rounded-full px-1.5 py-0.2 text-[9px] font-black">0</span>
           </button>
 
           <button onclick="window.MazajNav.lockScreen()" id="nav-lock-btn" title="قفل الشاشة مؤقتاً" class="px-2 md:px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 rounded-lg text-[11px] font-bold cursor-pointer transition-colors flex items-center gap-1">
@@ -776,23 +851,23 @@
     });
 
     setInterval(updateClock, 1000);
-    updateClock();
     updateNetworkStatusBadge();
     checkNotificationsBadge();
-    setInterval(checkNotificationsBadge, 30000);
+    setInterval(checkNotificationsBadge, 60000);
   }
 
   async function checkNotificationsBadge() {
     try {
-      const res = await fetch('/api/audit/notifications?limit=5', {
+      const res = await fetch('/api/notifications/low-stock', {
         headers: { 'Accept': 'application/json' }
       });
       if (res.ok) {
         const data = await res.json();
         const badge = document.getElementById('nav-notifications-badge');
         if (badge) {
-          if (data.unread_count > 0) {
-            badge.textContent = data.unread_count > 99 ? '99+' : data.unread_count;
+          const count = data.count || (data.items ? data.items.length : 0);
+          if (count > 0) {
+            badge.textContent = count > 99 ? '99+' : count;
             badge.classList.remove('hidden');
           } else {
             badge.classList.add('hidden');
@@ -802,30 +877,46 @@
     } catch (e) {}
   }
 
-  async function showNotificationsModal() {
+  async function showLowStockDropdown() {
     try {
-      const res = await fetch('/api/audit/notifications?limit=20', {
+      const res = await fetch('/api/notifications/low-stock', {
         headers: { 'Accept': 'application/json' }
       });
-      if (!res.ok) throw new Error('فشل جلب الإشعارات');
+      if (!res.ok) throw new Error('فشل جلب تنبيهات المخزون');
       const data = await res.json();
-      const notifs = data.notifications || [];
+      const items = data.items || [];
 
-      let listHtml = notifs.length === 0 
-        ? '<div class="text-center py-6 text-slate-400 text-xs">لا توجد إشعارات أو تنبيهات حالية.</div>'
-        : `<div class="space-y-2 max-h-80 overflow-y-auto scrollbar-thin">` + notifs.map(n => `
-          <div class="p-3 bg-slate-900/80 border ${n.severity === 'CRITICAL' ? 'border-rose-500/50 bg-rose-950/20' : n.severity === 'HIGH' ? 'border-amber-500/40 bg-amber-950/20' : 'border-slate-800'} rounded-xl text-right">
-            <div class="flex items-center justify-between text-[11px] mb-1">
-              <span class="font-bold text-amber-400">${n.title || 'تنبيه أمني'}</span>
-              <span class="text-[10px] text-slate-500 font-mono">${new Date(n.created_at).toLocaleTimeString('ar-SA')}</span>
-            </div>
-            <div class="text-xs text-slate-300 mb-1.5">${n.body || ''}</div>
-            ${n.recommended_action_ar ? `<div class="text-[10px] bg-slate-950/60 p-1.5 rounded-lg border border-slate-800 text-amber-200">💡 <strong>الإجراء المقترح:</strong> ${n.recommended_action_ar}</div>` : ''}
+      let listHtml = items.length === 0 
+        ? '<div class="text-center py-6 text-emerald-400 font-bold text-xs">جميع أصناف ومواد المخزون ضمن الحدود الآمنة ✅</div>'
+        : `
+          <div class="text-xs text-slate-300 mb-3 font-medium leading-relaxed">
+            تم رصد <strong class="text-rose-400 font-bold font-mono">${items.length}</strong> صنف/مادة خام وصلت أو هبطت تحت حد الطلب الأدنى:
           </div>
-        `).join('') + `</div>`;
+          <div class="space-y-2 max-h-80 overflow-y-auto scrollbar-thin">
+        ` + items.map(item => `
+          <div class="p-2.5 bg-slate-900/90 border border-rose-500/40 rounded-xl text-right flex items-center justify-between gap-3">
+            <div>
+              <div class="font-bold text-xs text-white">${item.name}</div>
+              <div class="text-[10px] text-slate-400 font-mono">القسم: ${item.department || 'عام'} • المورد: ${item.supplier_name || 'غير محدد'}</div>
+            </div>
+            <div class="text-left shrink-0">
+              <div class="text-xs font-mono font-black text-rose-400">${item.current_stock} ${item.unit || ''}</div>
+              <div class="text-[10px] text-slate-400 font-mono">الحد الأدنى: ${item.min_stock_level}</div>
+            </div>
+          </div>
+        `).join('') + `
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-800 flex justify-end">
+            <a href="/inventory.html" class="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl text-xs transition-colors shadow">
+              إدارة المخزون والتوريد 📦
+            </a>
+          </div>
+        `;
 
       if (window.UIState && window.UIState.showInPageAlert) {
-        await window.UIState.showInPageAlert(listHtml, 'مركز الإشعارات والتنبيهات الأمنية', 'info', 'إغلاق');
+        await window.UIState.showInPageAlert(listHtml, 'تنبيهات نقص المخزون (Low Stock)', 'warning', 'إغلاق');
+      } else {
+        showLowStockModalFallback(listHtml);
       }
       checkNotificationsBadge();
     } catch (err) {
@@ -833,6 +924,147 @@
         window.UIState.showToast(err.message, 'error');
       }
     }
+  }
+
+  function showLowStockModalFallback(contentHtml) {
+    let modal = document.getElementById('low-stock-modal');
+    if (modal) modal.remove();
+
+    modal = document.createElement('div');
+    modal.id = 'low-stock-modal';
+    modal.dir = 'rtl';
+    modal.className = 'fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[99999] flex items-center justify-center p-4 text-slate-100 select-none';
+    modal.style.fontFamily = "'Tajawal', system-ui, sans-serif";
+
+    modal.innerHTML = `
+      <div class="w-full max-w-md bg-slate-900 border border-rose-500/40 rounded-2xl p-5 shadow-2xl">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
+          <div class="flex items-center gap-2">
+            <span class="text-xl">🔔</span>
+            <h3 class="text-sm font-black text-rose-400">تنبيهات نقص المخزون</h3>
+          </div>
+          <button onclick="document.getElementById('low-stock-modal').remove()" class="w-6 h-6 rounded-lg bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center text-xs">✕</button>
+        </div>
+        ${contentHtml}
+      </div>
+    `;
+    document.body.appendChild(modal);
+  }
+
+  function showChangePinModal() {
+    let modal = document.getElementById('change-pin-modal');
+    if (modal) modal.remove();
+
+    modal = document.createElement('div');
+    modal.id = 'change-pin-modal';
+    modal.dir = 'rtl';
+    modal.className = 'fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[99999] flex items-center justify-center p-4 text-slate-100 select-none';
+    modal.style.fontFamily = "'Tajawal', system-ui, sans-serif";
+
+    modal.innerHTML = `
+      <div class="w-full max-w-sm bg-slate-900 border border-amber-500/40 rounded-2xl p-5 shadow-2xl">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
+          <div class="flex items-center gap-2">
+            <span class="text-xl">🔑</span>
+            <h3 class="text-sm font-black text-amber-300">تغيير رمز المرور (PIN)</h3>
+          </div>
+          <button onclick="document.getElementById('change-pin-modal').remove()" class="w-6 h-6 rounded-lg bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center text-xs">✕</button>
+        </div>
+
+        <p class="text-xs text-slate-300 mb-4 leading-relaxed">
+          عند تغيير رمز PIN، ستستمر جلستك الحالية على هذا الجهاز، ويتم فورياً إبطال وإنهاء تسجيل الدخول من جميع الأجهزة الأخرى.
+        </p>
+
+        <form id="change-pin-form" onsubmit="window.MazajNav.submitChangePin(event)" class="space-y-3 mb-4">
+          <div>
+            <label class="block text-[11px] font-bold text-slate-400 mb-1">رمز PIN الحالي:</label>
+            <input type="password" id="current-pin-input" required maxlength="8" placeholder="••••" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-center text-lg tracking-widest text-white focus:border-amber-400 focus:outline-none">
+          </div>
+
+          <div>
+            <label class="block text-[11px] font-bold text-slate-400 mb-1">رمز PIN الجديد (4 أرقام على الأقل):</label>
+            <input type="password" id="new-pin-input" required maxlength="8" placeholder="••••" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-center text-lg tracking-widest text-amber-400 focus:border-amber-400 focus:outline-none">
+          </div>
+
+          <div>
+            <label class="block text-[11px] font-bold text-slate-400 mb-1">تأكيد رمز PIN الجديد:</label>
+            <input type="password" id="confirm-pin-input" required maxlength="8" placeholder="••••" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-center text-lg tracking-widest text-amber-400 focus:border-amber-400 focus:outline-none">
+          </div>
+
+          <div id="change-pin-err" class="hidden p-2 rounded-lg bg-rose-950/60 border border-rose-800 text-rose-300 text-xs text-center font-bold"></div>
+
+          <div class="flex items-center gap-2 pt-2">
+            <button type="submit" id="submit-change-pin-btn" class="flex-1 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs rounded-xl transition-all shadow cursor-pointer">
+              حفظ الرمز وتأمين الجلسات 🔒
+            </button>
+            <button type="button" onclick="document.getElementById('change-pin-modal').remove()" class="px-3 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs rounded-xl transition-all cursor-pointer">
+              إلغاء
+            </button>
+          </div>
+        </form>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    setTimeout(() => {
+      const inp = document.getElementById('current-pin-input');
+      if (inp) inp.focus();
+    }, 50);
+  }
+
+  async function submitChangePin(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    const currentPin = document.getElementById('current-pin-input')?.value.trim();
+    const newPin = document.getElementById('new-pin-input')?.value.trim();
+    const confirmPin = document.getElementById('confirm-pin-input')?.value.trim();
+    const errEl = document.getElementById('change-pin-err');
+    const btn = document.getElementById('submit-change-pin-btn');
+
+    if (errEl) errEl.classList.add('hidden');
+
+    if (!currentPin || !newPin || !confirmPin) {
+      if (errEl) { errEl.textContent = 'يرجى إدخال جميع الحقول المطلوبة'; errEl.classList.remove('hidden'); }
+      return;
+    }
+    if (newPin.length < 4) {
+      if (errEl) { errEl.textContent = 'رمز PIN الجديد يجب أن يتكون من 4 أرقام على الأقل'; errEl.classList.remove('hidden'); }
+      return;
+    }
+    if (newPin !== confirmPin) {
+      if (errEl) { errEl.textContent = 'رمز PIN الجديد وتأكيده غير متطابقين'; errEl.classList.remove('hidden'); }
+      return;
+    }
+
+    try {
+      if (btn) { btn.disabled = true; btn.textContent = 'جاري الحفظ... ⏳'; }
+      const res = await fetch('/api/auth/change-pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ old_pin: currentPin, new_pin: newPin })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        document.getElementById('change-pin-modal')?.remove();
+        if (window.UIState && window.UIState.showToast) {
+          window.UIState.showToast(data.message || 'تم تغيير رمز PIN بنجاح وتأمين الجلسات 🔒', 'success');
+        }
+      } else {
+        if (errEl) {
+          errEl.textContent = data.error || 'فشل تغيير رمز PIN';
+          errEl.classList.remove('hidden');
+        }
+        if (btn) { btn.disabled = false; btn.textContent = 'حفظ الرمز وتأمين الجلسات 🔒'; }
+      }
+    } catch (err) {
+      if (errEl) {
+        errEl.textContent = 'خطأ في الاتصال بالخادم';
+        errEl.classList.remove('hidden');
+      }
+      if (btn) { btn.disabled = false; btn.textContent = 'حفظ الرمز وتأمين الجلسات 🔒'; }
+    }
+  }
+
+  async function showNotificationsModal() {
+    return showLowStockDropdown();
   }
 
   function lockScreen() {
@@ -916,6 +1148,9 @@
     submitEnableCaffeine,
     submitDisableCaffeine,
     showNotificationsModal,
+    showLowStockDropdown,
+    showChangePinModal,
+    submitChangePin,
     checkNotificationsBadge,
     lockScreen,
     logout,

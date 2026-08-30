@@ -55,6 +55,8 @@ async function logAudit(venueId, userId, action, targetType, targetId, details, 
   }
 }
 
+const pinUserCache = new Map();
+
 async function authenticateWithPin(pin, ip = null, userAgent = null, deviceId = null) {
   const cleanPin = String(pin || '').trim();
   if (!cleanPin || cleanPin.length < 4) {
@@ -80,21 +82,39 @@ async function authenticateWithPin(pin, ip = null, userAgent = null, deviceId = 
   let isLockedOut = false;
   let isDisabled = false;
 
-  const matches = await Promise.all(
-    users.map(async (u) => {
-      if (!u.pin_hash) return null;
+  // Fast-path: Check cached user for this PIN
+  if (pinUserCache.has(cleanPin)) {
+    const cachedUserId = pinUserCache.get(cleanPin);
+    const cachedUser = users.find(u => String(u.id) === String(cachedUserId));
+    if (cachedUser && cachedUser.pin_hash) {
+      try {
+        const isMatch = await verifyPin(cleanPin, cachedUser.pin_hash);
+        if (isMatch) {
+          matchedUser = cachedUser;
+        }
+      } catch (e) {
+        // Fallback to full search
+      }
+    }
+  }
+
+  if (!matchedUser) {
+    for (const u of users) {
+      if (!u.pin_hash) continue;
       try {
         const isMatch = await verifyPin(cleanPin, u.pin_hash);
-        return isMatch ? u : null;
+        if (isMatch) {
+          matchedUser = u;
+          pinUserCache.set(cleanPin, u.id);
+          break;
+        }
       } catch (e) {
-        return null;
+        // ignore and continue
       }
-    })
-  );
+    }
+  }
 
-  const matchedUsers = matches.filter(Boolean);
-  if (matchedUsers.length > 0) {
-    matchedUser = matchedUsers[0];
+  if (matchedUser) {
     if (matchedUser.is_active === 0) {
       isDisabled = true;
     } else if (matchedUser.locked_until && new Date(matchedUser.locked_until).getTime() > Date.now()) {

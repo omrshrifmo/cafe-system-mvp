@@ -227,7 +227,18 @@
       const grid = document.getElementById('categoriesGrid');
       document.getElementById('catCount').textContent = `${cats.length} تصنيف`;
       if (!cats.length) {
-        grid.innerHTML = `<div class="col-span-4 text-center py-16 text-slate-500"><div class="text-5xl mb-4">📂</div><p>لا توجد تصنيفات بعد. أضف تصنيفاً أولاً.</p></div>`;
+        grid.innerHTML = `
+          <div class="col-span-4 text-center py-12">
+            <div class="max-w-md mx-auto p-6 rounded-2xl bg-slate-900 border border-slate-700 shadow-xl space-y-3">
+              <div class="text-4xl">📂</div>
+              <h4 class="text-sm font-black text-white">لا توجد تصنيفات بعد</h4>
+              <p class="text-xs text-slate-400">ابدأ بإنشاء أول قسم لتنظيم قائمة المشروبات والمأكولات والشيشة.</p>
+              <button onclick="openCategoryModal()" class="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl text-xs shadow-lg cursor-pointer">
+                ➕ إضافة أول تصنيف
+              </button>
+            </div>
+          </div>
+        `;
         return;
       }
       grid.innerHTML = cats.map(c => `
@@ -369,7 +380,18 @@
     function renderItems(items) {
       const grid = document.getElementById('itemsGrid');
       if (!items.length) {
-        grid.innerHTML = `<div class="col-span-4 text-center py-16 text-slate-500"><div class="text-5xl mb-4">🍳</div><p>لا توجد أصناف. أضف صنفاً جديداً.</p></div>`;
+        grid.innerHTML = `
+          <div class="col-span-4 text-center py-12">
+            <div class="max-w-md mx-auto p-6 rounded-2xl bg-slate-900 border border-slate-700 shadow-xl space-y-3">
+              <div class="text-4xl">☕</div>
+              <h4 class="text-sm font-black text-white">قائمة المنيو فارغة</h4>
+              <p class="text-xs text-slate-400">لم تقم بإضافة أي أصناف للبيع حتى الآن. أضف صنفك الأول أو استورد المنيو عبر ملف CSV.</p>
+              <button onclick="openItemModal()" class="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl text-xs shadow-lg cursor-pointer">
+                ➕ أضف أول صنف للمنيو
+              </button>
+            </div>
+          </div>
+        `;
         return;
       }
       grid.innerHTML = items.map(item => {

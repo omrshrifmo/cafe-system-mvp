@@ -86,7 +86,7 @@ function csrfProtection(req, res, next) {
   }
 
   // Exempt public auth login, logout, or setup endpoints that establish/destroy a session
-  if (req.path === '/api/auth/login' || req.path === '/api/auth/logout' || req.path === '/api/setup/initialize' || req.path.startsWith('/api/qr/')) {
+  if (req.path === '/api/auth/login' || req.path === '/api/auth/logout' || req.path === '/api/setup/initialize' || req.path === '/api/system/initialize' || req.path.startsWith('/api/qr/')) {
     return next();
   }
 

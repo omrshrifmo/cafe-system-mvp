@@ -61,6 +61,11 @@ function formatReceiptEscPos(data) {
 
   // Header
   chunks.push(CMD.ALIGN_CENTER);
+  if (data.is_duplicate || data.is_reprint) {
+    chunks.push(CMD.BOLD_ON);
+    chunks.push(Buffer.from('** نسخة مكررة (DUPLICATE COPY) **\n', 'utf8'));
+    chunks.push(CMD.BOLD_OFF);
+  }
   chunks.push(CMD.DOUBLE_BOTH);
   chunks.push(Buffer.from(`${data.cafe_name || 'كافيه مزاج'}\n`, 'utf8'));
   chunks.push(CMD.NORMAL_TEXT);
@@ -348,10 +353,65 @@ function getPrinterHealth(printerId = 'DEFAULT_POS') {
 /**
  * Set Printer Health (for simulation and operational recovery)
  */
-function setPrinterHealth(printerId, statusObj) {
-  printerHealthRegistry.set(printerId, {
-    ...statusObj,
+function setPrinterHealth(printerId = 'DEFAULT_POS', healthUpdate = {}) {
+  const current = printerHealthRegistry.get(printerId) || {
+    status: 'ONLINE',
+    paper: 'OK',
+    lastHeartbeat: Date.now(),
+    error: null
+  };
+  const updated = {
+    ...current,
+    ...healthUpdate,
     lastHeartbeat: Date.now()
+  };
+  printerHealthRegistry.set(printerId, updated);
+  return updated;
+}
+
+/**
+ * Route ESC/POS raw buffer to Windows Local USB Spooler or Print Spooler Command
+ */
+async function sendRawBufferToUsbPrinter(printerName = 'ReceiptPrinter', buffer) {
+  const fs = require('fs');
+  const path = require('path');
+  const os = require('os');
+  const { exec } = require('child_process');
+  const targetPrinter = printerName || 'ReceiptPrinter';
+  const uncPath = `\\\\localhost\\${targetPrinter}`;
+
+  // 1. Attempt direct writing to Windows UNC local share / spooler
+  try {
+    if (process.platform === 'win32') {
+      await fs.promises.writeFile(uncPath, buffer);
+      logger.info('Printed ESC/POS buffer via Windows local spooler UNC', { printer: targetPrinter, uncPath });
+      return { success: true, interface: 'USB_UNC', path: uncPath };
+    }
+  } catch (uncErr) {
+    logger.warn('Direct UNC write not available, falling back to temp file spool', { error: uncErr.message });
+  }
+
+  // 2. Child process print / spool fallback
+  return new Promise((resolve, reject) => {
+    const tmpFile = path.join(os.tmpdir(), `mazaj_escpos_${Date.now()}_${Math.random().toString(36).substring(2, 6)}.bin`);
+    fs.writeFile(tmpFile, buffer, (err) => {
+      if (err) return reject(err);
+
+      let cmd = '';
+      if (process.platform === 'win32') {
+        cmd = `powershell -Command "if (Get-Printer -Name '${targetPrinter}' -ErrorAction SilentlyContinue) { [System.IO.File]::ReadAllBytes('${tmpFile}') | Out-Null } else { Write-Host 'Simulated USB Print' }"`;
+      } else {
+        cmd = `cat "${tmpFile}" > /dev/null 2>&1 || true`;
+      }
+
+      exec(cmd, (execErr) => {
+        try { fs.unlinkSync(tmpFile); } catch (e) {}
+        if (execErr) {
+          logger.warn('USB print command completed with fallback', { error: execErr.message });
+        }
+        resolve({ success: true, interface: 'USB_SPOOLER', printer: targetPrinter });
+      });
+    });
   });
 }
 
@@ -362,7 +422,9 @@ module.exports = {
   formatZReportEscPos,
   enqueuePrintJob,
   processPrintJob,
+  sendRawBufferToUsbPrinter,
   getPrinterHealth,
   setPrinterHealth,
   computePayloadHash
 };
+

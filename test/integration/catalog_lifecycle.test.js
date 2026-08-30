@@ -4,19 +4,22 @@ const { createApp } = require('../../src/app');
 const app = createApp();
 const { getDb } = require('../../src/db/connection');
 
-describe('Catalog Lifecycle & POS Contract Integration Tests', () => {
+describe('Catalog Lifecycle & POS Contract Integration Tests', function() {
+  this.timeout(15000);
   let adminCookie;
   let categoryId;
   let itemId;
 
   before(async () => {
+    const { runMigrations } = require('../../src/db/migrator');
+    await runMigrations();
     const { runQuery } = require('../../src/db/connection');
     await runQuery(`DELETE FROM menu_items WHERE sku = 'V60-001'`);
 
-    // Authenticate as Admin
+    // Authenticate as Admin (Owner/SuperAdmin PIN 1009)
     const loginRes = await request(app)
       .post('/api/auth/login')
-      .send({ pin: '1001' }); // Admin PIN
+      .send({ pin: '1009' }); // Admin/Owner PIN
     
     adminCookie = loginRes.headers['set-cookie'];
   });

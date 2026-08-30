@@ -146,12 +146,14 @@ async function declareCashExtended(declarationPayload, actor = null) {
     [uId, user_name || (actor ? actor.name : 'كاشير'), shift_type, opening_float, report.cash_sales, declaredCash, expectedCash, variance]
   );
 
-  // Spool Shift Z-Report Print Job
-  const zReportPayload = JSON.stringify({
+  // Spool and trigger Shift Z-Report Thermal Print Job
+  const zReportData = {
     declaration_id: res.lastID,
     user_id: uId,
     user_name: user_name || (actor ? actor.name : 'كاشير'),
     shift_type,
+    shift_start: report.shift_start || 'بداية الوردية',
+    shift_end: new Date().toLocaleString('ar-EG'),
     opening_float,
     cash_sales: report.cash_sales,
     digital_sales: report.digital_sales,
@@ -163,12 +165,19 @@ async function declareCashExtended(declarationPayload, actor = null) {
     variance: variance,
     order_count: report.order_count,
     created_at: new Date().toLocaleString('ar-EG')
-  });
+  };
 
-  await runQuery(
-    `INSERT INTO print_jobs (id, job_type, payload_json, status) VALUES (?, 'Z_REPORT', ?, 'PENDING')`,
-    [crypto.randomUUID(), zReportPayload]
-  );
+  try {
+    const { enqueuePrintJob } = require('../printing/service');
+    await enqueuePrintJob({
+      jobType: 'Z_REPORT',
+      payload: zReportData,
+      idempotencyKey: `z_report_${res.lastID}_${Date.now()}`
+    });
+  } catch (printErr) {
+    // Silent fail-safe for printer offline without breaking cash close
+    logger.warn('Thermal print Z-report silent dispatch:', printErr.message);
+  }
 
   // Close active shift
   await runQuery(

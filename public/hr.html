@@ -104,6 +104,27 @@
       </div>
     </div>
 
+    <!-- 🏆 Gamification & Employee of the Day / Week Section -->
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-md shrink-0">
+      <div class="flex items-center justify-between mb-3 border-b border-slate-800 pb-2.5">
+        <div class="flex items-center gap-2.5">
+          <span class="text-xl">🏆</span>
+          <div>
+            <h2 class="text-sm font-black text-white">لوحة الشرف والأداء ونجم اليوم (Staff Leaderboard & Gamification)</h2>
+            <p class="text-[10px] text-slate-400">تقييم الكفاءة: سرعة تحضير الطلبات، دقة تحصيل الكاشير، والانضباط الوظيفي</p>
+          </div>
+        </div>
+        <button onclick="loadLeaderboard()" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30 rounded-xl text-xs font-bold cursor-pointer flex items-center gap-1 transition-colors">
+          <span>🔄</span>
+          <span>تحديث الترتيب</span>
+        </button>
+      </div>
+
+      <div id="leaderboard-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+        <div class="text-xs text-slate-500 py-3 text-center col-span-full">جاري تحميل لوحة الشرف... ⏳</div>
+      </div>
+    </div>
+
     <!-- 2 Column Layout: Expenses & Advances -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1 min-h-0">
       <!-- Left Column: Daily Expenses -->
@@ -440,6 +461,7 @@
         if (advData.success) renderAdvances(advData.advances);
         if (tipsData.success) document.getElementById('tips-total-display').innerText = `${tipsData.total_tips} ج.م`;
         if (shiftsData.success) renderActiveShiftsSummary(shiftsData.shifts);
+        loadLeaderboard();
       } catch (err) {
         showToast('خطأ في تحميل بيانات اليوم', true);
       }
@@ -545,9 +567,10 @@
     let currentZReportData = null;
 
     async function submitCashDeclaration(e) {
-      e.preventDefault();
-      const declared = document.getElementById('declared-cash-input').value;
-      if (!declared) return;
+      if (e && e.preventDefault) e.preventDefault();
+      const inputEl = document.getElementById('declared-cash-input');
+      const declared = inputEl ? inputEl.value : null;
+      if (!declared && declared !== '0' && declared !== 0) return;
       try {
         const userStr = localStorage.getItem('currentUser') || localStorage.getItem('user') || '{}';
         const user = JSON.parse(userStr);
@@ -565,14 +588,30 @@
           })
         });
         const data = await res.json();
-        if (data.success) {
+        if (data.success || res.ok) {
           const decl = data.declaration || data.result || data;
           const varType = decl.variance === 0 ? 'مطابق تماماً ✅' : (decl.variance > 0 ? `زيادة +${decl.variance} ج.م 📈` : `عجز ${decl.variance} ج.م ⚠️`);
-          showToast(`تم إغلاق الوردية وتوثيق التقرير (${varType})`);
-          document.getElementById('declared-cash-input').value = '';
+          showToast(`تم إغلاق الوردية وتوثيق التقرير (${varType}) - جاري تسجيل الخروج تلقائياً 🖨️🔒`);
+          if (inputEl) inputEl.value = '';
 
           // Fetch full Shift Z-Report and display modal
           fetchUserZReport(user.id || 1, shiftType, Number(declared), decl.variance);
+
+          // Force Post-Shift Auto-Logout & Session Purge
+          setTimeout(async () => {
+            if (window.MazajNav && typeof window.MazajNav.logout === 'function') {
+              await window.MazajNav.logout();
+            } else if (window.AuthModule && typeof window.AuthModule.logout === 'function') {
+              await window.AuthModule.logout();
+            } else {
+              try { await fetch('/api/auth/logout', { method: 'POST' }); } catch(e) {}
+              localStorage.removeItem('currentUser');
+              localStorage.removeItem('user');
+              localStorage.removeItem('session_token');
+              sessionStorage.clear();
+              window.location.href = '/index.html';
+            }
+          }, 3000);
         } else {
           showToast(data.error || 'فشل حفظ إقرار الوردية', true);
         }
@@ -580,6 +619,9 @@
         showToast('خطأ بالاتصال بالسيرفر', true);
       }
     }
+
+    const submitDrawerDeclaration = submitCashDeclaration;
+    window.submitDrawerDeclaration = submitCashDeclaration;
 
     async function fetchUserZReport(userId, shiftType, declaredAmt, variance) {
       try {
@@ -693,6 +735,25 @@
               </button>
             </div>
           </td></tr>`;
+          return;
+        }
+
+        if (!data.payroll.length) {
+          tbody.innerHTML = `
+            <tr>
+              <td colspan="8" class="p-8 text-center">
+                <div class="max-w-md mx-auto p-6 rounded-2xl bg-slate-900 border border-slate-700 shadow-xl space-y-3">
+                  <div class="text-4xl">👥</div>
+                  <h4 class="text-sm font-black text-white">سجل الموظفين والرواتب فارغ</h4>
+                  <p class="text-xs text-slate-400">لم يتم تسجيل أي موظفين حتى الآن. أضف موظفك الأول من الإعدادات لاحتساب ساعات العمل والرواتب.</p>
+                  <a href="/settings.html" class="inline-flex items-center gap-1.5 px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl text-xs shadow-lg cursor-pointer transition-all">
+                    <span>➕</span>
+                    <span>إضافة أول موظف من الإعدادات</span>
+                  </a>
+                </div>
+              </td>
+            </tr>
+          `;
           return;
         }
 
@@ -924,6 +985,44 @@
         }
       } catch (err) {
         showToast('خطأ بالاتصال بالسيرفر', true);
+      }
+    }
+
+    // HR Gamification Leaderboard Loader
+    async function loadLeaderboard() {
+      const container = document.getElementById('leaderboard-container');
+      if (!container) return;
+      try {
+        const res = await fetch('/api/hr/leaderboard');
+        const data = await res.json();
+        if (data.success && Array.isArray(data.leaderboard) && data.leaderboard.length > 0) {
+          container.innerHTML = data.leaderboard.slice(0, 4).map(u => `
+            <div class="p-3 rounded-2xl border ${u.badge_class} flex flex-col justify-between shadow-sm bg-slate-950/70 backdrop-blur-sm">
+              <div class="flex items-start justify-between">
+                <div class="flex items-center gap-2">
+                  <span class="text-2xl">${u.badge}</span>
+                  <div>
+                    <h3 class="text-xs font-black text-white leading-tight">${u.name}</h3>
+                    <p class="text-[10px] text-slate-400 font-mono mt-0.5">${u.tier_title}</p>
+                  </div>
+                </div>
+                <span class="text-xs font-black font-mono px-2 py-0.5 rounded-lg bg-slate-950 text-amber-400 border border-slate-700">
+                  ${u.score} نقطة
+                </span>
+              </div>
+
+              <div class="mt-2.5 pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px] text-slate-300 font-mono">
+                <span>طلبات: <strong>${u.orders_count}</strong></span>
+                <span>ورديات: <strong>${u.shifts_count}</strong></span>
+                <span>${u.has_zero_penalties ? '<span class="text-emerald-400 font-bold">بدون جزاءات ✅</span>' : `<span class="text-rose-400 font-bold">جزاءات: ${u.penalty_count}</span>`}</span>
+              </div>
+            </div>
+          `).join('');
+        } else {
+          container.innerHTML = '<div class="text-xs text-slate-500 py-2 text-center col-span-full">لا توجد بيانات أداء موظفين حتى الآن.</div>';
+        }
+      } catch (err) {
+        container.innerHTML = '<div class="text-xs text-rose-400 py-2 text-center col-span-full">فشل تحميل لوحة الشرف والأداء.</div>';
       }
     }
 

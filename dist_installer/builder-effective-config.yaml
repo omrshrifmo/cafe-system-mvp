@@ -1,0 +1,35 @@
+directories:
+  output: dist_installer
+  buildResources: build
+appId: com.mazaj.os
+productName: Mazaj OS
+files:
+  - filter:
+      - main.js
+      - dist_bytecode/**/*
+      - public/**/*
+      - src/**/*
+      - package.json
+      - node_modules/**/*
+extraResources:
+  - from: bin
+    to: bin
+    filter:
+      - '*'
+  - from: cafe.db
+    to: cafe.db
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: public/icons/icon-512x512.png
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Mazaj OS
+  artifactName: MazajOS-Setup-${version}.${ext}
+  runAfterFinish: true
+electronVersion: 44.0.0

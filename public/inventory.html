@@ -403,6 +403,24 @@
       shishaGrid.innerHTML = '';
       kitchenGrid.innerHTML = '';
 
+      if (!items || items.length === 0) {
+        const emptyBox = `
+          <div class="col-span-full p-8 text-center bg-slate-950/80 rounded-2xl border border-slate-800 space-y-3">
+            <div class="text-4xl">📦</div>
+            <h4 class="text-sm font-black text-white">مستودع المخزون فارغ</h4>
+            <p class="text-xs text-slate-400">لم يتم تسجيل أي خامات أو مواد أولية حتى الآن. أضف صنفك الأول لضبط بطاقات الوصفات والتكاليف.</p>
+            <button onclick="document.getElementById('add-material-btn')?.click() || window.location.reload()" class="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl text-xs shadow-lg cursor-pointer">
+              ➕ أضف أول صنف للمخزون
+            </button>
+          </div>
+        `;
+        baristaGrid.innerHTML = emptyBox;
+        document.getElementById('barista-count').textContent = '0 خامات';
+        document.getElementById('shisha-count').textContent = '0 خامات';
+        document.getElementById('kitchen-count').textContent = '0 خامات';
+        return;
+      }
+
       let cBarista = 0, cShisha = 0, cKitchen = 0;
 
       items.forEach(item => {

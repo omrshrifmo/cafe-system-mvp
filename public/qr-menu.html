@@ -338,6 +338,18 @@
       color: var(--text-dim);
     }
     .empty-icon { font-size: 60px; margin-bottom: 16px; }
+
+    /* Star rating styles */
+    .star-btn {
+      color: #475569;
+      cursor: pointer;
+      transition: color 0.15s, transform 0.15s;
+      user-select: none;
+    }
+    .star-btn.active {
+      color: #f59e0b;
+      transform: scale(1.15);
+    }
   </style>
 </head>
 <body>
@@ -385,14 +397,43 @@
     </div>
   </div>
 
-  <!-- Success Overlay -->
+  <!-- Success & Experience Feedback Overlay -->
   <div class="success-overlay" id="successOverlay">
     <div class="success-icon">✅</div>
-    <div class="success-title">تم استلام طلبك!</div>
-    <div class="success-sub">فريقنا يعمل على تحضير طلبك الآن.<br>سيصلك قريباً إلى طاولتك.</div>
+    <div class="success-title">تم استلام طلبك بنجاح!</div>
+    <div class="success-sub">فريق البارستا والمطبخ بدأ بتحضير طلبك الآن.</div>
     <div class="order-ref" id="successRef"></div>
-    <button onclick="resetAll()" style="margin-top:24px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:white;border-radius:12px;padding:12px 32px;font-size:15px;font-weight:700;cursor:pointer;font-family:'Tajawal',sans-serif;">
-      طلب جديد
+
+    <!-- 🌟 كيف كانت تجربتك؟ Rating Section -->
+    <div id="feedbackSection" style="margin-top:20px;background:rgba(30,41,59,0.95);border:1px solid rgba(245,158,11,0.4);border-radius:20px;padding:18px;width:100%;max-width:340px;box-shadow:0 10px 25px -5px rgba(0,0,0,0.5);">
+      <div style="font-size:16px;font-weight:900;color:#f59e0b;margin-bottom:4px;">🌟 كيف كانت تجربتك؟</div>
+      <div style="font-size:11px;color:#94a3b8;margin-bottom:12px;">ساعدنا بتقييم الخدمة والمشروبات اليوم</div>
+      
+      <!-- Stars Row -->
+      <div id="starRatingRow" style="display:flex;justify-content:center;gap:10px;font-size:34px;margin-bottom:12px;direction:ltr;">
+        <span class="star-btn active" data-val="1" onclick="setStarRating(1)">★</span>
+        <span class="star-btn active" data-val="2" onclick="setStarRating(2)">★</span>
+        <span class="star-btn active" data-val="3" onclick="setStarRating(3)">★</span>
+        <span class="star-btn active" data-val="4" onclick="setStarRating(4)">★</span>
+        <span class="star-btn active" data-val="5" onclick="setStarRating(5)">★</span>
+      </div>
+
+      <!-- Conditional Comment Box -->
+      <div id="commentContainer" style="display:block;margin-bottom:12px;text-align:right;">
+        <label id="commentLabel" style="display:block;font-size:11px;font-weight:700;color:#f8fafc;margin-bottom:4px;">ما الذي أعجبك اليوم؟ (اختياري):</label>
+        <textarea id="feedbackCommentInput" placeholder="يسعدنا سماع انطباعك الإيجابي..." style="width:100%;height:65px;background:#0f172a;border:1px solid #475569;border-radius:12px;color:white;padding:8px 10px;font-size:12px;resize:none;font-family:'Tajawal',sans-serif;"></textarea>
+      </div>
+
+      <button id="submitFeedbackBtn" onclick="submitGuestFeedback()" style="width:100%;background:#f59e0b;color:#0f172a;border:none;border-radius:12px;padding:11px;font-weight:900;font-size:14px;cursor:pointer;font-family:'Tajawal',sans-serif;transition:all 0.2s;">
+        إرسال التقييم 🌟
+      </button>
+      <div id="feedbackThanksMsg" style="display:none;color:#10b981;font-size:13px;font-weight:800;margin-top:10px;">
+        ✅ شكراً جزيلاً لتقييمك! نسعد دائماً بخدمتك.
+      </div>
+    </div>
+
+    <button onclick="resetAll()" style="margin-top:16px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:white;border-radius:12px;padding:10px 28px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Tajawal',sans-serif;">
+      طلب جديد ➕
     </button>
   </div>
 
@@ -622,10 +663,19 @@
         }
 
         const orderRef = data.order_id || data.order?.id || data.order?.session_id;
+        lastPlacedOrderId = orderRef;
 
-        // Show success
+        // Show success & initialize rating
         document.getElementById('cartModal').classList.remove('open');
         document.getElementById('successRef').textContent = orderRef ? `رقم الطلب: #${orderRef}` : '';
+        setStarRating(5);
+        document.getElementById('feedbackThanksMsg').style.display = 'none';
+        const submitBtn = document.getElementById('submitFeedbackBtn');
+        if (submitBtn) {
+          submitBtn.style.display = 'block';
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'إرسال التقييم 🌟';
+        }
         document.getElementById('successOverlay').classList.add('open');
         cart = [];
         updateCartBar();
@@ -645,6 +695,81 @@
       document.getElementById('successOverlay').classList.remove('open');
       document.getElementById('orderNotes').value = '';
       loadMenu();
+    }
+
+    // --- Guest Experience Rating & Feedback Logic ---
+    let selectedRating = 5;
+    let lastPlacedOrderId = null;
+
+    function setStarRating(rating) {
+      selectedRating = rating;
+      const stars = document.querySelectorAll('.star-btn');
+      stars.forEach(s => {
+        const val = parseInt(s.getAttribute('data-val'), 10);
+        if (val <= rating) {
+          s.classList.add('active');
+        } else {
+          s.classList.remove('active');
+        }
+      });
+
+      const commentContainer = document.getElementById('commentContainer');
+      const commentLabel = document.getElementById('commentLabel');
+      const commentInput = document.getElementById('feedbackCommentInput');
+      if (!commentContainer || !commentLabel || !commentInput) return;
+
+      commentContainer.style.display = 'block';
+      if (rating <= 3) {
+        commentLabel.innerHTML = '<span style="color:#ef4444;font-weight:900;">⚠️ يرجى إخبارنا بما أزعجك أو ما يمكننا تحسينه (مطلوب):</span>';
+        commentInput.placeholder = 'أخبرنا عن أي تأخير أو مشكلة في الطلب أو الخدمة...';
+        commentInput.required = true;
+      } else {
+        commentLabel.innerHTML = '<span style="color:#10b981;font-weight:700;">ما الذي أعجبك اليوم؟ (اختياري):</span>';
+        commentInput.placeholder = 'يسعدنا سماع انطباعك الإيجابي...';
+        commentInput.required = false;
+      }
+    }
+
+    async function submitGuestFeedback() {
+      const commentInput = document.getElementById('feedbackCommentInput');
+      const comment = commentInput ? commentInput.value.trim() : '';
+
+      if (selectedRating <= 3 && !comment) {
+        showToast('يرجى كتابة سبب التقييم لنتمكن من معالجة المشكلة ومتابعتها فوراً!');
+        if (commentInput) commentInput.focus();
+        return;
+      }
+
+      const submitBtn = document.getElementById('submitFeedbackBtn');
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = '⏳ جاري إرسال التقييم...';
+      }
+
+      try {
+        const res = await fetch('/api/public/feedback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            table_number: tableNumber,
+            rating_1_to_5: selectedRating,
+            rating: selectedRating,
+            comment: comment,
+            order_id: lastPlacedOrderId
+          })
+        });
+        const data = await res.json();
+        if (submitBtn) submitBtn.style.display = 'none';
+        const thanks = document.getElementById('feedbackThanksMsg');
+        if (thanks) thanks.style.display = 'block';
+        if (commentInput) commentInput.disabled = true;
+      } catch (err) {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'إعادة المحاولة 🌟';
+        }
+        showToast('فشل إرسال التقييم: ' + err.message);
+      }
     }
 
     validateTable();

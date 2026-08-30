@@ -287,18 +287,60 @@ router.get(['/feedback', '/customers/feedback', '/crm/feedback'], requireAuth, a
   }
 });
 
-router.post(['/feedback', '/customers/feedback', '/crm/feedback'], async (req, res, next) => {
+router.post(['/public/feedback', '/api/public/feedback', '/feedback', '/customers/feedback', '/crm/feedback'], async (req, res, next) => {
   try {
-    const { order_id, rating, comments, comment, customer_phone, category } = req.body;
+    const { table_number, rating_1_to_5, rating, comments, comment, customer_phone, order_id, session_id } = req.body;
+    const finalRating = parseInt(rating_1_to_5 || rating || 5, 10);
     const finalComment = comment || comments || '';
-    const resId = await runQuery(
-      `INSERT INTO customer_feedback (order_id, rating, comments) VALUES (?, ?, ?)`,
-      [order_id || null, rating || 5, finalComment]
-    );
+    const finalOrderId = order_id || session_id || null;
+    const isFlagged = finalRating <= 3 ? 1 : 0;
+
+    let resId;
+    try {
+      resId = await runQuery(
+        `INSERT INTO customer_feedback (table_number, rating, comment, order_id, customer_phone, is_flagged, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))`,
+        [table_number || null, finalRating, finalComment, finalOrderId, customer_phone || null, isFlagged]
+      );
+    } catch (e) {
+      // Fallback if schema does not have extra columns
+      resId = await runQuery(
+        `INSERT INTO customer_feedback (order_id, rating, comment) VALUES (?, ?, ?)`,
+        [finalOrderId, finalRating, finalComment]
+      );
+    }
+
+    // Automatically trigger high severity QA complaint for OP_MANAGER if rating <= 3
+    if (isFlagged) {
+      try {
+        const { createComplaint } = require('../../domain/qa/qualityService');
+        await createComplaint({
+          venueId: 'V_DEFAULT',
+          orderSessionId: String(finalOrderId || 'QR-TABLE-' + (table_number || 'UNKNOWN')),
+          loggedByUserId: 1,
+          customerName: table_number ? `ضيف طاولة ${table_number}` : 'ضيف كافيه مزاج',
+          customerPhone: customer_phone || null,
+          severity: 'HIGH',
+          description: `[تقييم سلبي من QR - ${finalRating}/5 نجوم] طاولة: ${table_number || 'سفري'}. ملاحظات الضيف: ${finalComment || 'لا توجد تفاصيل إضافية'}`
+        });
+      } catch (qaErr) {
+        // Fallback direct complaint table insert
+        try {
+          await runQuery(
+            `INSERT INTO complaints (venue_id, title, description, severity, status, created_at)
+             VALUES ('V_DEFAULT', ?, ?, 'HIGH', 'OPEN', datetime('now', 'localtime'))`,
+            [`تقييم سلبي من طاولة ${table_number || 'غير محددة'} (${finalRating}/5 نجوم)`, finalComment || 'تقييم منخفض من ضيف القائمة الرقمية']
+          );
+        } catch (e2) {}
+      }
+    }
+
     res.json({
       success: true,
-      data: { feedback_id: resId.lastID },
-      feedback_id: resId.lastID,
+      message: 'شكراً لمشاركتنا تقييمك! نسعد دائماً بخدمتكم وتطوير تجربتكم ☕🌟',
+      data: { feedback_id: resId ? resId.lastID : null },
+      feedback_id: resId ? resId.lastID : null,
+      is_flagged: isFlagged === 1,
       requestId: req.id
     });
   } catch (err) {

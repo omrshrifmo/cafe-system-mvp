@@ -5,6 +5,7 @@ const express = require('express');
 const router = express.Router();
 const { 
   getInventory, 
+  getLowStockItems,
   getInventoryReconciliationAudit, 
   logPurchase, 
   logWaste, 
@@ -27,6 +28,20 @@ const {
 const { requireAuth } = require('../middleware/auth');
 const { requirePermission } = require('../middleware/permissions');
 const { allQuery } = require('../../db/connection');
+
+// GET /api/notifications/low-stock (and alias /api/inventory/low-stock)
+router.get(['/notifications/low-stock', '/inventory/low-stock'], requireAuth, async (req, res, next) => {
+  try {
+    const items = await getLowStockItems();
+    res.json({
+      success: true,
+      count: items.length,
+      items
+    });
+  } catch (err) {
+    next(err);
+  }
+});
 
 // Inventory list & reconciliation audit
 router.get('/inventory', requireAuth, async (req, res, next) => {

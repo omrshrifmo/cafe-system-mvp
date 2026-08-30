@@ -34,17 +34,20 @@ const updatesRoutes = require('./http/routes/updates');
 const auditRoutes = require('./http/routes/audit');
 const deviceRoutes = require('./http/routes/devices');
 const demoRoutes = require('./http/routes/demo');
+const exportImportRoutes = require('./http/routes/exportImport');
 const entertainmentRoutes = require('./http/routes/entertainment');
 const promotionsRoutes = require('./http/routes/promotions');
 const menuEngineeringRoutes = require('./http/routes/menuEngineering');
+const haccpRoutes = require('./http/routes/haccp');
 const { securityHeaders, strictCors, csrfProtection, blockDebugEndpoints, requireHttps } = require('./http/middleware/security');
 const { adminLimiter, healthLimiter, updateLimiter } = require('./http/middleware/rate-limit');
+const { licenseMiddleware } = require('./http/middleware/license');
 const { router: healthRoutes, recordRequestMetric } = require('./http/routes/health');
 
 function createApp() {
   const app = express();
 
-  // Security Headers & Strict CORS
+  // Enforce secure origin headers & basic protection
   app.use(requireHttps);
   app.use(securityHeaders);
   app.use(strictCors);
@@ -70,6 +73,7 @@ function createApp() {
   app.use(envelopeMiddleware);
   app.use(modeMiddleware);
   app.use(authMiddleware);
+  app.use(licenseMiddleware);
 
   // ─────────────────────────────────────────────────────────────────────────
   // HTML Page Routing — Public vs. Protected
@@ -96,14 +100,19 @@ function createApp() {
 
   // ─────────────────────────────────────────────────────────────────────────
   // Root Boot-Decision
-  // GET / → check onboarding_state in system_config.
-  //   UNINITIALIZED or IN_PROGRESS → redirect to /setup.html (first-run)
-  //   COMPLETE (or unknown/populated) → serve /index.html (login)
+  // GET / or /index.html → check if users table is empty OR onboarding_state is UNINITIALIZED.
+  //   If empty/uninitialized → redirect to /setup.html (first-run onboarding)
+  //   COMPLETE (or populated DB) → serve /index.html (login)
   // ─────────────────────────────────────────────────────────────────────────
-  app.get('/', (req, res, next) => {
+  app.get(['/', '/index.html'], async (req, res, next) => {
     try {
       const db = require('./db/connection');
-      db.getQuery(
+      const userCountRow = await db.getQuery("SELECT COUNT(*) as count FROM v3_users WHERE is_active = 1", []).catch(() => null);
+      if (userCountRow && userCountRow.count === 0) {
+        return res.redirect('/setup.html');
+      }
+
+      const row = await db.getQuery(
         "SELECT value FROM system_config WHERE key = 'onboarding_state' LIMIT 1",
         []
       ).then(row => {
@@ -155,6 +164,7 @@ function createApp() {
   app.use('/api', shiftsRoutes);
   app.use('/api', reportsRoutes);
   app.use('/api', configRoutes);
+  app.use('/api', exportImportRoutes);
   app.use('/api', crmRoutes);
   app.use('/api', syncRoutes);
   app.use('/api', printRoutes);
@@ -169,6 +179,7 @@ function createApp() {
   app.use('/api', promotionsRoutes);
   app.use('/api', menuEngineeringRoutes);
   app.use('/api', healthRoutes);
+  app.use('/api/haccp', haccpRoutes);
 
   // Health check endpoint (publicly accessible for load balancers and monitoring)
   app.get('/healthz', healthLimiter, (req, res) => {

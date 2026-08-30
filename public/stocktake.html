@@ -238,7 +238,13 @@
           <td class="py-3 px-3 text-slate-400">${item.category || 'عام'}</td>
           <td class="py-3 px-3 font-mono text-amber-300/80">${item.unit || 'وحدة'}</td>
           <td class="py-3 px-3 text-center">
-            <input type="number" step="any" data-item-id="${item.id}" placeholder="0.00" class="count-input w-28 bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-center text-xs text-white font-mono focus:outline-none focus:border-amber-500">
+            <div class="inline-flex items-center gap-1.5 justify-center">
+              <input type="number" step="any" data-item-id="${item.id}" id="count-input-${item.id}" placeholder="0.00" class="count-input w-24 bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-center text-xs text-white font-mono focus:outline-none focus:border-amber-500">
+              <button type="button" onclick="readFromDigitalScale('count-input-${item.id}')" title="قراءة الوزن من الميزان الإلكتروني (WebSerial)" class="px-2 py-1.5 bg-amber-500/20 hover:bg-amber-500/40 text-amber-300 border border-amber-500/40 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1">
+                <span>⚖️</span>
+                <span class="hidden lg:inline text-[10px]">ميزان</span>
+              </button>
+            </div>
           </td>
           <td class="py-3 px-3 expected-col hidden text-center font-mono text-slate-400">-</td>
           <td class="py-3 px-3 expected-col hidden text-center font-mono text-slate-400">-</td>
@@ -291,7 +297,13 @@
             <td class="py-3 px-3 text-slate-400">${l.category || 'عام'}</td>
             <td class="py-3 px-3 font-mono text-amber-300/80">${l.unit}</td>
             <td class="py-3 px-3 text-center">
-              <input type="number" step="any" data-item-id="${l.item_id}" value="${l.counted_stock}" class="count-input w-28 bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-center text-xs text-white font-mono focus:outline-none focus:border-amber-500">
+              <div class="inline-flex items-center gap-1.5 justify-center">
+                <input type="number" step="any" data-item-id="${l.item_id}" id="count-input-${l.item_id}" value="${l.counted_stock}" class="count-input w-24 bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-center text-xs text-white font-mono focus:outline-none focus:border-amber-500">
+                <button type="button" onclick="readFromDigitalScale('count-input-${l.item_id}')" title="قراءة الوزن من الميزان الإلكتروني (WebSerial)" class="px-2 py-1.5 bg-amber-500/20 hover:bg-amber-500/40 text-amber-300 border border-amber-500/40 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1">
+                  <span>⚖️</span>
+                  <span class="hidden lg:inline text-[10px]">ميزان</span>
+                </button>
+              </div>
             </td>
             <td class="py-3 px-3 expected-col text-center font-mono font-bold text-slate-300">${l.expected_stock}</td>
             <td class="py-3 px-3 expected-col text-center font-mono font-black ${valColor}">
@@ -421,6 +433,69 @@
         }
       } catch (err) {
         console.error('Error reconciling stocktake:', err);
+      }
+    }
+
+    // WebSerial Digital Scale Reader
+    async function readFromDigitalScale(targetInputId) {
+      const inputEl = document.getElementById(targetInputId);
+      if (!inputEl) return;
+
+      if (!('serial' in navigator)) {
+        if (window.UIState && UIState.showToast) {
+          UIState.showToast('المتصفح الحالي لا يدعم WebSerial API. يرجى استخدام Chrome أو Edge للتوصيل بالميزان.', 'warning');
+        } else if (typeof showToast === 'function') {
+          showToast('المتصفح الحالي لا يدعم WebSerial API. يرجى استخدام Chrome أو Edge للتوصيل بالميزان.', true);
+        }
+        return;
+      }
+
+      let port;
+      try {
+        if (window.UIState && UIState.showToast) UIState.showToast('جاري الاتصال بالميزان الإلكتروني عبر منفذ COM/USB... ⚖️', 'info');
+        port = await navigator.serial.requestPort();
+        await port.open({ baudRate: 9600, dataBits: 8, stopBits: 1, parity: 'none' });
+
+        const textDecoder = new TextDecoderStream();
+        port.readable.pipeTo(textDecoder.writable);
+        const reader = textDecoder.readable.getReader();
+
+        let rawBuffer = '';
+        const readTimeout = setTimeout(async () => {
+          try { await reader.cancel(); } catch(e) {}
+        }, 4000);
+
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          if (value) {
+            rawBuffer += value;
+            const match = rawBuffer.match(/[-+]?\d*\.?\d+/);
+            if (match) {
+              const parsedWeight = parseFloat(match[0]);
+              if (!isNaN(parsedWeight) && parsedWeight > 0) {
+                clearTimeout(readTimeout);
+                inputEl.value = parsedWeight;
+                inputEl.dispatchEvent(new Event('input', { bubbles: true }));
+                inputEl.dispatchEvent(new Event('change', { bubbles: true }));
+                if (window.UIState && UIState.showToast) {
+                  UIState.showToast(`تمت قراءة الوزن بنجاح من الميزان: ${parsedWeight} ⚖️✅`, 'success');
+                }
+                try { await reader.cancel(); } catch(e) {}
+                break;
+              }
+            }
+          }
+        }
+      } catch (err) {
+        if (err.name !== 'NotFoundError') {
+          console.warn('Scale reading error:', err);
+          if (window.UIState && UIState.showToast) UIState.showToast('تعذر قراءة بيانات الميزان: ' + (err.message || 'تم إلغاء الاتصال'), 'error');
+        }
+      } finally {
+        if (port && port.readable) {
+          try { await port.close(); } catch(e) {}
+        }
       }
     }
 

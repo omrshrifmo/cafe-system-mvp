@@ -165,6 +165,91 @@ router.post('/rotate-pin', requireAuth, authLimiter, async (req, res) => {
   }
 });
 
+// POST /api/auth/change-pin
+// Changes user PIN without logging out current device, but invalidates all other terminal sessions
+router.post('/change-pin', requireAuth, authLimiter, async (req, res) => {
+  try {
+    const { getQuery, runQuery } = require('../../db/connection');
+    const { hashPin, verifyPin } = require('../../domain/auth/service');
+
+    const old_pin = req.body.old_pin || req.body.oldPin;
+    const new_pin = req.body.new_pin || req.body.newPin;
+    const ip = req.ip || req.connection.remoteAddress;
+    const deviceId = req.headers['x-device-id'] || req.user.deviceId || null;
+    const currentSessionId = req.user.sessionId || req.user.id;
+
+    if (!old_pin || !new_pin) {
+      return res.status(400).json({
+        success: false,
+        error: 'يرجى إدخال رمز المرور الحالي والرمز الجديد'
+      });
+    }
+
+    const cleanNewPin = String(new_pin).trim();
+    if (cleanNewPin.length < 4) {
+      return res.status(400).json({
+        success: false,
+        error: 'رمز PIN الجديد يجب أن يتكون من 4 أرقام على الأقل'
+      });
+    }
+
+    // 1. Fetch user & verify old PIN via bcrypt
+    const user = await getQuery(`SELECT id, venue_id, pin_hash FROM v3_users WHERE id = ?`, [req.user.id]);
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'المستخدم غير موجود' });
+    }
+
+    const valid = await verifyPin(old_pin, user.pin_hash);
+    if (!valid) {
+      return res.status(400).json({ success: false, error: 'رمز PIN الحالي غير صحيح' });
+    }
+
+    // 2. Hash & save new PIN
+    const newHash = await hashPin(cleanNewPin);
+    await runQuery(
+      `UPDATE v3_users SET pin_hash = ?, failed_attempts = 0, locked_until = NULL, updated_at = datetime('now', 'localtime') WHERE id = ?`,
+      [newHash, req.user.id]
+    );
+
+    // 3. Security Lockout: Immediately execute database query to DELETE FROM v3_user_sessions WHERE user_id = ? AND device_id != ?
+    let deleteResult;
+    if (deviceId) {
+      deleteResult = await runQuery(
+        `DELETE FROM v3_user_sessions WHERE user_id = ? AND (device_id != ? OR device_id IS NULL)`,
+        [req.user.id, deviceId]
+      );
+    } else if (currentSessionId) {
+      deleteResult = await runQuery(
+        `DELETE FROM v3_user_sessions WHERE user_id = ? AND id != ?`,
+        [req.user.id, currentSessionId]
+      );
+    } else {
+      deleteResult = await runQuery(
+        `DELETE FROM v3_user_sessions WHERE user_id = ? AND id != (SELECT id FROM v3_user_sessions WHERE user_id = ? ORDER BY last_seen_at DESC LIMIT 1)`,
+        [req.user.id, req.user.id]
+      );
+    }
+
+    // Close WebSocket connections for other terminated devices
+    try {
+      const { closeUserSocketsExcept } = require('../../realtime/websocket');
+      if (typeof closeUserSocketsExcept === 'function') {
+        closeUserSocketsExcept(req.user.id, currentSessionId);
+      }
+    } catch (wsErr) {}
+
+    await logAudit(user.venue_id, req.user.id, 'PIN_CHANGE', 'USER', req.user.id, { deviceId }, ip);
+
+    res.json({
+      success: true,
+      message: 'تم تغيير رمز PIN بنجاح وتأمين الجلسات على الأجهزة الأخرى',
+      sessions_revoked: deleteResult.changes || 0
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // Ping endpoint to manually extend inactivity timeout (e.g. while actively interacting)
 router.post('/ping', requireAuth, (req, res) => {
   res.json({ success: true });

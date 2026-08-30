@@ -38,6 +38,23 @@ async function getInventory() {
   return items;
 }
 
+async function getLowStockItems() {
+  const items = await allQuery(
+    `SELECT i.id, i.name, i.category as department, i.unit,
+            COALESCE(i.min_limit, 0) as min_stock_level,
+            i.cost_per_unit_minor / 100.0 as unit_cost,
+            ROUND(i.current_stock_microunits / 1000000.0, 3) as current_stock,
+            ROUND(COALESCE(i.min_limit, 0) - (i.current_stock_microunits / 1000000.0), 3) as deficit_qty,
+            s.name as supplier_name, s.phone as supplier_phone
+     FROM inventory_items i
+     LEFT JOIN suppliers s ON i.default_supplier_id = s.id
+     WHERE i.is_active = 1 
+       AND (i.current_stock_microunits / 1000000.0) <= COALESCE(i.min_limit, 0)
+     ORDER BY ((i.current_stock_microunits / 1000000.0) - COALESCE(i.min_limit, 0)) ASC`
+  );
+  return items;
+}
+
 async function getInventoryReconciliationAudit() {
   const items = await allQuery(
     `SELECT i.id, i.name, i.category as department, i.unit,
@@ -568,6 +585,7 @@ module.exports = {
   NEGATIVE_STOCK_POLICIES,
   STOCKTAKE_STATUSES,
   getInventory,
+  getLowStockItems,
   getInventoryReconciliationAudit,
   reconcilePhysicalInventory,
   getPhysicalReconciliations,

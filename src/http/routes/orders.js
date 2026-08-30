@@ -85,7 +85,7 @@ router.post('/orders/:id/cancel-request', requireAuth, async (req, res, next) =>
   try {
     const { reason } = req.body;
     const result = await requestOrderCancellation(req.params.id, req.user ? req.user.id : null, reason);
-    res.json({ success: true, result, data: result });
+    res.json({ success: true, edit_request: result ? result.edit_request : 'CANCEL_REQUESTED', result, data: result });
   } catch (err) {
     next(err);
   }
@@ -96,7 +96,7 @@ router.post('/orders/request-cancel', requireAuth, async (req, res, next) => {
     const { order_id, id, reason } = req.body;
     const targetId = order_id || id;
     const result = await requestOrderCancellation(targetId, req.user ? req.user.id : null, reason);
-    res.json({ success: true, result, data: result });
+    res.json({ success: true, edit_request: result ? result.edit_request : 'CANCEL_REQUESTED', result, data: result });
   } catch (err) {
     next(err);
   }

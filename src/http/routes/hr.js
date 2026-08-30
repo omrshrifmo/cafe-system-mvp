@@ -520,4 +520,134 @@ router.post(['/staff-allowances', '/hr/allowances', '/allowances'], requireAuth,
   }
 });
 
+router.post(['/hr/declare-cash', '/declare-cash'], requireAuth, async (req, res, next) => {
+  try {
+    const { declareCashExtended } = require('../../domain/shifts/service');
+    const payload = {
+      user_id: req.user.id,
+      user_name: req.user.name,
+      ...req.body
+    };
+    const result = await declareCashExtended(payload, req.user);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// HR Gamification & Employee of the Day / Week Leaderboard
+router.get(['/hr/leaderboard', '/leaderboard', '/hr/gamification'], requireAuth, async (req, res, next) => {
+  try {
+    const { getQuery, allQuery } = require('../../db/connection');
+    const users = await allQuery(`SELECT id, name, role FROM users WHERE is_active = 1`);
+    const leaderboard = [];
+
+    for (const u of users) {
+      // 1. Orders handled / KDS Speed
+      let ordersCount = 0;
+      try {
+        const orderStats = await getQuery(
+          `SELECT COUNT(*) as orders_count
+           FROM orders 
+           WHERE waiter_id = ? OR id IN (SELECT order_id FROM order_status_events WHERE user_id = ?)`,
+          [u.id, u.id]
+        );
+        ordersCount = orderStats ? (orderStats.orders_count || 0) : 0;
+      } catch (e) {}
+
+      // 2. Cash Declaration accuracy (lowest variance)
+      let avgVariance = 0;
+      try {
+        const declStats = await getQuery(
+          `SELECT COUNT(*) as decl_count, COALESCE(AVG(ABS(variance)), 0) as avg_variance 
+           FROM drawer_declarations 
+           WHERE user_id = ?`,
+          [u.id]
+        );
+        avgVariance = declStats ? Number(declStats.avg_variance || 0) : 0;
+      } catch (e) {}
+
+      // 3. Zero penalties check (last 30 days)
+      let penaltyCount = 0;
+      try {
+        const penaltyStats = await getQuery(
+          `SELECT COUNT(*) as penalty_count 
+           FROM penalties 
+           WHERE user_id = ? AND date(created_at) >= date('now', '-30 days')`,
+          [u.id]
+        );
+        penaltyCount = penaltyStats ? (penaltyStats.penalty_count || 0) : 0;
+      } catch (e) {}
+
+      // 4. Shifts count
+      let shiftCount = 0;
+      try {
+        const shiftStats = await getQuery(
+          `SELECT COUNT(*) as shift_count FROM shifts WHERE user_id = ?`,
+          [u.id]
+        );
+        shiftCount = shiftStats ? (shiftStats.shift_count || 0) : 0;
+      } catch (e) {}
+
+      // Composite performance score calculation
+      let score = 100;
+      score += (ordersCount * 5);
+      score += (shiftCount * 15);
+      score -= (penaltyCount * 40);
+      score -= (avgVariance * 0.1);
+      score = Math.max(10, Math.round(score));
+
+      leaderboard.push({
+        user_id: u.id,
+        name: u.name,
+        role: u.role,
+        score,
+        orders_count: ordersCount,
+        shifts_count: shiftCount,
+        avg_variance: Number(avgVariance.toFixed(2)),
+        penalty_count: penaltyCount,
+        has_zero_penalties: penaltyCount === 0
+      });
+    }
+
+    // Sort descending by score
+    leaderboard.sort((a, b) => b.score - a.score);
+
+    // Assign Rank Badges (Gold, Silver, Bronze)
+    leaderboard.forEach((item, index) => {
+      if (index === 0) {
+        item.rank = 1;
+        item.badge = '🥇';
+        item.tier_title = 'موظف اليوم الذهبي (Gold Star)';
+        item.badge_class = 'bg-amber-500/20 text-amber-300 border-amber-500/40';
+      } else if (index === 1) {
+        item.rank = 2;
+        item.badge = '🥈';
+        item.tier_title = 'الموظف الفضي (Silver Star)';
+        item.badge_class = 'bg-slate-300/20 text-slate-200 border-slate-300/40';
+      } else if (index === 2) {
+        item.rank = 3;
+        item.badge = '🥉';
+        item.tier_title = 'الموظف البرونزي (Bronze Star)';
+        item.badge_class = 'bg-amber-800/20 text-amber-600 border-amber-800/40';
+      } else {
+        item.rank = index + 1;
+        item.badge = '🎖️';
+        item.tier_title = 'كادر متميز (Active Team)';
+        item.badge_class = 'bg-slate-800 text-slate-400 border-slate-700';
+      }
+    });
+
+    res.json({
+      success: true,
+      data: { leaderboard },
+      leaderboard,
+      employee_of_the_day: leaderboard[0] || null,
+      generated_at: new Date().toISOString()
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 module.exports = router;

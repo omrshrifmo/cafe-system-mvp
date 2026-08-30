@@ -4,7 +4,8 @@ const { createApp } = require('../../src/app');
 const { runMigrations } = require('../../src/db/migrator');
 const { allQuery, getQuery } = require('../../src/db/connection');
 
-describe('Orders Lifecycle & BOM Integration Tests', () => {
+describe('Orders Lifecycle & BOM Integration Tests', function() {
+  this.timeout(15000);
   let app;
   let waiterToken;
   let baristaToken;

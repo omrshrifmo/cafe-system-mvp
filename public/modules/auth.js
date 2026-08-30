@@ -4,7 +4,41 @@
  */
 let currentUser = null;
 let inactivityTimer = null;
-const INACTIVITY_LIMIT_MS = 15000; // 15 seconds
+
+/**
+ * Dynamic Per-Role Inactivity Timeout Mapping
+ * - Cashiers & Waiters: 15 seconds (High rotation terminals)
+ * - Owner & Operations Managers: 60 seconds (Administrative overview)
+ * - Kitchen, Barista & Shisha: 300 seconds / 5 minutes (Hands-free preparation stations)
+ */
+function getInactivityLimitMs(user) {
+  if (!user) return 15000;
+  const role = String(user.role || user.role_id || '').toUpperCase().replace(/^ROLE_/, '').replace(/^R_/, '');
+  switch (role) {
+    case 'OP_ASSISTANT_CASHIER':
+    case 'CASHIER':
+    case 'WAITER':
+      return 15000; // 15 seconds
+    case 'OWNER':
+    case 'OP_MANAGER':
+    case 'SUPER_ADMIN':
+    case 'ADMIN':
+    case 'HALL_MANAGER':
+    case 'BOM_MANAGER':
+    case 'HR_PAYROLL':
+    case 'QA':
+    case 'READ_ONLY':
+      return 60000; // 60 seconds
+    case 'BARISTA':
+    case 'SHISHA':
+    case 'SHIASH':
+    case 'CHEF':
+    case 'RUNNER':
+      return 300000; // 300 seconds (5 minutes)
+    default:
+      return 60000;
+  }
+}
 
 // Hydrate initial user if stored from valid login
 try {
@@ -152,9 +186,11 @@ function resetInactivityTimer(e) {
 
   if (document.getElementById('mazaj-lock-overlay')) return;
 
+  const limitMs = getInactivityLimitMs(currentUser);
+
   clearTimeout(inactivityTimer);
   clearInterval(countdownTimer);
-  secondsRemaining = Math.round(INACTIVITY_LIMIT_MS / 1000);
+  secondsRemaining = Math.round(limitMs / 1000);
   updateCountdownWarning();
 
   if (isCaffeineActive) {
@@ -176,7 +212,7 @@ function resetInactivityTimer(e) {
     }
   }, 1000);
 
-  inactivityTimer = setTimeout(lockScreen, INACTIVITY_LIMIT_MS);
+  inactivityTimer = setTimeout(lockScreen, limitMs);
 }
 
 let lockPinValue = "";
@@ -557,7 +593,8 @@ if (typeof window !== 'undefined') {
     disableCaffeineMode,
     fetchCaffeineStatus,
     saveCheckpoint,
-    checkAndPromptRestore
+    checkAndPromptRestore,
+    getInactivityLimitMs
   };
   
   // Start inactivity timer on PAGE_READY

@@ -237,4 +237,131 @@ router.post(['/system/restore', '/restore'], requireAuth, uploadBackup.single('d
   }
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// First-Boot Setup & System Initialization (Zero-Touch Self-Serve SaaS)
+// ─────────────────────────────────────────────────────────────────────────────
+router.post(['/system/initialize', '/setup/initialize'], async (req, res, next) => {
+  try {
+    const { 
+      admin_name, 
+      admin_pin, 
+      cafe_name, 
+      currency, 
+      vat_percent, 
+      service_percent, 
+      load_demo_data, 
+      seed_mode 
+    } = req.body;
+
+    const pin = admin_pin || req.body.pin || '8801';
+    const name = admin_name || req.body.name || 'سوبر أدمن';
+    const cleanPin = String(pin).trim();
+
+    if (cleanPin.length < 4) {
+      return res.status(400).json({
+        success: false,
+        error: 'رمز PIN الخاص بالمسؤول يجب أن يتكون من 4 أرقام على الأقل'
+      });
+    }
+
+    const { hashPin } = require('../../domain/auth/service');
+
+    // 1. Hash admin PIN and create SUPER_ADMIN user
+    const pinHash = await hashPin(cleanPin);
+
+    // Ensure roles exist
+    const canonicalRoles = [
+      'SUPER_ADMIN', 'OWNER', 'OP_MANAGER', 'OP_ASSISTANT_CASHIER', 'BARISTA',
+      'CHEF', 'SHISHA', 'WAITER', 'RUNNER', 'HALL_MANAGER', 'BOM_MANAGER',
+      'HR_PAYROLL', 'QA', 'READ_ONLY', 'CASHIER'
+    ];
+    for (const r of canonicalRoles) {
+      await runQuery(`INSERT OR IGNORE INTO roles (id, venue_id, name) VALUES (?, 'V_DEFAULT', ?)`, [`R_${r}`, r]);
+    }
+
+    await runQuery(
+      `INSERT OR REPLACE INTO v3_users (id, venue_id, name, role_id, pin_hash, is_active, failed_attempts, locked_until)
+       VALUES ('101', 'V_DEFAULT', ?, 'R_SUPER_ADMIN', ?, 1, 0, NULL)`,
+      [name, pinHash]
+    );
+
+    // 2. Save global config in system_config
+    const shouldLoadDemo = load_demo_data === true || load_demo_data === 'true' || seed_mode === 'DEMO';
+    const configs = [
+      { key: 'cafe_name', value: cafe_name || 'كافيه مزاج' },
+      { key: 'currency', value: currency || 'ج.م' },
+      { key: 'vat_percent', value: String(vat_percent !== undefined ? vat_percent : 14) },
+      { key: 'service_percent', value: String(service_percent !== undefined ? service_percent : 12) },
+      { key: 'onboarding_state', value: 'COMPLETE' },
+      { key: 'app_mode', value: shouldLoadDemo ? 'DEMO' : 'LIVE' },
+      { key: 'setup_completed_at', value: new Date().toISOString() }
+    ];
+
+    for (const c of configs) {
+      await runQuery(
+        `INSERT OR REPLACE INTO system_config (key, value, updated_at) VALUES (?, ?, datetime('now', 'localtime'))`,
+        [c.key, c.value]
+      );
+    }
+
+    // 3. If load_demo_data is true, seed initial demo catalog & inventory
+    if (shouldLoadDemo) {
+      // Seed Demo Categories
+      await runQuery(`INSERT OR IGNORE INTO menu_categories (id, name, icon, is_active) VALUES (1, 'مشروبات ساخنة', '☕', 1)`);
+      await runQuery(`INSERT OR IGNORE INTO menu_categories (id, name, icon, is_active) VALUES (2, 'مشروبات باردة', '🥤', 1)`);
+      await runQuery(`INSERT OR IGNORE INTO menu_categories (id, name, icon, is_active) VALUES (3, 'مأكولات وسندوتشات', '🥪', 1)`);
+      await runQuery(`INSERT OR IGNORE INTO menu_categories (id, name, icon, is_active) VALUES (4, 'شيشة ومعسلات', '💨', 1)`);
+
+      // Seed Demo Menu Items & Prices
+      const demoItems = [
+        { id: 1, cat: 1, name: 'إسبريسو سينجل', dept: 'BARISTA', price: 3000 },
+        { id: 2, cat: 1, name: 'كابتشينو كلاسيك', dept: 'BARISTA', price: 5500 },
+        { id: 3, cat: 1, name: 'لاتيه كراميل', dept: 'BARISTA', price: 6500 },
+        { id: 4, cat: 2, name: 'مياه معدنية', dept: 'BARISTA', price: 1500 },
+        { id: 5, cat: 3, name: 'ساندوتش تركي بالجبنة', dept: 'KITCHEN', price: 7500 },
+        { id: 6, cat: 4, name: 'شيشة تفاحتين فاخر', dept: 'SHISHA', price: 8000 }
+      ];
+
+      for (const item of demoItems) {
+        await runQuery(
+          `INSERT OR IGNORE INTO menu_items (id, category_id, name, department, is_available, is_sellable, lifecycle_state)
+           VALUES (?, ?, ?, ?, 1, 1, 'PUBLISHED')`,
+          [item.id, item.cat, item.name, item.dept]
+        );
+        await runQuery(
+          `INSERT OR REPLACE INTO menu_prices (menu_item_id, amount_minor, currency)
+           VALUES (?, ?, ?)`,
+          [item.id, item.price, currency || 'ج.م']
+        );
+      }
+
+      // Seed Demo Inventory Items
+      const demoInventory = [
+        { id: 1, name: 'بن حبوب إسبريسو', cat: 'بن', unit: 'kg', min: 5, cost: 45000, stock: 25000000 },
+        { id: 2, name: 'حليب كامل الدسم', cat: 'ألبان', unit: 'L', min: 10, cost: 3500, stock: 50000000 },
+        { id: 3, name: 'سيرب كراميل', cat: 'سيرب', unit: 'bottle', min: 2, cost: 12000, stock: 10000000 },
+        { id: 4, name: 'معسل تفاحتين', cat: 'معسل', unit: 'kg', min: 3, cost: 35000, stock: 15000000 },
+        { id: 5, name: 'فحم شيشة طبيعي', cat: 'فحم', unit: 'kg', min: 10, cost: 4500, stock: 40000000 }
+      ];
+
+      for (const inv of demoInventory) {
+        await runQuery(
+          `INSERT OR IGNORE INTO inventory_items (id, name, category, unit, min_limit, cost_per_unit_minor, current_stock_microunits, is_active)
+           VALUES (?, ?, ?, ?, ?, ?, ?, 1)`,
+          [inv.id, inv.name, inv.cat, inv.unit, inv.min, inv.cost, inv.stock]
+        );
+      }
+    }
+
+    res.json({
+      success: true,
+      message: 'تم تهيئة النظام بنجاح وتجهيز حساب المسؤول',
+      admin_id: '101',
+      mode: shouldLoadDemo ? 'DEMO' : 'LIVE'
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 module.exports = router;

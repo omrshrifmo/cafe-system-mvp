@@ -538,14 +538,23 @@
             </div>
           ` : ''}
 
-          <h4 class="text-sm font-black text-white leading-tight">${order.item_name}</h4>
+          <div class="flex items-center justify-between gap-1">
+            <h4 class="text-sm font-black text-white leading-tight">${order.item_name}</h4>
+            ${(order.is_surprise_mix || (order.item_notes && order.item_notes.includes('مفاجأة'))) ? `
+              <span class="px-2 py-0.5 rounded-full bg-purple-900/90 border border-purple-400 text-purple-200 text-[9px] font-black shadow-lg">
+                🌟 خليط مفاجأة (بمعرفة المحطة)
+              </span>
+            ` : ''}
+          </div>
 
           <!-- Customizations Badges -->
           <div class="flex flex-wrap gap-1 mt-1.5">
+            ${order.flavor ? `<span class="px-1.5 py-0.5 rounded bg-violet-950/80 border border-violet-500/40 text-violet-300 text-[10px] font-bold">🍓 النكهة: ${order.flavor}</span>` : ''}
             ${order.variant ? `<span class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-200 text-[10px] font-bold">🏷️ ${order.variant}</span>` : ''}
             ${order.addons ? `<span class="px-1.5 py-0.5 rounded bg-emerald-950/80 border border-emerald-500/30 text-emerald-300 text-[10px] font-bold">➕ ${order.addons}</span>` : ''}
           </div>
 
+          ${order.prep_instructions ? `<div class="mt-1.5 text-[10px] bg-purple-950/50 p-1.5 rounded-lg border border-purple-700/50 text-purple-300 font-medium">📋 تعليمات التحضير: ${order.prep_instructions}</div>` : ''}
           ${order.item_notes ? `<div class="mt-1.5 text-[10px] bg-slate-950/60 p-1.5 rounded-lg border border-slate-800 text-slate-300">📝 ${order.item_notes}</div>` : ''}
 
           <div class="flex items-center justify-between bg-slate-800/90 px-2.5 py-1 rounded-lg mt-2 text-xs">

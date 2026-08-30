@@ -230,6 +230,60 @@ router.get('/reports/bom-reconciliation', requireAuth, requirePermission('report
 // Structured Expenses & Indirect Cost Allocations
 const { getExpenses, recordExpense, allocateIndirectCosts } = require('../../domain/accounting/expenseService');
 
+// Petty Cash & Daily Expenses
+router.get(['/reports/expenses', '/daily-expenses'], requireAuth, async (req, res, next) => {
+  try {
+    const expenses = await allQuery(`
+      SELECT de.*, COALESCE(u.name, 'الإدارة') as logged_by
+      FROM daily_expenses de
+      LEFT JOIN users u ON de.created_by = u.id
+      ORDER BY de.created_at DESC 
+      LIMIT 100
+    `);
+    const totalRow = await getQuery(`
+      SELECT COALESCE(SUM(amount), 0) as total_today 
+      FROM daily_expenses 
+      WHERE date(created_at) = date('now', 'localtime')
+    `);
+    res.json({
+      success: true,
+      expenses,
+      data: { expenses, total_today: totalRow ? totalRow.total_today : 0 },
+      total_today: totalRow ? totalRow.total_today : 0
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post(['/reports/expenses', '/daily-expenses'], requireAuth, async (req, res, next) => {
+  try {
+    const { description, notes, amount, payment_source = 'DRAWER', category = 'نثريات وتشغيل', expense_date } = req.body;
+    const desc = description || notes || 'مصروف عام';
+    const numAmount = Number(amount);
+    if (!numAmount || numAmount <= 0) {
+      return res.status(400).json({ success: false, error: 'قيمة المصروف يجب أن تكون أكبر من الصفر' });
+    }
+    const userId = req.user ? req.user.id : null;
+    const dateStr = expense_date || new Date().toISOString().split('T')[0];
+
+    const result = await runQuery(
+      `INSERT INTO daily_expenses (description, amount, payment_source, category, user_id, created_by, expense_date)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [desc, numAmount, payment_source, category, userId, userId, dateStr]
+    );
+
+    res.json({
+      success: true,
+      message: 'تم تسجيل المصروف بنجاح',
+      data: { expense_id: result.lastID, amount: numAmount, category },
+      expense_id: result.lastID
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.get('/expenses', requireAuth, async (req, res, next) => {
   try {
     const expenses = await getExpenses(req.query);

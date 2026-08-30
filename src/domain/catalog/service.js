@@ -15,6 +15,11 @@ async function getMenu() {
     `SELECT m.id, m.category_id, m.name, m.name_en, m.description, m.department, 
             m.is_available, m.is_featured, m.sort_order, m.sku, m.image_ref,
             m.allergens, m.tax_class, m.lifecycle_state, m.effective_from,
+            COALESCE(m.has_sugar_options, 0) as has_sugar_options,
+            COALESCE(m.has_roast_options, 0) as has_roast_options,
+            m.available_flavors,
+            COALESCE(m.is_surprise_mix, 0) as is_surprise_mix,
+            m.prep_instructions,
             COALESCE(p.amount_minor, 0) as price_minor,
             COALESCE(p.currency, 'ج.م') as currency
      FROM menu_items m
@@ -35,10 +40,21 @@ async function getMenu() {
       parsedAllergens = [];
     }
 
+    let parsedFlavors = [];
+    try {
+      parsedFlavors = item.available_flavors ? (typeof item.available_flavors === 'string' ? JSON.parse(item.available_flavors) : item.available_flavors) : [];
+    } catch (e) {
+      parsedFlavors = [];
+    }
+
     itemsByCategory.get(item.category_id).push({
       ...item,
       price: (item.price_minor / 100).toFixed(2),
-      allergens: parsedAllergens
+      allergens: parsedAllergens,
+      available_flavors: Array.isArray(parsedFlavors) ? parsedFlavors : [],
+      has_sugar_options: Boolean(item.has_sugar_options),
+      has_roast_options: Boolean(item.has_roast_options),
+      is_surprise_mix: Boolean(item.is_surprise_mix)
     });
   }
 
@@ -142,14 +158,29 @@ async function validateUniqueItem(sku, name, name_en, excludeId = null) {
 }
 
 async function createMenuItem(itemData) {
-  const { sku, name, name_en, category_id, department, priceMinor, description, is_featured, sort_order, author_id } = itemData;
+  const { 
+    sku, name, name_en, category_id, department, priceMinor, 
+    description, is_featured, sort_order, author_id,
+    has_sugar_options = 0, has_roast_options = 0, 
+    available_flavors = null, is_surprise_mix = 0, prep_instructions = null
+  } = itemData;
   
   await validateUniqueItem(sku, name, name_en);
 
+  const flavorsStr = available_flavors ? (typeof available_flavors === 'string' ? available_flavors : JSON.stringify(available_flavors)) : null;
+
   const itemRes = await runQuery(
-    `INSERT INTO menu_items (sku, category_id, name, name_en, description, department, is_available, is_featured, sort_order, lifecycle_state) 
-     VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, 'DRAFT')`,
-    [sku || null, category_id || 1, name.trim(), name_en ? name_en.trim() : null, description || null, department || 'BARISTA', is_featured ? 1 : 0, sort_order || 0]
+    `INSERT INTO menu_items (
+      sku, category_id, name, name_en, description, department, 
+      is_available, is_featured, sort_order, lifecycle_state,
+      has_sugar_options, has_roast_options, available_flavors, is_surprise_mix, prep_instructions
+    ) 
+     VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, 'DRAFT', ?, ?, ?, ?, ?)`,
+    [
+      sku || null, category_id || 1, name.trim(), name_en ? name_en.trim() : null, description || null, 
+      department || 'BARISTA', is_featured ? 1 : 0, sort_order || 0,
+      has_sugar_options ? 1 : 0, has_roast_options ? 1 : 0, flavorsStr, is_surprise_mix ? 1 : 0, prep_instructions || null
+    ]
   );
 
   const itemId = itemRes.lastID;

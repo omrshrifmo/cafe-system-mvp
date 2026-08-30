@@ -114,7 +114,7 @@
         <div class="flex items-center justify-between border-b border-slate-800 pb-3">
           <div class="flex items-center gap-2">
             <span class="text-xl">🖨️</span>
-            <h2 class="text-base font-extrabold text-white">طابعة الإيصالات والشبكة (ESC/POS)</h2>
+            <h2 class="text-base font-extrabold text-white">طابعة الإيصالات والفواتير (ESC/POS)</h2>
           </div>
           <button onclick="testPrinter()" class="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30 rounded-lg text-xs font-bold cursor-pointer flex items-center gap-1">
             <span>تجربة الطباعة</span>
@@ -123,7 +123,23 @@
         </div>
 
         <div class="space-y-3 text-xs">
-          <div class="grid grid-cols-3 gap-2">
+          <!-- Connection Type: Network IP vs USB / Local Windows -->
+          <div>
+            <label class="block font-bold text-slate-300 mb-1">نوع التوصيل (Connection Type):</label>
+            <div class="grid grid-cols-2 gap-2 p-1 bg-slate-950 rounded-xl border border-slate-700">
+              <label class="flex items-center justify-center gap-1.5 p-2 rounded-lg text-xs font-bold cursor-pointer transition-colors has-[:checked]:bg-indigo-600 has-[:checked]:text-white text-slate-400">
+                <input type="radio" name="printer_type" id="cfg-printer-type-net" value="NETWORK" checked onchange="togglePrinterTypeFields()" class="hidden" />
+                <span>🌐 شبكة (Network IP)</span>
+              </label>
+              <label class="flex items-center justify-center gap-1.5 p-2 rounded-lg text-xs font-bold cursor-pointer transition-colors has-[:checked]:bg-amber-500 has-[:checked]:text-slate-950 text-slate-400">
+                <input type="radio" name="printer_type" id="cfg-printer-type-usb" value="USB" onchange="togglePrinterTypeFields()" class="hidden" />
+                <span>🔌 USB / طابعة ويندوز</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Network Fields -->
+          <div id="printer-net-fields" class="grid grid-cols-3 gap-2">
             <div class="col-span-2">
               <label class="block font-bold text-slate-300 mb-1">عنوان IP الطابعة الحرارية:</label>
               <input type="text" id="cfg-printer-ip" class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-indigo-400 font-mono font-bold focus:border-indigo-500 focus:outline-none" placeholder="192.168.1.100" />
@@ -132,6 +148,13 @@
               <label class="block font-bold text-slate-300 mb-1">المنفذ (Port):</label>
               <input type="number" id="cfg-printer-port" class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-slate-300 font-mono font-bold focus:border-indigo-500 focus:outline-none" placeholder="9100" />
             </div>
+          </div>
+
+          <!-- USB Fields -->
+          <div id="printer-usb-fields" class="hidden">
+            <label class="block font-bold text-slate-300 mb-1">اسم الطابعة في ويندوز (Windows Printer Name):</label>
+            <input type="text" id="cfg-printer-name" class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-amber-400 font-mono font-bold focus:border-amber-500 focus:outline-none" placeholder="ReceiptPrinter (مثل: POS-80 أو XP-80C)" />
+            <p class="text-[10px] text-slate-400 mt-1">يتم الإرسال مباشرة إلى طابور الطباعة المحلي (Windows Spooler \\localhost\PrinterName)</p>
           </div>
 
           <div class="flex items-center justify-between p-2.5 bg-slate-950 rounded-xl border border-slate-800">
@@ -301,6 +324,10 @@
             </div>
           </div>
           <div class="flex items-center gap-2">
+            <button type="button" onclick="if(window.MazajNav) window.MazajNav.showChangePinModal()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 rounded-xl text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors">
+              <span>🔑</span>
+              <span>تغيير رمزي الشخصي</span>
+            </button>
             <button onclick="togglePermissionsMatrix()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-xl text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors">
               <span>🛡️</span>
               <span>مصفوفة الصلاحيات</span>
@@ -446,6 +473,121 @@
               <input type="file" id="restore-db-file" accept=".db,.sqlite" class="w-full text-xs text-slate-400 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-slate-800 file:text-amber-300 hover:file:bg-slate-700 cursor-pointer" />
               <button onclick="triggerDatabaseRestore()" class="w-full py-2.5 bg-amber-600 hover:bg-amber-500 text-slate-950 font-black rounded-xl flex items-center justify-center gap-2 shadow-lg cursor-pointer transition-all">
                 <span>⚠️ استعادة قاعدة البيانات من الملف</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Card: Module Settings (إعدادات الوحدات والخصائص) -->
+      <section class="stat-card space-y-4 md:col-span-2 border-amber-500/30 bg-slate-900/90 shadow-xl">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div class="flex items-center gap-2">
+            <span class="text-xl">🧩</span>
+            <div>
+              <h2 class="text-base font-extrabold text-white">إعدادات الوحدات والخصائص التشغيلية (Module Settings)</h2>
+              <p class="text-[11px] text-slate-400">تفعيل أو تعطيل وحدات النظام الأساسية وحفظها في إعدادات النظام</p>
+            </div>
+          </div>
+          <span class="px-2.5 py-1 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-bold rounded-lg">
+            وحدات موديولار
+          </span>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+          <!-- 1. WiFi Module -->
+          <div class="p-3 bg-slate-950 rounded-xl border border-slate-800 flex items-center justify-between">
+            <div>
+              <p class="font-bold text-white text-xs">📶 شبكة الواي فاي (WiFi Portal)</p>
+              <p class="text-[10px] text-slate-400">طباعة بيانات الواي فاي بالإيصال</p>
+            </div>
+            <input type="checkbox" id="cfg-module-wifi" class="w-4 h-4 accent-amber-500 cursor-pointer" />
+          </div>
+
+          <!-- 2. Gaming Rentals -->
+          <div class="p-3 bg-slate-950 rounded-xl border border-slate-800 flex items-center justify-between">
+            <div>
+              <p class="font-bold text-white text-xs">🎮 تأجير الألعاب (Gaming / PS)</p>
+              <p class="text-[10px] text-slate-400">إدارة البلايستيشن وحساب الوقت</p>
+            </div>
+            <input type="checkbox" id="cfg-module-gaming" class="w-4 h-4 accent-amber-500 cursor-pointer" />
+          </div>
+
+          <!-- 3. Reservations -->
+          <div class="p-3 bg-slate-950 rounded-xl border border-slate-800 flex items-center justify-between">
+            <div>
+              <p class="font-bold text-white text-xs">📅 حجز الطاولات (Reservations)</p>
+              <p class="text-[10px] text-slate-400">جدولة الحجوزات والمناسبات</p>
+            </div>
+            <input type="checkbox" id="cfg-module-reservations" class="w-4 h-4 accent-amber-500 cursor-pointer" />
+          </div>
+
+          <!-- 4. Auto-Lock -->
+          <div class="p-3 bg-slate-950 rounded-xl border border-slate-800 flex items-center justify-between">
+            <div>
+              <p class="font-bold text-white text-xs">🔒 القفل التلقائي للشاشة (Auto-Lock)</p>
+              <p class="text-[10px] text-slate-400">قفل الشاشة عند الخمول بحسب الدور</p>
+            </div>
+            <input type="checkbox" id="cfg-module-autolock" class="w-4 h-4 accent-amber-500 cursor-pointer" />
+          </div>
+        </div>
+      </section>
+
+      <!-- Card: SaaS Data Export & Mega Bulk-Import Hub -->
+      <section class="stat-card space-y-4 md:col-span-2 border-sky-500/30 bg-slate-900/90 shadow-2xl">
+        <div class="flex flex-wrap items-center justify-between border-b border-slate-800 pb-3 gap-2">
+          <div class="flex items-center gap-2">
+            <span class="text-2xl">📊</span>
+            <div>
+              <h2 class="text-base font-extrabold text-white">مركز تصدير واستيراد البيانات الشامل (SaaS Data Hub & Bulk Import)</h2>
+              <p class="text-[11px] text-slate-400">تصدير تقارير Excel المعتمدة باللغة العربية واستيراد ملفات التهيئة الجماعية الشاملة</p>
+            </div>
+          </div>
+          <button onclick="downloadMasterTemplates()" class="px-3 py-1.5 bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/40 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow transition-all">
+            <span>📦</span>
+            <span>تحميل قالب الإعداد الشامل (Master Setup Template.zip)</span>
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+          <!-- 1. Export Hub -->
+          <div class="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-3">
+            <div class="flex items-center gap-2 text-emerald-400 font-bold">
+              <span class="text-lg">📥</span>
+              <span>تصدير البيانات إلى Excel (UTF-8 BOM)</span>
+            </div>
+            <p class="text-slate-400 text-[11px] leading-relaxed">
+              تصدير ملفات متوافقة 100% مع Microsoft Excel تدعم اللغة العربية مباشرة بدون مشاكل ترميز.
+            </p>
+            <div class="grid grid-cols-2 gap-2 pt-1">
+              <button onclick="exportSalesCsv()" class="py-2.5 px-3 bg-slate-900 hover:bg-slate-800 text-emerald-400 border border-emerald-500/30 rounded-xl font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-all">
+                <span>💰</span>
+                <span>تصدير المبيعات (.csv)</span>
+              </button>
+              <button onclick="exportInventoryCsv()" class="py-2.5 px-3 bg-slate-900 hover:bg-slate-800 text-blue-400 border border-blue-500/30 rounded-xl font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-all">
+                <span>📦</span>
+                <span>تصدير المخزون (.csv)</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- 2. Mega Bulk-Import Hub -->
+          <div class="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-3">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2 text-amber-400 font-bold">
+                <span class="text-lg">📤</span>
+                <span>الاستيراد الشامل (Mega Bulk-Import)</span>
+              </div>
+              <span class="text-[10px] text-slate-400 font-bold">يدعم ملفات CSV المتعددة</span>
+            </div>
+            <p class="text-slate-400 text-[11px] leading-relaxed">
+              قم برفع ملفات CSV لتهيئة المنظومة دفعة واحدة (الخامات والمخزون، قائمة الأصناف، والوصفات BOM).
+            </p>
+            <div class="space-y-2">
+              <input type="file" id="import-master-files" multiple accept=".csv" class="w-full text-xs text-slate-400 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-slate-800 file:text-amber-300 hover:file:bg-slate-700 cursor-pointer" />
+              <button id="import-master-btn" onclick="triggerMasterImport()" class="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl flex items-center justify-center gap-2 shadow-lg cursor-pointer transition-all">
+                <span>⚡</span>
+                <span>بدء الاستيراد والمعالجة الشاملة</span>
               </button>
             </div>
           </div>
@@ -682,6 +824,21 @@
           document.getElementById('cfg-printer-port').value = c.printer_port || 9100;
           document.getElementById('cfg-drawer-kick').checked = !!c.cash_drawer_auto_kick;
 
+          const isUsb = (c.printer_connection_type === 'USB');
+          if (document.getElementById('cfg-printer-type-usb')) {
+            document.getElementById('cfg-printer-type-usb').checked = isUsb;
+            document.getElementById('cfg-printer-type-net').checked = !isUsb;
+          }
+          if (document.getElementById('cfg-printer-name')) {
+            document.getElementById('cfg-printer-name').value = c.printer_name || 'ReceiptPrinter';
+          }
+          togglePrinterTypeFields();
+
+          if (document.getElementById('cfg-module-wifi')) document.getElementById('cfg-module-wifi').checked = c.module_wifi !== false && c.module_wifi !== 'false';
+          if (document.getElementById('cfg-module-gaming')) document.getElementById('cfg-module-gaming').checked = c.module_gaming !== false && c.module_gaming !== 'false';
+          if (document.getElementById('cfg-module-reservations')) document.getElementById('cfg-module-reservations').checked = c.module_reservations !== false && c.module_reservations !== 'false';
+          if (document.getElementById('cfg-module-autolock')) document.getElementById('cfg-module-autolock').checked = c.module_autolock !== false && c.module_autolock !== 'false';
+
           toggleTaxFields();
         }
       } catch (err) {
@@ -914,6 +1071,14 @@
       }
     }
 
+    function togglePrinterTypeFields() {
+      const isUsb = document.getElementById('cfg-printer-type-usb')?.checked;
+      const netFields = document.getElementById('printer-net-fields');
+      const usbFields = document.getElementById('printer-usb-fields');
+      if (netFields) netFields.style.display = isUsb ? 'none' : 'grid';
+      if (usbFields) usbFields.style.display = isUsb ? 'block' : 'none';
+    }
+
     async function saveAllSettings() {
       const payload = {
         cafe_name: document.getElementById('cfg-cafe-name').value.trim() || 'كافيه مزاج',
@@ -924,9 +1089,15 @@
         apply_taxes: document.getElementById('cfg-apply-taxes').checked,
         vat_percent: parseFloat(document.getElementById('cfg-vat-percent').value) || 0,
         service_percent: parseFloat(document.getElementById('cfg-service-percent').value) || 0,
+        printer_connection_type: document.getElementById('cfg-printer-type-usb')?.checked ? 'USB' : 'NETWORK',
+        printer_name: document.getElementById('cfg-printer-name')?.value.trim() || 'ReceiptPrinter',
         printer_ip: document.getElementById('cfg-printer-ip').value.trim() || '192.168.1.100',
         printer_port: parseInt(document.getElementById('cfg-printer-port').value, 10) || 9100,
-        cash_drawer_auto_kick: document.getElementById('cfg-drawer-kick').checked
+        cash_drawer_auto_kick: document.getElementById('cfg-drawer-kick').checked,
+        module_wifi: document.getElementById('cfg-module-wifi') ? document.getElementById('cfg-module-wifi').checked : true,
+        module_gaming: document.getElementById('cfg-module-gaming') ? document.getElementById('cfg-module-gaming').checked : true,
+        module_reservations: document.getElementById('cfg-module-reservations') ? document.getElementById('cfg-module-reservations').checked : true,
+        module_autolock: document.getElementById('cfg-module-autolock') ? document.getElementById('cfg-module-autolock').checked : true
       };
 
       try {
@@ -949,7 +1120,16 @@
     async function testPrinter() {
       try {
         showToast('جاري إرسال إيصال الاختبار للطابعة...');
-        const res = await fetch('/api/print/test', { method: 'POST' });
+        const isUsb = document.getElementById('cfg-printer-type-usb')?.checked;
+        const printerName = document.getElementById('cfg-printer-name')?.value.trim() || 'ReceiptPrinter';
+        const res = await fetch('/api/print/test', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            connection_type: isUsb ? 'USB' : 'NETWORK',
+            printer_name: printerName
+          })
+        });
         const data = await res.json();
         if (data.success) {
           showToast('تمت طباعة صفحة الاختبار بنجاح! 🖨️');
@@ -1265,6 +1445,65 @@
       } catch (err) {
         showToast('خطأ في الاتصال بالخادم أثناء الاستعادة', true);
       }
+    }
+
+    // --- SaaS Data Export & Import ---
+    function exportSalesCsv() {
+      showToast('جاري تصدير وتحميل سجل المبيعات (CSV UTF-8)... ⏳');
+      window.location.href = '/api/export/sales';
+    }
+
+    function exportInventoryCsv() {
+      showToast('جاري تصدير وتحميل سجل المخزون (CSV UTF-8)... ⏳');
+      window.location.href = '/api/export/inventory';
+    }
+
+    function downloadMasterTemplates() {
+      showToast('جاري إنشاء وتحميل حزمة قوالب الإعداد الشامل (.zip)... ⏳');
+      window.location.href = '/api/export/templates/master';
+    }
+
+    function downloadMenuTemplate() {
+      downloadMasterTemplates();
+    }
+
+    async function triggerMasterImport() {
+      const fileInput = document.getElementById('import-master-files');
+      const btn = document.getElementById('import-master-btn');
+      if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+        showToast('يرجى اختيار ملف CSV واحد على الأقل للاستيراد', true);
+        return;
+      }
+
+      const formData = new FormData();
+      for (let i = 0; i < fileInput.files.length; i++) {
+        formData.append('files', fileInput.files[i]);
+      }
+
+      try {
+        if (btn) { btn.disabled = true; btn.innerHTML = '<span>جاري الاستيراد والمعالجة الشاملة... ⏳</span>'; }
+        showToast('جاري معالجة واستيراد ملفات المنظومة (خامات، منيو، وصفات)... ⏳');
+
+        const res = await fetch('/api/import/master', {
+          method: 'POST',
+          body: formData
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          showToast(data.message || 'تم الاستيراد الشامل بنجاح! 📦');
+          fileInput.value = '';
+        } else {
+          showToast(data.error || 'فشل الاستيراد الشامل', true);
+        }
+      } catch (err) {
+        showToast('خطأ في الاتصال بالخادم أثناء الاستيراد', true);
+      } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = '<span>⚡</span><span>بدء الاستيراد والمعالجة الشاملة</span>'; }
+      }
+    }
+
+    async function triggerMenuImport() {
+      await triggerMasterImport();
     }
 
     window.addEventListener('DOMContentLoaded', () => {

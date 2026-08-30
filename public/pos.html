@@ -76,6 +76,24 @@
         <span id="live-clock">--:--:--</span>
       </div>
 
+      <!-- ☕ Caffeine Mode Toggle Button -->
+      <button onclick="togglePosCaffeineMode()" id="pos-caffeine-btn" title="وضع الكافيين (منع القفل التلقائي للشاشة أثناء ضغط العمل)" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30 rounded-xl text-xs font-bold flex items-center gap-1 cursor-pointer transition-all shadow">
+        <span>☕</span>
+        <span id="pos-caffeine-label" class="hidden sm:inline">وضع الكافيين</span>
+      </button>
+
+      <!-- 🗄️ No-Sale Drawer Kick -->
+      <button onclick="triggerNoSaleDrawerKick()" id="drawer-kick-btn" title="فتح درج الكاشير بدون بيع (No-Sale)" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30 rounded-xl text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors shadow">
+        <span>🗄️</span>
+        <span class="hidden sm:inline">فتح الدرج</span>
+      </button>
+
+      <!-- 📜 Past Orders & Reprinting -->
+      <button onclick="openPastOrdersModal()" id="past-orders-btn" title="سجل الطلبات والفواتير السابقة" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl border border-slate-700 flex items-center gap-1 transition-colors">
+        <span>📜</span>
+        <span class="hidden md:inline">الطلبات السابقة</span>
+      </button>
+
       <button onclick="openTableMapModal()" class="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black rounded-xl flex items-center gap-1.5 transition-colors shadow-lg cursor-pointer">
         <span>🗺️</span>
         <span>خريطة الصالة</span>
@@ -349,6 +367,37 @@
   </main>
 
   <!-- ==================== MODALS ==================== -->
+
+  <!-- Past Orders & Receipts Modal (الطلبات والفواتير السابقة وإعادة الطباعة) -->
+  <div id="past-orders-modal" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-center justify-center hidden p-3 md:p-6">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-3xl h-[80vh] flex flex-col shadow-2xl overflow-hidden text-right">
+      
+      <!-- Modal Header -->
+      <div class="shrink-0 px-5 py-3.5 border-b border-slate-800 flex items-center justify-between bg-slate-950/60">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-sky-500/20 text-sky-400 flex items-center justify-center text-xl font-bold border border-sky-500/30">
+            📜
+          </div>
+          <div>
+            <h2 class="text-base font-black text-white">سجل الفواتير والطلبات السابقة (Past Orders & Receipts)</h2>
+            <p class="text-xs text-slate-400">استعراض الفواتير المغلقة وإعادة طباعة إيصال العميل المعتمد (نسخة مكررة)</p>
+          </div>
+        </div>
+        <button onclick="closePastOrdersModal()" class="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center font-bold text-sm cursor-pointer">✕</button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="flex-1 overflow-y-auto p-4 space-y-2" id="past-orders-list">
+        <div class="text-center py-8 text-slate-500 text-xs">جاري تحميل الفواتير السابقة...</div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="shrink-0 px-5 py-3 border-t border-slate-800 bg-slate-950 flex items-center justify-between text-xs text-slate-400">
+        <span>💡 الفواتير المعاد طباعتها تحمل علامة (** نسخة مكررة **) لمنع التلاعب</span>
+        <button onclick="closePastOrdersModal()" class="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-bold cursor-pointer">إغلاق النافذة</button>
+      </div>
+    </div>
+  </div>
 
   <!-- 1. Full Floor Table Map Modal (خريطة الصالة التفاعلية) -->
   <div id="table-map-modal" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-center justify-center hidden p-3 md:p-6">
@@ -668,6 +717,24 @@
         </div>
       </div>
 
+      <!-- Custom Manual Discount Section (Role Protected) -->
+      <div id="custom-discount-container" class="bg-slate-950 p-2.5 rounded-xl border border-slate-800 space-y-2 mb-3 hidden">
+        <div class="flex items-center justify-between">
+          <label class="text-[11px] font-bold text-amber-400 flex items-center gap-1">
+            <span>🏷️</span>
+            <span>خصم استثنائي (Custom Discount):</span>
+          </label>
+          <span class="text-[9px] text-slate-400 font-bold bg-slate-900 px-2 py-0.5 rounded border border-slate-800">صلاحية مدير/مالك/كاشير</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <input type="number" id="custom-discount-val" min="0" step="any" placeholder="0" oninput="updateCheckoutRemaining()" class="flex-1 px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-xl text-amber-300 font-mono font-bold text-xs focus:border-amber-500 focus:outline-none" />
+          <select id="custom-discount-type" onchange="updateCheckoutRemaining()" class="px-2 py-1.5 bg-slate-900 border border-slate-700 rounded-xl text-white font-bold text-xs">
+            <option value="AMOUNT">ج.م (EGP)</option>
+            <option value="PERCENT">% نسبة</option>
+          </select>
+        </div>
+      </div>
+
       <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 mb-3 flex items-center justify-between">
         <div>
           <span class="text-xs font-bold text-slate-300 block" id="checkout-target-label">المبلغ المطلوب:</span>
@@ -739,12 +806,26 @@
   <div id="modifier-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
     <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 max-w-sm w-full space-y-4 shadow-2xl text-right">
       <div class="flex items-center justify-between border-b border-slate-800 pb-2">
-        <h3 id="modifier-item-title" class="text-base font-bold text-amber-400">تخصيص المشروب</h3>
+        <h3 id="modifier-item-title" class="text-base font-bold text-amber-400">تخصيص الصنف</h3>
         <button onclick="closeModifierModal()" class="text-slate-400 hover:text-white font-bold text-lg cursor-pointer">✕</button>
       </div>
 
+      <!-- Surprise Mix Badge -->
+      <div id="surprise-mix-badge-container" class="hidden p-2 rounded-xl bg-gradient-to-r from-amber-500/20 to-purple-500/20 border border-amber-400/50 text-amber-300 text-xs font-black flex items-center gap-2 shadow-sm">
+        <span class="text-base">🌟</span>
+        <span>خليط مفاجأة (بمعرفة المحطة)</span>
+      </div>
+
+      <!-- Flavors Selection -->
+      <div id="flavors-selection-container" class="space-y-1.5 hidden">
+        <label class="text-xs font-extrabold text-slate-300 block">النكهة المفضلة (Flavor):</label>
+        <div id="flavors-list" class="flex flex-wrap gap-1.5 text-xs font-bold">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+
       <!-- Sugar Selection -->
-      <div class="space-y-1.5">
+      <div id="sugar-selection-container" class="space-y-1.5 hidden">
         <label class="text-xs font-extrabold text-slate-300 block">درجة السكر (Sugar Level):</label>
         <div class="grid grid-cols-2 gap-1.5 text-xs font-bold">
           <button type="button" onclick="selectSugar('مظبوط')" class="sugar-btn p-2 bg-amber-500/20 border border-amber-500 text-amber-300 rounded-lg">مظبوط</button>
@@ -755,7 +836,7 @@
       </div>
 
       <!-- Roast Selection -->
-      <div class="space-y-1.5">
+      <div id="roast-selection-container" class="space-y-1.5 hidden">
         <label class="text-xs font-extrabold text-slate-300 block">درجة التحويجة / البن (Roast Type):</label>
         <div class="grid grid-cols-3 gap-1.5 text-xs font-bold">
           <button type="button" onclick="selectRoast('افتراضي')" class="roast-btn p-1.5 bg-amber-500/20 border border-amber-500 text-amber-300 rounded-lg">افتراضي</button>
@@ -764,6 +845,12 @@
           <button type="button" onclick="selectRoast('غامق')" class="roast-btn p-1.5 bg-slate-800 border border-slate-700 text-slate-300 rounded-lg">غامق</button>
           <button type="button" onclick="selectRoast('محوج')" class="roast-btn p-1.5 bg-slate-800 border border-slate-700 text-slate-300 rounded-lg">محوج</button>
         </div>
+      </div>
+
+      <!-- Prep Instructions Info -->
+      <div id="prep-instructions-container" class="hidden p-2 bg-slate-950 rounded-xl border border-slate-800 text-[11px] text-slate-400">
+        <span class="font-bold text-amber-400">تعليمات التحضير: </span>
+        <span id="prep-instructions-text"></span>
       </div>
 
       <div class="pt-2 flex gap-2">
@@ -1675,13 +1762,19 @@
 
       filteredItems.forEach(item => {
         const name = item.menu_item_name || item.name || 'صنف';
-        const icon = getItemIcon(name, item.category);
+        const icon = getItemIcon(name, item.category || item.department);
         const price = Number(item.price) || 0;
 
         const btn = document.createElement('button');
-        btn.onclick = () => addToCart(name, item.category, icon, price);
-        btn.className = 'bg-slate-900 border border-slate-800 hover:border-amber-500/60 rounded-xl p-2 flex flex-col items-center justify-between text-center min-h-[105px] cursor-pointer transition-all hover:scale-[1.02] shadow-sm';
+        btn.onclick = () => addToCart(item);
+        btn.className = 'bg-slate-900 border border-slate-800 hover:border-amber-500/60 rounded-xl p-2 flex flex-col items-center justify-between text-center min-h-[105px] cursor-pointer transition-all hover:scale-[1.02] shadow-sm relative overflow-hidden';
+        
+        const surpriseBadge = item.is_surprise_mix 
+          ? `<span class="absolute top-1 right-1 px-1 py-0.5 bg-purple-600/90 text-white text-[8px] font-black rounded-md shadow">🌟 مفاجأة</span>` 
+          : '';
+
         btn.innerHTML = `
+          ${surpriseBadge}
           <div class="w-9 h-9 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-lg shadow-inner">
             ${icon}
           </div>
@@ -1701,12 +1794,68 @@
     let pendingItemForModifier = null;
     let selectedSugar = 'مظبوط';
     let selectedRoast = 'افتراضي';
+    let selectedFlavor = '';
 
-    function openModifierModal(itemName, category, icon, price) {
-      pendingItemForModifier = { itemName, category, icon, price };
-      selectedSugar = 'مظبوط';
-      selectedRoast = 'افتراضي';
-      document.getElementById('modifier-item-title').textContent = `تخصيص: ${itemName}`;
+    function openModifierModal(item) {
+      pendingItemForModifier = item;
+      selectedSugar = item.has_sugar_options ? 'مظبوط' : '';
+      selectedRoast = item.has_roast_options ? 'افتراضي' : '';
+      selectedFlavor = (item.available_flavors && item.available_flavors.length > 0) ? item.available_flavors[0] : '';
+
+      const name = item.menu_item_name || item.name || 'صنف';
+      document.getElementById('modifier-item-title').textContent = `تخصيص: ${name}`;
+
+      // 1. Surprise Mix
+      const surpriseEl = document.getElementById('surprise-mix-badge-container');
+      if (surpriseEl) {
+        if (item.is_surprise_mix) surpriseEl.classList.remove('hidden');
+        else surpriseEl.classList.add('hidden');
+      }
+
+      // 2. Flavors
+      const flavorsContainer = document.getElementById('flavors-selection-container');
+      const flavorsList = document.getElementById('flavors-list');
+      if (flavorsContainer && flavorsList) {
+        const flavors = Array.isArray(item.available_flavors) ? item.available_flavors : [];
+        if (flavors.length > 0) {
+          flavorsContainer.classList.remove('hidden');
+          flavorsList.innerHTML = flavors.map((f, idx) => `
+            <button type="button" onclick="selectFlavor('${f}')" class="flavor-btn p-2 rounded-lg font-bold border transition-all ${idx === 0 ? 'bg-amber-500/20 border-amber-500 text-amber-300' : 'bg-slate-800 border-slate-700 text-slate-300'}">
+              ${f}
+            </button>
+          `).join('');
+        } else {
+          flavorsContainer.classList.add('hidden');
+          flavorsList.innerHTML = '';
+        }
+      }
+
+      // 3. Sugar Options
+      const sugarContainer = document.getElementById('sugar-selection-container');
+      if (sugarContainer) {
+        if (item.has_sugar_options) sugarContainer.classList.remove('hidden');
+        else sugarContainer.classList.add('hidden');
+      }
+
+      // 4. Roast Options
+      const roastContainer = document.getElementById('roast-selection-container');
+      if (roastContainer) {
+        if (item.has_roast_options) roastContainer.classList.remove('hidden');
+        else roastContainer.classList.add('hidden');
+      }
+
+      // 5. Prep Instructions
+      const prepContainer = document.getElementById('prep-instructions-container');
+      const prepText = document.getElementById('prep-instructions-text');
+      if (prepContainer && prepText) {
+        if (item.prep_instructions) {
+          prepText.textContent = item.prep_instructions;
+          prepContainer.classList.remove('hidden');
+        } else {
+          prepContainer.classList.add('hidden');
+        }
+      }
+
       renderModifierSelections();
       document.getElementById('modifier-modal').classList.remove('hidden');
     }
@@ -1714,6 +1863,17 @@
     function closeModifierModal() {
       document.getElementById('modifier-modal').classList.add('hidden');
       pendingItemForModifier = null;
+    }
+
+    function selectFlavor(val) {
+      selectedFlavor = val;
+      document.querySelectorAll('.flavor-btn').forEach(btn => {
+        if (btn.textContent.trim() === selectedFlavor) {
+          btn.className = "flavor-btn p-2 bg-amber-500/20 border border-amber-500 text-amber-300 rounded-lg font-bold";
+        } else {
+          btn.className = "flavor-btn p-2 bg-slate-800 border border-slate-700 text-slate-300 rounded-lg font-bold";
+        }
+      });
     }
 
     function selectSugar(val) {
@@ -1745,28 +1905,73 @@
 
     function confirmItemWithModifiers() {
       if (!pendingItemForModifier) return;
-      const { itemName, category, icon, price } = pendingItemForModifier;
+      const item = pendingItemForModifier;
+      const name = item.menu_item_name || item.name || 'صنف';
+      const category = item.category || item.department || 'BARISTA';
+      const icon = item.icon || getItemIcon(name, category);
+      const price = Number(item.price) || 0;
       
-      const existingIndex = cart.findIndex(item => item.item_name === itemName && item.price === price && item.sugar_level === selectedSugar && item.roast_type === selectedRoast);
+      const existingIndex = cart.findIndex(i => 
+        i.item_name === name && 
+        i.price === price && 
+        i.sugar_level === selectedSugar && 
+        i.roast_type === selectedRoast &&
+        i.flavor === selectedFlavor
+      );
+
       if (existingIndex > -1) {
         cart[existingIndex].quantity += 1;
       } else {
         cart.push({
-          item_name: itemName,
-          category: category || 'BARISTA',
-          icon: icon || '🍹',
-          price: Number(price) || 0,
+          item_id: item.id || null,
+          item_name: name,
+          name: name,
+          category: category,
+          icon: icon,
+          price: price,
+          price_minor: Math.round(price * 100),
           quantity: 1,
           sugar_level: selectedSugar,
-          roast_type: selectedRoast
+          roast_type: selectedRoast,
+          flavor: selectedFlavor,
+          is_surprise_mix: Boolean(item.is_surprise_mix),
+          prep_instructions: item.prep_instructions || ''
         });
       }
       closeModifierModal();
       renderCartUI();
     }
 
-    function addToCart(itemName, category, icon, price = 0) {
-      openModifierModal(itemName, category, icon, price);
+    function addToCart(itemOrName, category, icon, price = 0) {
+      let item = typeof itemOrName === 'object' ? itemOrName : { name: itemOrName, category, icon, price };
+      const hasModifiers = item.has_sugar_options || item.has_roast_options || (item.available_flavors && item.available_flavors.length > 0) || item.is_surprise_mix || item.prep_instructions;
+      if (hasModifiers) {
+        openModifierModal(item);
+      } else {
+        const name = item.name || item.menu_item_name || 'صنف';
+        const p = Number(item.price) || 0;
+        const existingIndex = cart.findIndex(i => i.item_name === name && i.price === p && !i.flavor && !i.sugar_level && !i.roast_type);
+        if (existingIndex > -1) {
+          cart[existingIndex].quantity += 1;
+        } else {
+          cart.push({
+            item_id: item.id || null,
+            item_name: name,
+            name: name,
+            category: item.category || item.department || 'BARISTA',
+            icon: item.icon || getItemIcon(name, item.category),
+            price: p,
+            price_minor: Math.round(p * 100),
+            quantity: 1,
+            sugar_level: '',
+            roast_type: '',
+            flavor: '',
+            is_surprise_mix: Boolean(item.is_surprise_mix),
+            prep_instructions: item.prep_instructions || ''
+          });
+        }
+        renderCartUI();
+      }
     }
 
     function updateCartQuantity(index, change) {
@@ -2140,6 +2345,9 @@
         </div>
         <div class="flex items-center gap-2">
           <span class="text-[10px] text-slate-400 font-mono">${new Date(order.created_at || Date.now()).toLocaleTimeString('ar-EG')}</span>
+          <button onclick="reprintReceipt(${order.id || order.session_id})" title="إعادة طباعة الإيصال" class="p-1 bg-slate-900 hover:bg-sky-600 text-slate-400 hover:text-white rounded-md text-[10px] transition-colors cursor-pointer">
+            🖨️
+          </button>
         </div>
       `;
 
@@ -2205,6 +2413,18 @@
         currentCustomerData = null;
       }
 
+      // Check RBAC for Custom Discount
+      const currentUser = JSON.parse(localStorage.getItem('currentUser') || localStorage.getItem('user') || '{}');
+      const userRole = (currentUser.role || localStorage.getItem('user_role') || '').toUpperCase();
+      const canDiscount = ['OWNER', 'SUPER_ADMIN', 'OP_MANAGER', 'OP_ASSISTANT_CASHIER'].includes(userRole);
+      const discountEl = document.getElementById('custom-discount-container');
+      if (discountEl) {
+        if (canDiscount) discountEl.classList.remove('hidden');
+        else discountEl.classList.add('hidden');
+        const discInput = document.getElementById('custom-discount-val');
+        if (discInput) discInput.value = '';
+      }
+
       updateCheckoutRemaining();
       document.getElementById('checkout-modal').classList.remove('hidden');
     }
@@ -2243,17 +2463,40 @@
       const comp = Number(document.getElementById('pay-comp').value) || 0;
       const wallet = Number(document.getElementById('pay-wallet').value) || 0;
 
+      // Calculate custom manual discount
+      const discVal = Number(document.getElementById('custom-discount-val')?.value) || 0;
+      const discType = document.getElementById('custom-discount-type')?.value || 'AMOUNT';
+      let customDiscount = 0;
+      if (discVal > 0) {
+        if (discType === 'PERCENT') {
+          customDiscount = Number(((currentCheckoutSubtotal * discVal) / 100).toFixed(2));
+        } else {
+          customDiscount = discVal;
+        }
+      }
+
       let pointsDiscount = 0;
       const redeemToggle = document.getElementById('redeem-points-toggle');
       if (redeemToggle && redeemToggle.checked && currentCustomerData) {
-        pointsDiscount = Math.min(currentCheckoutTotal, currentCustomerData.points || 0);
+        pointsDiscount = Math.min(Math.max(0, currentCheckoutTotal - customDiscount), currentCustomerData.points || 0);
       }
 
-      const netBill = Math.max(0, currentCheckoutTotal - pointsDiscount);
-      document.getElementById('checkout-total-bill').textContent = `${netBill} ${posSystemConfig.currency || 'ج.م'} ${pointsDiscount > 0 ? `(خصم ${pointsDiscount} ${posSystemConfig.currency || 'ج.م'} نقاط)` : ''}`;
+      const totalDiscounts = customDiscount + pointsDiscount;
+      const netBill = Math.max(0, Number((currentCheckoutTotal - totalDiscounts).toFixed(2)));
+      
+      let discountBadge = '';
+      if (customDiscount > 0 && pointsDiscount > 0) {
+        discountBadge = `(خصم استثنائي: ${customDiscount} ج.م + نقاط: ${pointsDiscount} ج.م)`;
+      } else if (customDiscount > 0) {
+        discountBadge = `(خصم استثنائي: ${customDiscount} ج.م)`;
+      } else if (pointsDiscount > 0) {
+        discountBadge = `(خصم نقاط: ${pointsDiscount} ج.م)`;
+      }
+
+      document.getElementById('checkout-total-bill').textContent = `${netBill} ${posSystemConfig.currency || 'ج.م'} ${discountBadge}`;
 
       const totalPaid = cash + instapay + visa + comp + wallet;
-      const remaining = netBill - totalPaid;
+      const remaining = Number((netBill - totalPaid).toFixed(2));
       
       const remEl = document.getElementById('checkout-remaining');
       if (remaining < 0) {
@@ -2276,12 +2519,20 @@
     }
 
     function autofillPayment(method) {
+      const discVal = Number(document.getElementById('custom-discount-val')?.value) || 0;
+      const discType = document.getElementById('custom-discount-type')?.value || 'AMOUNT';
+      let customDiscount = 0;
+      if (discVal > 0) {
+        if (discType === 'PERCENT') customDiscount = Number(((currentCheckoutSubtotal * discVal) / 100).toFixed(2));
+        else customDiscount = discVal;
+      }
+
       const redeemToggle = document.getElementById('redeem-points-toggle');
       let pointsDiscount = 0;
       if (redeemToggle && redeemToggle.checked && currentCustomerData) {
-        pointsDiscount = Math.min(currentCheckoutTotal, currentCustomerData.points || 0);
+        pointsDiscount = Math.min(Math.max(0, currentCheckoutTotal - customDiscount), currentCustomerData.points || 0);
       }
-      const netBill = Math.max(0, currentCheckoutTotal - pointsDiscount);
+      const netBill = Math.max(0, Number((currentCheckoutTotal - customDiscount - pointsDiscount).toFixed(2)));
 
       document.getElementById('pay-cash').value = '';
       document.getElementById('pay-instapay').value = '';
@@ -2337,6 +2588,9 @@
           pointsRedeemed = Math.min(currentCheckoutTotal, currentCustomerData.points || 0);
         }
 
+        const customDiscountVal = Number(document.getElementById('custom-discount-val')?.value) || 0;
+        const customDiscountType = document.getElementById('custom-discount-type')?.value || 'AMOUNT';
+
         const currentUser = JSON.parse(localStorage.getItem('currentUser') || localStorage.getItem('user') || '{}');
 
         // Combined checkout items: active table items + new cart items
@@ -2355,7 +2609,11 @@
               cashier_name: currentUser.name || 'الكاشير',
               customer_phone: customerPhone || null,
               points_redeemed: pointsRedeemed,
-              tip_amount: tipAmount
+              tip_amount: tipAmount,
+              custom_discount_amount: customDiscountVal > 0 && customDiscountType === 'AMOUNT' ? customDiscountVal : 0,
+              custom_discount_percent: customDiscountVal > 0 && customDiscountType === 'PERCENT' ? customDiscountVal : 0,
+              custom_discount_type: customDiscountType,
+              custom_discount_value: customDiscountVal
             })
           });
 
@@ -2391,31 +2649,59 @@
 
     // Global POS Keyboard Shortcuts
     window.addEventListener('keydown', (e) => {
-      // F2 -> Search Menu
+      const activeEl = document.activeElement;
+      const isInput = activeEl && ['INPUT', 'TEXTAREA', 'SELECT'].includes(activeEl.tagName);
+
+      // F2 -> Immediately open Custom Item Modal & auto-focus name input
       if (e.key === 'F2') {
         e.preventDefault();
-        const searchInput = document.getElementById('menu-search-input') || document.querySelector('input[type="search"]');
-        if (searchInput) searchInput.focus();
+        openCustomItemModal();
+        return;
       }
+
+      // Escape -> Close any open custom in-page modals cleanly
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        closeCheckoutModal();
+        closeCustomItemModal();
+        closeCustomTableModal();
+        closeTableSeatingModal();
+        closeMoveTableModal();
+        closeModifierModal();
+        closeTableMapModal();
+        const openModals = document.querySelectorAll('.mazaj-modal, [id$="-modal"]:not(.hidden)');
+        openModals.forEach(m => m.classList.add('hidden'));
+        return;
+      }
+
+      // Enter -> Trigger "دفع الحساب" (Checkout) button if not typing in form inputs
+      if (e.key === 'Enter' && !isInput) {
+        e.preventDefault();
+        const checkoutBtn = document.getElementById('checkout-btn') || document.querySelector('button[onclick*="openCheckoutModal"]');
+        if (checkoutBtn && !checkoutBtn.disabled) {
+          checkoutBtn.click();
+        } else if (cart.length > 0 || (typeof activeTableOrders !== 'undefined' && activeTableOrders.length > 0)) {
+          openCheckoutModal();
+        }
+        return;
+      }
+
       // F4 -> Quick Checkout
       if (e.key === 'F4') {
         e.preventDefault();
-        if (cart.length > 0 || activeTableOrders.length > 0) {
+        if (cart.length > 0 || (typeof activeTableOrders !== 'undefined' && activeTableOrders.length > 0)) {
           openCheckoutModal();
         } else {
           UIState.showToast('لا توجد عناصر مفتوحة لإتمام الحساب', 'warning');
         }
+        return;
       }
+
       // F8 -> Print Check
       if (e.key === 'F8') {
         e.preventDefault();
         printTableCheckBill();
-      }
-      // Escape -> Close all modals
-      if (e.key === 'Escape') {
-        closeCheckoutModal();
-        closeModifierModal();
-        closeTableMapModal();
+        return;
       }
     });
 
@@ -2434,6 +2720,162 @@
         };
         ws.onclose = () => setTimeout(connectWebSocket, 3000);
       } catch (e) {}
+    }
+
+    // --- 🗄️ Audited No-Sale Drawer Kick & 📜 Past Orders Reprint ---
+    async function triggerNoSaleDrawerKick() {
+      try {
+        showToast('جاري إرسال إشارة فتح الدرج يدويًا... 🗄️');
+        const res = await fetch('/api/print/open-drawer', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reason: 'فتح يدوي مباشر لدرج الكاشير (No-Sale Drawer Kick)' })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          showToast(data.message || 'تم فتح درج النقدية وتوثيق العملية في سجل التدقيق بنجاح! 🗄️⚡');
+        } else {
+          showToast(data.error || 'فشل فتح درج النقدية', true);
+        }
+      } catch (err) {
+        showToast('خطأ في الاتصال بالخادم لفتح الدرج', true);
+      }
+    }
+
+    async function openPastOrdersModal() {
+      const modal = document.getElementById('past-orders-modal');
+      const list = document.getElementById('past-orders-list');
+      if (modal) modal.classList.remove('hidden');
+      if (!list) return;
+
+      list.innerHTML = '<div class="text-center py-8 text-slate-500 text-xs">جاري تحميل الفواتير السابقة... ⏳</div>';
+
+      try {
+        const res = await fetch('/api/receipts');
+        const data = await res.json();
+        if (data.success && Array.isArray(data.receipts) && data.receipts.length > 0) {
+          list.innerHTML = data.receipts.map(r => `
+            <div class="flex items-center justify-between p-3 rounded-2xl bg-slate-950/80 border border-slate-800 hover:border-sky-500/40 transition-colors text-xs">
+              <div class="flex items-center gap-3">
+                <span class="w-8 h-8 rounded-xl bg-sky-500/10 text-sky-400 font-mono font-bold flex items-center justify-center border border-sky-500/20">
+                  #${r.session_id || r.receipt_id}
+                </span>
+                <div>
+                  <div class="flex items-center gap-2">
+                    <span class="font-black text-white">طاولة: ${r.table_id || r.table_number || 'سفري'}</span>
+                    <span class="px-2 py-0.5 bg-emerald-500/10 text-emerald-300 font-mono font-bold text-[10px] rounded-md">${r.method || 'CASH'}</span>
+                  </div>
+                  <span class="text-[10px] text-slate-400 font-mono">${new Date(r.created_at || Date.now()).toLocaleString('ar-EG')}</span>
+                </div>
+              </div>
+              <div class="flex items-center gap-3">
+                <span class="font-mono font-black text-sm text-amber-400">${r.amount || ((r.amount_minor || 0) / 100)} ${posSystemConfig.currency || 'ج.م'}</span>
+                <button onclick="reprintReceipt(${r.session_id || r.receipt_id})" class="px-3 py-1.5 bg-sky-600 hover:bg-sky-500 text-white font-bold rounded-xl text-xs flex items-center gap-1 cursor-pointer transition-colors shadow">
+                  <span>🖨️</span>
+                  <span>إعادة طباعة</span>
+                </button>
+              </div>
+            </div>
+          `).join('');
+        } else {
+          list.innerHTML = '<div class="text-center py-8 text-slate-500 text-xs">لا توجد فواتير مغلقة مسجلة حتى الآن.</div>';
+        }
+      } catch (err) {
+        list.innerHTML = '<div class="text-center py-8 text-rose-400 text-xs">فشل تحميل سجل الفواتير السابقة.</div>';
+      }
+    }
+
+    function closePastOrdersModal() {
+      const modal = document.getElementById('past-orders-modal');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    async function reprintReceipt(orderId) {
+      if (!orderId) return;
+      try {
+        showToast(`جاري إرسال الفاتورة #${orderId} لإعادة الطباعة... 🖨️`);
+        const res = await fetch(`/api/print/receipt/reprint/${orderId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          showToast(data.message || 'تمت إعادة طباعة الفاتورة (** نسخة مكررة **) بنجاح! 🖨️');
+        } else {
+          showToast(data.error || 'فشلت إعادة طباعة الفاتورة', true);
+        }
+      } catch (err) {
+        showToast('خطأ في الاتصال بالخادم أثناء إعادة الطباعة', true);
+      }
+    }
+
+    // Caffeine Mode Inactivity Bypass & Toggle
+    let isPosCaffeineActive = false;
+
+    async function checkPosCaffeineStatus() {
+      try {
+        const res = await fetch('/api/auth/caffeine');
+        const data = await res.json();
+        if (data.success && data.active) {
+          isPosCaffeineActive = true;
+          updatePosCaffeineUI(true, data.expires_at);
+        } else {
+          isPosCaffeineActive = false;
+          updatePosCaffeineUI(false);
+        }
+      } catch (e) {}
+    }
+
+    function updatePosCaffeineUI(active, expiresAt) {
+      const btn = document.getElementById('pos-caffeine-btn');
+      const label = document.getElementById('pos-caffeine-label');
+      if (!btn) return;
+
+      if (active) {
+        btn.classList.remove('bg-slate-800', 'text-amber-300', 'border-amber-500/30');
+        btn.classList.add('bg-amber-500', 'text-slate-950', 'border-amber-400', 'ring-2', 'ring-amber-500/50');
+        if (label) label.textContent = 'الكافيين نشط ☕';
+        btn.title = `وضع الكافيين مفعل (القفل التلقائي معطل حتى ${expiresAt ? new Date(expiresAt).toLocaleTimeString('ar-EG') : 'انتهاء الجلسة'})`;
+      } else {
+        btn.classList.remove('bg-amber-500', 'text-slate-950', 'border-amber-400', 'ring-2', 'ring-amber-500/50');
+        btn.classList.add('bg-slate-800', 'text-amber-300', 'border-amber-500/30');
+        if (label) label.textContent = 'وضع الكافيين';
+        btn.title = 'وضع الكافيين (منع القفل التلقائي للشاشة أثناء ضغط العمل)';
+      }
+    }
+
+    async function togglePosCaffeineMode() {
+      if (isPosCaffeineActive) {
+        try {
+          const res = await fetch('/api/auth/caffeine', { method: 'DELETE' });
+          const data = await res.json();
+          if (data.success) {
+            isPosCaffeineActive = false;
+            updatePosCaffeineUI(false);
+            showToast('تم إيقاف وضع الكافيين وعودة القفل التلقائي 🔒');
+          }
+        } catch (e) {
+          showToast('فشل إلغاء وضع الكافيين', true);
+        }
+      } else {
+        try {
+          const res = await fetch('/api/auth/caffeine', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ duration_minutes: 60, reason: 'POS_PEAK_HOURS_OVERRIDE' })
+          });
+          const data = await res.json();
+          if (data.success) {
+            isPosCaffeineActive = true;
+            updatePosCaffeineUI(true, data.expires_at);
+            showToast('تم تفعيل وضع الكافيين! الشاشة لن تُقفل تلقائياً ☕⚡');
+          } else {
+            showToast(data.error || 'فشل تفعيل وضع الكافيين', true);
+          }
+        } catch (e) {
+          showToast('فشل تفعيل وضع الكافيين', true);
+        }
+      }
     }
 
     // Network Monitor
@@ -2463,11 +2905,13 @@
     // Initialize POS
     initNetworkMonitor();
     initAuthUser();
+    checkPosCaffeineStatus();
     loadPosConfig();
     fetchMenu();
     fetchTableSessions();
     connectWebSocket();
     setInterval(fetchTableSessions, 10000);
+    setInterval(checkPosCaffeineStatus, 30000);
 
     // Activity recovery triggers on login/unlock/tab focus
     window.addEventListener('storage', (e) => {

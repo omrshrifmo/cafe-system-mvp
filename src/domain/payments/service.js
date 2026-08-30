@@ -22,7 +22,11 @@ async function getSystemTaxConfig() {
     cash_drawer_auto_kick: cfg.cash_drawer_auto_kick !== 'false',
     daily_target: parseFloat(cfg.daily_target || '5000'),
     header_note: cfg.header_note || '',
-    footer_note: cfg.footer_note || ''
+    footer_note: cfg.footer_note || '',
+    module_wifi: cfg.module_wifi !== 'false',
+    module_gaming: cfg.module_gaming !== 'false',
+    module_reservations: cfg.module_reservations !== 'false',
+    module_autolock: cfg.module_autolock !== 'false'
   };
 }
 
@@ -217,6 +221,33 @@ async function settleSession(checkoutPayload, actor = null) {
       calculatedDiscountMinor = Math.round(discount_amount * 100);
     }
 
+    // Custom Manual Discount (خصم استثنائي)
+    let customDiscountMinor = 0;
+    const rawCustomDiscount = checkoutPayload.custom_discount_amount !== undefined 
+      ? checkoutPayload.custom_discount_amount 
+      : (checkoutPayload.custom_discount_value !== undefined ? checkoutPayload.custom_discount_value : 0);
+    const customDiscountType = checkoutPayload.custom_discount_type || (checkoutPayload.custom_discount_percent ? 'PERCENT' : 'AMOUNT');
+
+    if (Number(rawCustomDiscount) > 0 || Number(checkoutPayload.custom_discount_percent) > 0) {
+      // RBAC Enforcement: OWNER, SUPER_ADMIN, OP_MANAGER, OP_ASSISTANT_CASHIER
+      const allowedRoles = ['OWNER', 'SUPER_ADMIN', 'OP_MANAGER', 'OP_ASSISTANT_CASHIER'];
+      const actorRole = actor && actor.role ? actor.role.toUpperCase() : '';
+      if (!allowedRoles.includes(actorRole)) {
+        const err = new Error('FORBIDDEN_CUSTOM_DISCOUNT: لا تملك الصلاحية لتطبيق خصم استثنائي (مقتصر على المالك والمدير ومساعد الكاشير)');
+        err.status = 403;
+        err.statusCode = 403;
+        throw err;
+      }
+
+      if (customDiscountType === 'PERCENT' || Number(checkoutPayload.custom_discount_percent) > 0) {
+        const pct = Number(checkoutPayload.custom_discount_percent) || Number(rawCustomDiscount);
+        customDiscountMinor = Math.round((subtotalMinor * pct) / 100);
+      } else {
+        customDiscountMinor = Math.round(Number(rawCustomDiscount) * 100);
+      }
+      calculatedDiscountMinor += customDiscountMinor;
+    }
+
     // Scan and apply active promotions (HAPPY_HOUR, BOGO, COMBO, TIER_DISCOUNT)
     try {
       const { evaluateBestPromotion } = require('../promotions/promotionEngine');
@@ -224,8 +255,8 @@ async function settleSession(checkoutPayload, actor = null) {
         subtotalMinor,
         customer_phone
       });
-      if (promoResult && promoResult.discountMinor > calculatedDiscountMinor) {
-        calculatedDiscountMinor = promoResult.discountMinor;
+      if (promoResult && promoResult.discountMinor > (calculatedDiscountMinor - customDiscountMinor)) {
+        calculatedDiscountMinor = promoResult.discountMinor + customDiscountMinor;
       }
     } catch (e) {}
 
@@ -244,6 +275,30 @@ async function settleSession(checkoutPayload, actor = null) {
         [publicRef, tNum > 0 ? 'DINE_IN' : 'TAKEAWAY', table ? table.id : null, customer_phone || null, subtotalMinor, finalBillMinor, actor ? actor.id : null]
       );
       session = { id: sRes.lastID, public_ref: publicRef };
+    }
+
+    // Audit Log for Custom Manual Discount
+    if (customDiscountMinor > 0) {
+      try {
+        await tx.run(
+          `INSERT INTO audit_logs (user_id, action, target_table, record_id, previous_value, new_value) VALUES (?, ?, ?, ?, ?, ?)`,
+          [
+            actor ? actor.id : null,
+            'CUSTOM_DISCOUNT_APPLIED',
+            'order_sessions',
+            String(session.id),
+            null,
+            JSON.stringify({
+              discount_amount_egp: customDiscountMinor / 100,
+              discount_type: customDiscountType,
+              order_id: session.id,
+              user_id: actor ? actor.id : null,
+              applied_by_role: actor ? actor.role : null,
+              created_at: new Date().toISOString()
+            })
+          ]
+        );
+      } catch (e) {}
     }
 
     // 3. Process Payments array
@@ -468,6 +523,8 @@ async function settleSession(checkoutPayload, actor = null) {
 
     return {
       success: true,
+      session_id: session ? session.id : null,
+      order_id: session ? session.id : null,
       message: 'تم إغلاق الحساب وتسجيل الدفع بنجاح',
       invoice: invoiceObj,
       bill: invoiceObj,
