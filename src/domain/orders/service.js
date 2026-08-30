@@ -413,7 +413,16 @@ async function getPendingOrdersByDepartment(department = null) {
   });
 }
 
-async function getPastOrdersByDepartment(department = null) {
+async function getPastOrdersByDepartment(department = null, { limit = 50, offset = 0 } = {}) {
+  const parsedLimit = Math.min(Math.max(1, parseInt(limit, 10) || 50), 200);
+  const parsedOffset = Math.max(0, parseInt(offset, 10) || 0);
+
+  let countSql = `
+    SELECT COUNT(*) as total
+    FROM order_items oi
+    JOIN order_sessions os ON oi.session_id = os.id
+    WHERE oi.kds_status = 'DELIVERED'
+  `;
   let sql = `
     SELECT oi.id, oi.session_id, oi.item_name_snapshot as item_name, oi.quantity,
            oi.modifiers_json, oi.department, oi.kds_status, oi.edit_request, oi.cancel_reason,
@@ -423,15 +432,22 @@ async function getPastOrdersByDepartment(department = null) {
     LEFT JOIN tables t ON os.table_id = t.id
     WHERE oi.kds_status = 'DELIVERED'
   `;
+  const countParams = [];
   const params = [];
   if (department) {
+    countSql += ` AND oi.department = ?`;
+    countParams.push(String(department).toUpperCase());
     sql += ` AND oi.department = ?`;
     params.push(String(department).toUpperCase());
   }
-  sql += ` ORDER BY oi.updated_at DESC LIMIT 50`;
+  sql += ` ORDER BY oi.updated_at DESC LIMIT ? OFFSET ?`;
+  params.push(parsedLimit, parsedOffset);
+
+  const totalRow = await getQuery(countSql, countParams);
+  const total = totalRow ? totalRow.total : 0;
 
   const rows = await allQuery(sql, params);
-  return rows.map(r => {
+  const orders = rows.map(r => {
     let mods = {};
     try { mods = JSON.parse(r.modifiers_json || '{}'); } catch (e) {}
     return {
@@ -442,6 +458,16 @@ async function getPastOrdersByDepartment(department = null) {
       notes: mods.notes || ''
     };
   });
+
+  return {
+    orders,
+    pagination: {
+      total,
+      limit: parsedLimit,
+      offset: parsedOffset,
+      hasMore: (parsedOffset + orders.length) < total
+    }
+  };
 }
 
 const VALID_ORDER_SESSION_TRANSITIONS = {

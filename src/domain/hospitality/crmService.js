@@ -274,6 +274,91 @@ async function anonymizeCustomer(customerId) {
   });
 }
 
+/**
+ * Settle Customer Outstanding Debt ("سداد حساب آجل")
+ */
+async function settleCustomerDebt(phone, amount, paymentMethod = 'CASH', notes = '', actor = null) {
+  const cleanPhone = String(phone || '').trim();
+  const amt = Number(amount);
+  if (!cleanPhone || isNaN(amt) || amt <= 0) {
+    throw new Error('VALIDATION_ERROR: رقم هاتف العميل ومبلغ السداد الإيجابي مطلوبان');
+  }
+
+  const amtMinor = Math.round(amt * 100);
+
+  return runTransaction(async (tx) => {
+    // 1. Check legacy customers table
+    let cust = await tx.get(`SELECT * FROM customers WHERE phone = ?`, [cleanPhone]);
+    if (!cust) {
+      // Check v3_customers
+      cust = await tx.get(`SELECT * FROM v3_customers WHERE phone = ?`, [cleanPhone]);
+    }
+
+    if (!cust) {
+      throw new Error(`NOT_FOUND: العميل صاحب الرقم [${cleanPhone}] غير مسجل بالنظام`);
+    }
+
+    const currentDebtMinor = (cust.credit_balance_minor !== undefined && cust.credit_balance_minor !== null)
+      ? Number(cust.credit_balance_minor)
+      : Math.round((Number(cust.credit_balance) || 0) * 100);
+
+    const currentDebtEgp = currentDebtMinor / 100.0;
+
+    // Reduce debt
+    const newDebtMinor = Math.max(0, currentDebtMinor - amtMinor);
+    const newDebtEgp = newDebtMinor / 100.0;
+
+    // Update customers
+    await tx.run(`UPDATE customers SET credit_balance = ? WHERE phone = ?`, [newDebtEgp, cleanPhone]);
+    await tx.run(`UPDATE v3_customers SET credit_balance_minor = ? WHERE phone = ?`, [newDebtMinor, cleanPhone]);
+
+    // Create a compliant order_session record for accounting & ledger tracking
+    const publicRef = `DEBT_SETTLE_${cleanPhone}_${Date.now()}`;
+    const sessRes = await tx.run(
+      `INSERT INTO order_sessions (public_ref, order_type, customer_id, status, total_minor, created_by)
+       VALUES (?, 'TAKEAWAY', ?, 'SETTLED', ?, ?)`,
+      [publicRef, cleanPhone, amtMinor, actor ? parseInt(actor.id, 10) : 1]
+    );
+    const sessionId = sessRes.lastID;
+
+    // Insert append-only payment record
+    await tx.run(
+      `INSERT INTO payments (session_id, method, amount_minor, tip_minor, currency, external_ref, created_by)
+       VALUES (?, ?, ?, 0, 'EGP', ?, ?)`,
+      [sessionId, paymentMethod.toUpperCase(), amtMinor, `سداد حساب آجل للعميل: ${cleanPhone}${notes ? ' - ' + notes : ''}`, actor ? parseInt(actor.id, 10) : 1]
+    );
+
+    // Audit log
+    const { logAudit } = require('../auth/service');
+    await logAudit(
+      'V_DEFAULT',
+      actor ? actor.id : '1',
+      'CUSTOMER_DEBT_SETTLED',
+      'CUSTOMER',
+      cleanPhone,
+      {
+        phone: cleanPhone,
+        amount_paid: amt,
+        previous_debt: currentDebtEgp,
+        remaining_debt: newDebtEgp,
+        payment_method: paymentMethod,
+        notes
+      }
+    );
+
+    return {
+      success: true,
+      phone: cleanPhone,
+      customer_name: cust.name || 'عميل',
+      amount_paid: amt,
+      previous_debt: currentDebtEgp,
+      remaining_debt: newDebtEgp,
+      payment_method: paymentMethod,
+      message: `تم سداد ${amt} ج.م من الحساب الآجل بنجاح. المتبقي: ${newDebtEgp} ج.م`
+    };
+  });
+}
+
 module.exports = {
   maskPhone,
   maskEmail,
@@ -281,5 +366,6 @@ module.exports = {
   createOrUpdateCustomer,
   awardLoyaltyPoints,
   recordCustomerVisit,
-  anonymizeCustomer
+  anonymizeCustomer,
+  settleCustomerDebt
 };

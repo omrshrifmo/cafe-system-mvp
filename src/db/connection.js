@@ -39,6 +39,8 @@ function getDb(customPath = null) {
       dbInstance.run('PRAGMA journal_mode = WAL');
       dbInstance.run('PRAGMA synchronous = NORMAL');
       dbInstance.run('PRAGMA busy_timeout = 5000');
+      dbInstance.run('PRAGMA cache_size = -20000');
+      dbInstance.run('PRAGMA temp_store = MEMORY');
     });
   }
   return dbInstance;

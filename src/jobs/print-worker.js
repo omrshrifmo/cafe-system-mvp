@@ -7,16 +7,32 @@ const { formatReceiptEscPos, formatKitchenTicketEscPos, formatZReportEscPos } = 
 const logger = require('../observability/logger');
 
 let isRunning = false;
+const fs = require('fs');
 let workerTimer = null;
 
-async function sendRawBufferToPrinter(ip, port, buffer, timeoutMs = 4000) {
+async function sendRawBufferToPrinter(ipOrPath, port, buffer, timeoutMs = 4000) {
+  // Check if target is a local USB device path (e.g. /dev/usb/lp0)
+  if (typeof ipOrPath === 'string' && (ipOrPath.startsWith('/') || ipOrPath.startsWith('\\\\.\\') || ipOrPath.toLowerCase().includes('usb'))) {
+    return new Promise((resolve, reject) => {
+      try {
+        fs.writeFile(ipOrPath, buffer, (err) => {
+          if (err) return reject(new Error(`USB Printer write error on ${ipOrPath}: ${err.message}`));
+          resolve({ success: true, interface: 'USB' });
+        });
+      } catch (err) {
+        reject(err);
+      }
+    });
+  }
+
+  // Otherwise treat as Network TCP Thermal Printer
   return new Promise((resolve, reject) => {
     const socket = new net.Socket();
     let isSettled = false;
 
     socket.setTimeout(timeoutMs);
 
-    socket.connect(port, ip, () => {
+    socket.connect(port || 9100, ipOrPath, () => {
       socket.write(buffer, () => {
         socket.end();
       });
@@ -25,7 +41,7 @@ async function sendRawBufferToPrinter(ip, port, buffer, timeoutMs = 4000) {
     socket.on('close', () => {
       if (!isSettled) {
         isSettled = true;
-        resolve({ success: true });
+        resolve({ success: true, interface: 'NETWORK' });
       }
     });
 
@@ -33,7 +49,7 @@ async function sendRawBufferToPrinter(ip, port, buffer, timeoutMs = 4000) {
       socket.destroy();
       if (!isSettled) {
         isSettled = true;
-        reject(new Error(`Printer TCP timeout on ${ip}:${port}`));
+        reject(new Error(`Printer TCP timeout on ${ipOrPath}:${port}`));
       }
     });
 

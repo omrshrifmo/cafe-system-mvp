@@ -131,6 +131,23 @@ router.post('/customers', requireAuth, async (req, res, next) => {
   }
 });
 
+// Settle Customer Outstanding Debt ("سداد حساب آجل")
+router.post('/customers/:phone/settle-debt', requireAuth, async (req, res, next) => {
+  try {
+    const { amount, payment_method, notes } = req.body;
+    const { settleCustomerDebt } = require('../../domain/hospitality/crmService');
+    const result = await settleCustomerDebt(req.params.phone, amount, payment_method, notes, req.user);
+    res.json({
+      success: true,
+      data: result,
+      ...result,
+      requestId: req.id
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // Loyalty Points Award / Redeem
 router.post('/customers/:id/loyalty', requireAuth, async (req, res, next) => {
   try {

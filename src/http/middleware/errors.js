@@ -15,7 +15,7 @@ function errorHandler(err, req, res, next) {
 
   let statusCode = err.status || err.statusCode || 500;
   let errorCode = err.code || (statusCode === 400 ? 'VALIDATION_ERROR' : 'INTERNAL_ERROR');
-  let clientMessage = err.message || 'حدث خطأ غير متوقع أثناء معالجة الطلب';
+  let clientMessage = err.message || 'حدث خطأ داخلي في النظام';
 
   // Map raw SQLite errors to safe public HTTP errors
   if (err.message && err.message.includes('SQLITE_CONSTRAINT_UNIQUE')) {

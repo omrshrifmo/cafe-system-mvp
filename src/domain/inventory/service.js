@@ -203,10 +203,24 @@ async function transferMaterial(transferData, actorId = null) {
   });
 }
 
-async function deductBOM(tx, orderItemId, catalogItem, qty, actorId) {
-  if (!catalogItem.ingredients || catalogItem.ingredients.length === 0) return;
+const { calculateShishaBOM } = require('../catalog/shishaBomService');
 
-  for (const ing of catalogItem.ingredients) {
+async function deductBOM(tx, orderItemId, catalogItem, qty, actorId, options = {}) {
+  let ingredients = catalogItem.ingredients || [];
+
+  // Dynamic Shisha BOM Intelligence
+  const isShisha = catalogItem.department === 'SHISHA' || (catalogItem.name && catalogItem.name.includes('شيشة'));
+  if (isShisha) {
+    const modifiers = options.modifiers || catalogItem.modifiers || {};
+    const bowlSize = modifiers.bowl_size || modifiers.size || (catalogItem.name.includes('صغير') ? 'SMALL' : 'LARGE');
+    const isBlend = Boolean(modifiers.is_blend || modifiers.blend_70_30 || catalogItem.name.includes('ميكس') || catalogItem.name.includes('خلطة'));
+    const shishaBom = calculateShishaBOM(bowlSize, { isBlend });
+    ingredients = shishaBom.ingredients;
+  }
+
+  if (!ingredients || ingredients.length === 0) return;
+
+  for (const ing of ingredients) {
     if (!ing.unit) {
       throw new Error(`UNRECONCILED: Invalid unit mapping for ingredient ${ing.inventory_item_id}`);
     }

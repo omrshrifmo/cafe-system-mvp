@@ -170,6 +170,13 @@ async function declareCashExtended(declarationPayload, actor = null) {
     [crypto.randomUUID(), zReportPayload]
   );
 
+  // Close active shift
+  await runQuery(
+    `UPDATE shifts SET clock_out = datetime('now', 'localtime'), status = 'COMPLETED'
+     WHERE user_id = ? AND status = 'ACTIVE'`,
+    [uId]
+  );
+
   return {
     success: true,
     message: 'تم إغلاق الوردية وتسجيل إقرار الدرج وطباعة تقرير Z-Report بنجاح',

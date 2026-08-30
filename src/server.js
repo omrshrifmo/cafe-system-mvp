@@ -61,6 +61,22 @@ async function startServer() {
     process.on('SIGTERM', () => shutdown('SIGTERM'));
     process.on('SIGINT', () => shutdown('SIGINT'));
 
+    // Global Process Error Boundaries (Prevent node crash on unhandled async errors)
+    process.on('uncaughtException', (err) => {
+      logger.error('CRITICAL: Uncaught Exception caught by Global Error Boundary', {
+        error: err ? err.message : String(err),
+        stack: err ? err.stack : null
+      });
+      // Keep process alive in production server lifecycle
+    });
+
+    process.on('unhandledRejection', (reason, promise) => {
+      logger.error('CRITICAL: Unhandled Promise Rejection caught by Global Error Boundary', {
+        reason: reason instanceof Error ? reason.message : String(reason),
+        stack: reason instanceof Error ? reason.stack : null
+      });
+    });
+
     return { app, server };
   } catch (err) {
     logger.error('Failed to start server:', { error: err.message, stack: err.stack });

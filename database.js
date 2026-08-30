@@ -14,9 +14,15 @@ const db = new sqlite3.Database(dbPath, (err) => {
   }
 });
 
-// Enable foreign key support & WAL journal mode in SQLite for concurrency
-db.run('PRAGMA foreign_keys = ON');
-db.run('PRAGMA journal_mode = WAL');
+// Enable foreign key support, WAL mode & high-concurrency memory cache in SQLite
+db.serialize(() => {
+  db.run('PRAGMA foreign_keys = ON');
+  db.run('PRAGMA journal_mode = WAL');
+  db.run('PRAGMA synchronous = NORMAL');
+  db.run('PRAGMA busy_timeout = 5000');
+  db.run('PRAGMA cache_size = -20000');
+  db.run('PRAGMA temp_store = MEMORY');
+});
 
 // Initialize database schema
 db.serialize(() => {

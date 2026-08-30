@@ -324,13 +324,288 @@
       `).join('');
     }
 
-    function searchCustomers() {
-      const q = document.getElementById('searchInput').value.trim();
-      if (q.length >= 2) {
-        loadCustomers(q);
-      } else if (q.length === 0) {
-        loadCustomers();
+  <!-- Settle Debt Modal -->
+  <div id="settleDebtModal" class="hidden fixed inset-0 z-50 flex items-center justify-center modal-bg p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md p-6 shadow-2xl">
+      <div class="flex items-center justify-between mb-4 border-b border-slate-800 pb-3">
+        <div class="flex items-center gap-2">
+          <span class="text-xl">💳</span>
+          <h3 class="text-lg font-bold text-white">سداد حساب آجل للعميل</h3>
+        </div>
+        <button onclick="closeSettleDebtModal()" class="text-slate-400 hover:text-white text-lg">✕</button>
+      </div>
+      <div class="space-y-4">
+        <div class="bg-slate-800/80 rounded-xl p-3 border border-slate-700">
+          <div class="text-xs text-slate-400 mb-1">العميل المستهدف:</div>
+          <div id="settleDebtCustomerName" class="font-bold text-white text-sm">--</div>
+          <div id="settleDebtCustomerPhone" class="text-xs text-slate-400 font-mono">--</div>
+          <div class="mt-2 flex justify-between items-center text-xs">
+            <span class="text-slate-400">إجمالي الحساب الآجل المستحق:</span>
+            <span id="settleDebtCurrentBalance" class="font-black text-rose-400 text-sm">0 ج.م</span>
+          </div>
+        </div>
+
+        <div>
+          <label class="text-slate-400 text-xs mb-1 block font-bold">المبلغ المسدد (ج.م) *</label>
+          <input id="settleDebtAmount" type="number" min="1" step="any" placeholder="أدخل المبلغ..."
+            class="w-full bg-slate-800 border border-slate-700 text-emerald-400 font-black text-lg rounded-xl px-4 py-2.5 focus:outline-none focus:border-amber-500">
+        </div>
+
+        <div>
+          <label class="text-slate-400 text-xs mb-1 block font-bold">طريقة السداد *</label>
+          <select id="settleDebtMethod" class="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:border-amber-500">
+            <option value="CASH">نقدي (Cash)</option>
+            <option value="INSTAPAY">إنستاباي (InstaPay)</option>
+            <option value="CARD">بطاقة بنكية (Card / POS)</option>
+            <option value="WALLET">محفظة إلكترونية (Smart Wallet)</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="text-slate-400 text-xs mb-1 block">ملاحظات التحصيل (اختياري)</label>
+          <input id="settleDebtNotes" type="text" placeholder="رقم إيصال / ملاحظة..."
+            class="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-4 py-2 text-xs focus:outline-none focus:border-amber-500">
+        </div>
+      </div>
+
+      <div class="flex gap-3 mt-6">
+        <button id="btnConfirmSettleDebt" onclick="confirmSettleDebt()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-xl transition-colors text-xs flex items-center justify-center gap-1.5 shadow-lg">
+          <span>✅</span><span>تأكيد السداد والتحصيل</span>
+        </button>
+        <button onclick="closeSettleDebtModal()" class="px-4 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-2.5 rounded-xl transition-colors text-xs">
+          إلغاء
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let _crmUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+    let allCustomers = [];
+    let selectedRating = 5;
+    let _activeSettleCustomer = null;
+    let _searchDebounceTimer = null;
+
+    function tierColor(spent) {
+      if (spent >= 2000) return { tier: 'GOLD', label: '🥇 ذهبي', color: 'text-amber-400' };
+      if (spent >= 500) return { tier: 'SILVER', label: '🥈 فضي', color: 'text-slate-300' };
+      return { tier: 'BRONZE', label: '🥉 برونزي', color: 'text-orange-600' };
+    }
+
+    async function loadCustomers(search = '') {
+      try {
+        const url = '/api/customers' + (search ? `?search=${encodeURIComponent(search)}` : '');
+        const res = await fetch(url);
+        const data = await res.json();
+        if (data.success) {
+          allCustomers = data.customers;
+          renderCustomers(data.customers);
+          renderStats(data.customers);
+          renderTopCustomers(data.customers);
+        }
+      } catch(e) {
+        console.error(e);
       }
+    }
+
+    function renderStats(customers) {
+      const total = customers.length;
+      const revenue = customers.reduce((s, c) => s + (c.total_spent || 0), 0);
+      const avg = total > 0 ? revenue / total : 0;
+      const points = customers.reduce((s, c) => s + (c.points || 0), 0);
+      document.getElementById('statTotal').textContent = total;
+      document.getElementById('statRevenue').textContent = revenue.toFixed(0) + ' ج';
+      document.getElementById('statAvg').textContent = avg.toFixed(0) + ' ج';
+      document.getElementById('statPoints').textContent = points.toLocaleString();
+      document.getElementById('customerCount').textContent = `${total} عميل`;
+    }
+
+    function renderCustomers(customers) {
+      const tbody = document.getElementById('customersTableBody');
+      if (!customers.length) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center py-12 text-slate-500">لا يوجد عملاء</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = customers.map(c => {
+        const { label, color } = tierColor(c.total_spent || 0);
+        const visits = c.visit_count || '—';
+        const debt = Number(c.credit_balance || (c.credit_balance_minor ? c.credit_balance_minor / 100 : 0)) || 0;
+        return `
+          <tr class="customer-row border-b border-slate-800/50 cursor-pointer transition-colors" onclick="showCustomerDetail(${JSON.stringify(c).replace(/"/g,'&quot;')})">
+            <td class="py-3 px-4">
+              <div class="font-semibold text-white text-sm">${c.name || 'عميل'}</div>
+              ${debt > 0 ? `<span class="inline-block mt-0.5 px-2 py-0.5 text-[10px] font-bold rounded-md bg-rose-500/20 text-rose-300 border border-rose-500/30">آجل: ${debt.toFixed(0)} ج</span>` : ''}
+              ${c.email ? `<div class="text-slate-500 text-xs">${c.email}</div>` : ''}
+            </td>
+            <td class="py-3 px-3 text-slate-300 text-sm font-mono">${c.phone}</td>
+            <td class="py-3 px-3 text-emerald-400 font-bold text-sm">${(c.total_spent || 0).toFixed(0)} ج</td>
+            <td class="py-3 px-3">
+              <span class="bg-amber-500/20 text-amber-300 text-xs font-bold px-2 py-1 rounded-full">${c.points || 0} نقطة</span>
+            </td>
+            <td class="py-3 px-3 text-slate-400 text-sm">${visits}</td>
+            <td class="py-3 px-3 ${color} text-xs font-bold">${label}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderTopCustomers(customers) {
+      const top = [...customers].sort((a, b) => (b.total_spent || 0) - (a.total_spent || 0)).slice(0, 5);
+      const el = document.getElementById('topCustomersList');
+      if (!top.length) { el.innerHTML = `<p class="text-slate-500 text-sm text-center py-4">لا يوجد بيانات</p>`; return; }
+      el.innerHTML = top.map((c, i) => {
+        const medals = ['🥇','🥈','🥉','4️⃣','5️⃣'];
+        return `
+          <div class="flex items-center justify-between py-2 border-b border-slate-800/50">
+            <div class="flex items-center gap-2">
+              <span class="text-lg">${medals[i]}</span>
+              <div>
+                <div class="font-semibold text-white text-sm">${c.name || 'عميل'}</div>
+                <div class="text-slate-500 text-xs">${c.phone}</div>
+              </div>
+            </div>
+            <div class="text-emerald-400 font-bold text-sm">${(c.total_spent || 0).toFixed(0)} ج</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function showCustomerDetail(c) {
+      const { label, color } = tierColor(c.total_spent || 0);
+      const el = document.getElementById('customerDetailContent');
+      const debt = Number(c.credit_balance || (c.credit_balance_minor ? c.credit_balance_minor / 100 : 0)) || 0;
+      el.innerHTML = `
+        <div class="space-y-3">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-12 h-12 rounded-full bg-amber-500/20 flex items-center justify-center text-2xl">👤</div>
+            <div>
+              <div class="font-bold text-white text-lg">${c.name || 'عميل'}</div>
+              <div class="${color} text-sm font-bold">${label}</div>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div class="bg-slate-800 rounded-xl p-3 text-center">
+              <div class="text-emerald-400 text-xl font-black">${(c.total_spent || 0).toFixed(0)} ج</div>
+              <div class="text-slate-400 text-xs mt-1">إجمالي الإنفاق</div>
+            </div>
+            <div class="bg-slate-800 rounded-xl p-3 text-center">
+              <div class="text-amber-400 text-xl font-black">${c.points || 0}</div>
+              <div class="text-slate-400 text-xs mt-1">نقاط الولاء</div>
+            </div>
+            <div class="bg-slate-800 rounded-xl p-3 text-center">
+              <div class="text-rose-400 text-xl font-black">${debt.toFixed(0)} ج</div>
+              <div class="text-slate-400 text-xs mt-1">حساب آجل مستحق</div>
+            </div>
+            <div class="bg-slate-800 rounded-xl p-3 text-center">
+              <div class="text-sky-400 text-xl font-black">${c.visit_count || 0}</div>
+              <div class="text-slate-400 text-xs mt-1">زيارة</div>
+            </div>
+          </div>
+          ${c.phone ? `<div class="text-slate-400 text-sm">📱 ${c.phone}</div>` : ''}
+          ${c.email ? `<div class="text-slate-400 text-sm">📧 ${c.email}</div>` : ''}
+          
+          <button onclick="openSettleDebtModal(${JSON.stringify(c).replace(/"/g,'&quot;')})" class="w-full bg-emerald-600/30 hover:bg-emerald-600/50 border border-emerald-600/50 text-emerald-300 font-bold py-2 rounded-xl transition-colors text-sm mt-2 flex items-center justify-center gap-1.5 cursor-pointer">
+            💳 سداد حساب آجل للعميل
+          </button>
+          
+          <button onclick="openFeedbackModal('${c.phone}')" class="w-full bg-purple-600/30 hover:bg-purple-600/50 border border-purple-600/50 text-purple-300 font-bold py-2 rounded-xl transition-colors text-sm mt-1 cursor-pointer">
+            ⭐ إضافة تقييم لهذا العميل
+          </button>
+        </div>
+      `;
+      document.getElementById('customerDetail').classList.remove('hidden');
+    }
+
+    // Debounced customer search
+    function searchCustomers() {
+      clearTimeout(_searchDebounceTimer);
+      _searchDebounceTimer = setTimeout(() => {
+        const q = document.getElementById('searchInput').value.trim();
+        if (q.length >= 2) {
+          loadCustomers(q);
+        } else if (q.length === 0) {
+          loadCustomers();
+        }
+      }, 300);
+    }
+
+    // Settle Debt Modal Functions
+    function openSettleDebtModal(c) {
+      _activeSettleCustomer = c;
+      const debt = Number(c.credit_balance || (c.credit_balance_minor ? c.credit_balance_minor / 100 : 0)) || 0;
+      document.getElementById('settleDebtCustomerName').textContent = c.name || 'عميل';
+      document.getElementById('settleDebtCustomerPhone').textContent = c.phone;
+      document.getElementById('settleDebtCurrentBalance').textContent = `${debt.toFixed(2)} ج.م`;
+      document.getElementById('settleDebtAmount').value = debt > 0 ? debt : '';
+      document.getElementById('settleDebtModal').classList.remove('hidden');
+    }
+
+    function closeSettleDebtModal() {
+      document.getElementById('settleDebtModal').classList.add('hidden');
+      _activeSettleCustomer = null;
+    }
+
+    async function confirmSettleDebt() {
+      if (!_activeSettleCustomer || !_activeSettleCustomer.phone) return;
+      const amt = parseFloat(document.getElementById('settleDebtAmount').value);
+      if (isNaN(amt) || amt <= 0) {
+        if (window.UIState) UIState.showToast('يرجى إدخال مبلغ سداد صالح', 'error');
+        else alert('يرجى إدخال مبلغ سداد صالح');
+        return;
+      }
+      const paymentMethod = document.getElementById('settleDebtMethod').value;
+      const notes = document.getElementById('settleDebtNotes').value.trim();
+      const btn = document.getElementById('btnConfirmSettleDebt');
+      btn.disabled = true;
+      btn.textContent = 'جاري تسجيل السداد...';
+
+      try {
+        const res = await fetch(`/api/customers/${encodeURIComponent(_activeSettleCustomer.phone)}/settle-debt`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ amount: amt, payment_method: paymentMethod, notes })
+        });
+        const data = await res.json();
+        if (data.success) {
+          closeSettleDebtModal();
+          await loadCustomers();
+          if (window.UIState) UIState.showToast(data.message || 'تم سداد الحساب بنجاح ✅', 'success');
+          else alert(data.message || 'تم سداد الحساب بنجاح');
+        } else {
+          if (window.UIState) UIState.showApiError(data.error || 'فشل تسجيل السداد');
+          else alert(data.error || 'فشل تسجيل السداد');
+        }
+      } catch (e) {
+        if (window.UIState) UIState.showToast('فشل الاتصال بالخادم', 'error');
+        else alert('فشل الاتصال بالخادم');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<span>✅</span><span>تأكيد السداد والتحصيل</span>';
+      }
+    }
+
+    async function loadFeedback() {
+      try {
+        const res = await fetch('/api/customers/feedback');
+        const data = await res.json();
+        if (data.success) renderFeedback(data.feedback);
+      } catch(e) {}
+    }
+
+    function renderFeedback(feedback) {
+      const el = document.getElementById('feedbackList');
+      if (!feedback.length) { el.innerHTML = `<p class="text-slate-500 text-sm text-center py-8">لا توجد تقييمات بعد</p>`; return; }
+      const catLabels = { GENERAL: 'عام', FOOD: 'الطعام', SERVICE: 'الخدمة', AMBIANCE: 'الجو', DELIVERY: 'التوصيل' };
+      el.innerHTML = feedback.slice(0, 20).map(fb => `
+        <div class="bg-slate-800/50 rounded-xl p-3 border border-slate-700/50">
+          <div class="flex items-center justify-between mb-1">
+            <div class="text-amber-400 text-sm">${'⭐'.repeat(fb.rating || 5)}</div>
+            <div class="text-slate-500 text-xs">${catLabels[fb.category] || fb.category || 'عام'}</div>
+          </div>
+          ${fb.comment ? `<div class="text-white text-sm mb-1">"${fb.comment}"</div>` : ''}
+          <div class="text-slate-500 text-xs">${fb.customer_phone || 'مجهول'} · ${new Date(fb.created_at).toLocaleDateString('ar-EG')}</div>
+        </div>
+      `).join('');
     }
 
     // Feedback modal
@@ -366,12 +641,12 @@
         if (data.success) {
           closeFeedbackModal();
           loadFeedback();
-          UIState.showToast('تم حفظ التقييم بنجاح ✅', 'success');
+          if (window.UIState) UIState.showToast('تم حفظ التقييم بنجاح ✅', 'success');
         } else {
-          UIState.showApiError(data.error || 'حدث خطأ في حفظ التقييم');
+          if (window.UIState) UIState.showApiError(data.error || 'حدث خطأ في حفظ التقييم');
         }
       } catch(e) {
-        UIState.showToast('حدث خطأ في الاتصال بالخادم', 'error');
+        if (window.UIState) UIState.showToast('حدث خطأ في الاتصال بالخادم', 'error');
       }
     }
 

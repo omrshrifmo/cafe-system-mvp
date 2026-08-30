@@ -1502,25 +1502,34 @@
       }
     }
 
-    // Filter Menu By Category & Search
+    // Filter Menu By Category & Search with Debouncing
+    let _posMenuSearchTimer = null;
+    let _posCategoryFilterTimer = null;
+
     function filterMenuCategory(cat) {
-      currentCategoryFilter = cat;
-      ['ALL', 'BARISTA', 'KITCHEN', 'SHISHA'].forEach(c => {
-        const tab = document.getElementById(`cat-tab-${c}`);
-        if (tab) {
-          tab.className = c === cat 
-            ? 'px-2.5 py-1 rounded-xl text-xs font-black bg-amber-500 text-slate-950 cursor-pointer shadow' 
-            : 'px-2.5 py-1 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 cursor-pointer';
-        }
-      });
-      renderMenuGrid();
+      clearTimeout(_posCategoryFilterTimer);
+      _posCategoryFilterTimer = setTimeout(() => {
+        currentCategoryFilter = cat;
+        ['ALL', 'BARISTA', 'KITCHEN', 'SHISHA'].forEach(c => {
+          const tab = document.getElementById(`cat-tab-${c}`);
+          if (tab) {
+            tab.className = c === cat 
+              ? 'px-2.5 py-1 rounded-xl text-xs font-black bg-amber-500 text-slate-950 cursor-pointer shadow' 
+              : 'px-2.5 py-1 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 cursor-pointer';
+          }
+        });
+        renderMenuGrid();
+      }, 50);
     }
 
     function handleMenuSearch(val) {
-      currentSearchQuery = val.trim().toLowerCase();
-      const clearBtn = document.getElementById('clear-search-btn');
-      if (clearBtn) clearBtn.classList.toggle('hidden', currentSearchQuery === '');
-      renderMenuGrid();
+      clearTimeout(_posMenuSearchTimer);
+      _posMenuSearchTimer = setTimeout(() => {
+        currentSearchQuery = val.trim().toLowerCase();
+        const clearBtn = document.getElementById('clear-search-btn');
+        if (clearBtn) clearBtn.classList.toggle('hidden', currentSearchQuery === '');
+        renderMenuGrid();
+      }, 150);
     }
 
     function clearMenuSearch() {
@@ -1948,9 +1957,12 @@
       }
     }
 
-    // Send Cart Orders to Kitchen / KDS
+    // Send Cart Orders to Kitchen / KDS with Debounce Guard
+    let _isSendingCart = false;
+
     async function sendCartOrders() {
-      if (cart.length === 0) return;
+      if (cart.length === 0 || _isSendingCart) return;
+      _isSendingCart = true;
 
       const sendBtn = document.getElementById('send-orders-btn');
       const sendBtnText = document.getElementById('send-btn-text');
@@ -2026,6 +2038,7 @@
         showToast(`تم إرسال بعض الطلبات وحصل خطأ في ${failureCount}`, false);
         renderCartUI();
       }
+      setTimeout(() => { _isSendingCart = false; }, 600);
     }
 
     // Append order to log

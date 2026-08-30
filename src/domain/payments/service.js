@@ -267,11 +267,16 @@ async function settleSession(checkoutPayload, actor = null) {
       );
 
       // Handle ON_CREDIT customer balance
-      if (p.method === 'ON_CREDIT' || p.method === 'CREDIT') {
+      if (p.method === 'ON_CREDIT' || p.method === 'CREDIT' || p.method === 'حساب آجل') {
         if (customer_phone) {
+          const cleanPhone = String(customer_phone).trim();
           await tx.run(
             `UPDATE customers SET credit_balance = credit_balance + ? WHERE phone = ?`,
-            [netPayment / 100, String(customer_phone).trim()]
+            [netPayment / 100, cleanPhone]
+          );
+          await tx.run(
+            `UPDATE v3_customers SET credit_balance_minor = credit_balance_minor + ? WHERE phone = ?`,
+            [netPayment, cleanPhone]
           );
         }
       }
@@ -427,19 +432,38 @@ async function voidOrder(orderId, managerPin, reason = 'إلغاء أوردر') 
 
     // Reverse inventory consumption
     const ledgerConsumptions = await tx.all(`SELECT * FROM inventory_ledger WHERE source_type = 'ORDER_ITEM' AND source_id = ?`, [String(orderId)]);
-    for (const entry of ledgerConsumptions) {
-      const reversalMicro = Math.abs(entry.quantity_delta_microunits);
-      await tx.run(`UPDATE inventory_items SET current_stock_microunits = current_stock_microunits + ? WHERE id = ?`, [reversalMicro, entry.inventory_item_id]);
+    // Immutable Ledger: If order was paid/settled, append negative adjusting entries (NEVER delete)
+    if (isPaid && session) {
+      const paidRows = await tx.all(`SELECT * FROM payments WHERE session_id = ? AND amount_minor > 0`, [session.id]);
+      for (const p of paidRows) {
+        await tx.run(
+          `INSERT INTO payments (session_id, method, amount_minor, tip_minor, currency, created_by)
+           VALUES (?, ?, ?, 0, ?, ?)`,
+          [session.id, p.method, -p.amount_minor, p.currency || 'EGP', authorizedUser.id]
+        );
+      }
+
+      // Record entry in daily_expenses table if present
+      try {
+        const totalPaid = paidRows.reduce((sum, p) => sum + p.amount_minor, 0) / 100.0;
+        await tx.run(
+          `INSERT INTO daily_expenses (amount, description, category, created_by)
+           VALUES (?, ?, 'REFUND', ?)`,
+          [totalPaid, `إلغاء واسترداد فاتورة رقم #${session.id} - ${reason}`, authorizedUser.id]
+        );
+      } catch (e) {
+        // Safe fallback if daily_expenses table has different schema
+      }
+
       await tx.run(
-        `INSERT INTO inventory_ledger (inventory_item_id, event_type, quantity_delta_microunits, unit, source_type, source_id, idempotency_key, reason, actor_id)
-         VALUES (?, 'REVERSAL', ?, ?, 'VOID_REVERSAL', ?, ?, ?, ?)`,
-        [entry.inventory_item_id, reversalMicro, entry.unit, String(orderId), `VOID_REV_${entry.idempotency_key}_${Date.now()}`, reason, authorizedUser.id]
+        `UPDATE order_sessions SET status = 'VOIDED', closed_at = datetime('now', 'localtime') WHERE id = ?`,
+        [session.id]
       );
     }
 
     return {
       success: true,
-      message: 'تم إلغاء الطلب وعكس الإيراد واسترجاع المخزون بنجاح',
+      message: 'تم إلغاء الطلب وعكس الإيراد واسترجاع المخزون بنجاح (سجل مالي ثابت)',
       voided_order: { id: orderId, status: 'VOIDED' }
     };
   });

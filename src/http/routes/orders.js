@@ -31,15 +31,18 @@ router.get('/orders', async (req, res, next) => {
   }
 });
 
-// Get recently delivered BOH orders (optionally filtered by department)
+// Get recently delivered BOH orders (optionally filtered by department and paginated)
 router.get('/orders/past', async (req, res, next) => {
   try {
     const dept = req.query.department || req.query.category || null;
-    const orders = await getPastOrdersByDepartment(dept);
+    const limit = req.query.limit ? parseInt(req.query.limit, 10) : 50;
+    const offset = req.query.offset ? parseInt(req.query.offset, 10) : 0;
+    const result = await getPastOrdersByDepartment(dept, { limit, offset });
     res.json({
       success: true,
-      orders,
-      data: { orders },
+      orders: result.orders || result,
+      data: { orders: result.orders || result, pagination: result.pagination },
+      pagination: result.pagination,
       requestId: req.id
     });
   } catch (err) {
