@@ -18,9 +18,18 @@ describe('Prompt S5: Accessible In-Page Arabic UX & Zero Native Dialog Gate', fu
   const publicDir = path.resolve(__dirname, '../../public');
   const UIState = require('../../public/modules/ui-state');
 
-  before(() => {
+  before(async () => {
     getDb();
     app = createApp();
+    const { hashPin } = require('../../src/domain/auth/service');
+    const { runQuery } = require('../../src/db/connection');
+    const pinHash = await hashPin('8801');
+    await runQuery(`INSERT OR REPLACE INTO roles (id, venue_id, name) VALUES ('R_SUPER_ADMIN', 'V_DEFAULT', 'SUPER_ADMIN')`);
+    await runQuery(
+      `INSERT OR REPLACE INTO v3_users (id, venue_id, name, role_id, pin_hash, is_active, failed_attempts, locked_until)
+       VALUES ('101', 'V_DEFAULT', 'سوبر أدمن', 'R_SUPER_ADMIN', ?, 1, 0, NULL)`,
+      [pinHash]
+    );
   });
 
   describe('1. Static Codebase Audit: Zero Native Browser Dialogs', () => {

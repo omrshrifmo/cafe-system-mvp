@@ -22,6 +22,9 @@ const routeRegistry = [
   { method: 'GET', pathRegex: /^\/api\/auth\/me$/, permission: 'authenticated' },
   { method: 'POST', pathRegex: /^\/api\/auth\/(unlock|verify-pin|rotate-pin|revoke-all|ping)$/, permission: 'authenticated' },
   { method: 'ALL', pathRegex: /^\/api\/auth\/(caffeine|checkpoint)$/, permission: 'authenticated' },
+  { method: 'ALL', pathRegex: /^\/api\/auth\/sessions(\/.*)?$/, permission: 'authenticated' },
+  { method: 'ALL', pathRegex: /^\/api\/system\/(backup|restore|factory-reset)$/, permission: 'authenticated' },
+  { method: 'ALL', pathRegex: /^\/api\/(backup|restore)$/, permission: 'authenticated' },
   
   // Menu & Catalog (Public Read, Write requires menu:write)
   { method: 'GET', pathRegex: /^\/api\/(menu|catalog)(\/.*)?$/, permission: 'public' },

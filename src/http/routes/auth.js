@@ -277,5 +277,59 @@ router.delete('/checkpoint', requireAuth, async (req, res) => {
   }
 });
 
+// --- Active Device Sessions & Remote Revocation ---
+const { listActiveSessions, revokeSessionById } = require('../../domain/admin/sessionAdminService');
+
+router.get('/sessions', requireAuth, async (req, res, next) => {
+  try {
+    if (!['SUPER_ADMIN', 'OWNER', 'ADMIN', 'OP_MANAGER'].includes(req.user.role)) {
+      return res.status(403).json({ success: false, error: 'غير مصرح: استعراض الجلسات النشطة مقتصر على الإدارة والمالك' });
+    }
+    const sessions = await listActiveSessions(req.user.venueId || 'V_DEFAULT');
+    const formatted = sessions.map(s => ({
+      id: s.sessionId,
+      session_id: s.sessionId,
+      device_id: s.deviceId,
+      device_name: s.deviceName,
+      device_class: s.deviceClass,
+      user_id: s.userId,
+      user_name: s.userName,
+      role: s.role,
+      last_seen: s.lastSeenAt,
+      last_seen_at: s.lastSeenAt,
+      issued_at: s.issuedAt,
+      created_at: s.issuedAt,
+      ip_address: s.ipAddress,
+      user_agent: s.userAgent,
+      is_emergency: s.isEmergency
+    }));
+
+    res.json({
+      success: true,
+      sessions: formatted,
+      data: formatted
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.delete('/sessions/:id', requireAuth, async (req, res, next) => {
+  try {
+    if (!['SUPER_ADMIN', 'OWNER', 'ADMIN', 'OP_MANAGER'].includes(req.user.role)) {
+      return res.status(403).json({ success: false, error: 'غير مصرح: إلغاء الجلسات مقتصر على الإدارة والمالك' });
+    }
+    const sessionId = req.params.id;
+    const result = await revokeSessionById(sessionId, req.user.id, req.user.venueId || 'V_DEFAULT', 'REMOTE_REVOCATION_BY_ADMIN');
+    res.json({
+      success: true,
+      message: 'تم إلغاء الجلسة بنجاح وفصل الجهاز فورياً 🔒',
+      ...result
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 module.exports = router;
 

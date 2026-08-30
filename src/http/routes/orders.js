@@ -126,35 +126,65 @@ router.post('/orders/cancel-resolve', requireAuth, async (req, res, next) => {
   }
 });
 
-// Public guest QR order
-router.post('/public/order', async (req, res, next) => {
+// Public guest QR order (supports /public/orders and /public/order)
+router.post(['/public/orders', '/public/order'], async (req, res, next) => {
   try {
-    const { table_number, table_id, items, notes } = req.body;
-    const targetTable = table_number || table_id;
-    if (!targetTable) {
-      return res.status(400).json({ success: false, error: 'رقم الطاولة مطلوب' });
+    const { table_number, table_id, token, table_token, items, item_name, quantity, price, notes, item_notes } = req.body;
+    
+    // Resolve table number from explicit field, id, or token payload
+    let targetTable = table_number || table_id;
+    if (!targetTable && (token || table_token)) {
+      const rawToken = String(token || table_token);
+      const match = rawToken.match(/(?:table[_-]?|t[_-]?)?(\d+)/i);
+      if (match) {
+        targetTable = parseInt(match[1], 10);
+      }
     }
-    if (!items || !Array.isArray(items) || items.length === 0) {
+
+    if (!targetTable && targetTable !== 0) {
+      return res.status(400).json({ success: false, error: 'رقم الطاولة أو الرمز التعريفي مطلوب' });
+    }
+
+    // Normalize items array
+    let itemsToOrder = [];
+    if (Array.isArray(items) && items.length > 0) {
+      itemsToOrder = items.map(it => ({
+        menu_item_id: it.id || it.item_id || it.menu_item_id,
+        item_name: it.name || it.item_name,
+        name: it.name || it.item_name,
+        quantity: parseInt(it.qty || it.quantity || 1, 10),
+        price: Number(it.price) || 0,
+        notes: it.notes || it.item_notes || '',
+        sugar_level: it.sugar || it.sugar_level || 'مظبوط',
+        roast_type: it.roast || it.roast_type || 'افتراضي',
+        department: it.department || 'BARISTA'
+      }));
+    } else if (item_name) {
+      itemsToOrder = [{
+        item_name: item_name,
+        name: item_name,
+        quantity: parseInt(quantity || 1, 10),
+        price: Number(price) || 0,
+        notes: notes || item_notes || '',
+        sugar_level: req.body.sugar_level || req.body.sugar || 'مظبوط',
+        roast_type: req.body.roast_type || req.body.roast || 'افتراضي',
+        department: req.body.department || 'BARISTA'
+      }];
+    } else {
       return res.status(400).json({ success: false, error: 'يجب اختيار أصناف للطلب' });
     }
+
     const result = await submitOrderWithBOM({
       table_number: targetTable,
-      items: items.map(it => ({
-        menu_item_id: it.id || it.menu_item_id,
-        item_name: it.name || it.item_name,
-        quantity: it.qty || it.quantity || 1,
-        price: it.price || 0,
-        notes: it.notes || '',
-        sugar_level: it.sugar || it.sugar_level || 'مظبوط',
-        roast_type: it.roast || it.roast_type || 'افتراضي'
-      })),
-      notes: notes || 'طلب طاولة من المنيو الإلكتروني (QR)'
+      items: itemsToOrder,
+      notes: notes || item_notes || 'طلب طاولة من المنيو الإلكتروني (QR)'
     }, null);
 
     res.json({
       success: true,
       message: 'تم إرسال طلبك إلى المطبخ بنجاح! سيصلك الطلب قريباً ☕',
-      order: result
+      order: result,
+      order_id: result.id || (result.items && result.items[0] ? result.items[0].id : null)
     });
   } catch (err) {
     next(err);

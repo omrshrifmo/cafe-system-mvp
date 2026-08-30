@@ -102,6 +102,25 @@
       </div>
     </div>
 
+    <!-- Daily Sales Target Progress Bar -->
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 shadow-md space-y-2">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="text-base">🎯</span>
+          <span class="text-xs font-black text-white">الهدف اليومي للمبيعات (Daily Sales Target)</span>
+        </div>
+        <div class="flex items-center gap-3 text-xs">
+          <span class="text-slate-400 font-bold">المحقق: <strong id="target-achieved-val" class="text-emerald-400 font-mono text-sm">0</strong> ج.م</span>
+          <span class="text-slate-600">|</span>
+          <span class="text-slate-400 font-bold">الهدف: <strong id="target-goal-val" class="text-amber-400 font-mono text-sm">5,000</strong> ج.م</span>
+          <span id="target-percent-badge" class="px-2 py-0.5 rounded-full font-black font-mono text-[11px] bg-amber-500/20 text-amber-300 border border-amber-500/40">0%</span>
+        </div>
+      </div>
+      <div class="w-full bg-slate-950 rounded-full h-3 p-0.5 border border-slate-800 overflow-hidden">
+        <div id="target-progress-bar" class="h-full rounded-full bg-gradient-to-r from-amber-500 via-emerald-500 to-teal-400" style="width: 0%"></div>
+      </div>
+    </div>
+
     <!-- Row 2: Zero-Animation Side-by-Side Charts -->
     <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-stretch">
       <!-- Hourly Sales Line Chart (Left 7 Cols) -->
@@ -139,9 +158,9 @@
         <h2 class="text-xs font-black text-white mb-2 pb-2 border-b border-slate-800 flex items-center justify-between">
           <span class="flex items-center gap-1.5">
             <span>🔥</span>
-            <span>أكثر الأصناف مبيعاً (Top 10 Selling Items)</span>
+            <span>أكثر الأصناف مبيعاً وهامش الربحية (Top Items & Profit Margins)</span>
           </span>
-          <span class="text-[10px] text-slate-400 font-bold">مرتبة حسب الكمية</span>
+          <span class="text-[10px] text-slate-400 font-bold">معادلة BOM + التكاليف غير المباشرة</span>
         </h2>
 
         <div class="overflow-x-auto">
@@ -150,8 +169,9 @@
               <tr class="text-slate-400 border-b border-slate-800 font-bold bg-slate-950/50">
                 <th class="py-1.5 px-2">#</th>
                 <th class="py-1.5 px-2">اسم الصنف</th>
-                <th class="py-1.5 px-2 text-center">الكمية المباعة</th>
-                <th class="py-1.5 px-2 text-left">إجمالي المبيعات</th>
+                <th class="py-1.5 px-2 text-center">الكمية</th>
+                <th class="py-1.5 px-2 text-left">المبيعات</th>
+                <th class="py-1.5 px-2 text-center">هامش الربح %</th>
               </tr>
             </thead>
             <tbody id="top-items-body" class="divide-y divide-slate-800/60 font-medium">
@@ -234,11 +254,12 @@
         const biData = await biRes.json();
         const invData = await invRes.json();
 
-        if (biRes.ok && biData.success && biData.data) {
-          renderKPIs(biData.data.kpis);
-          renderHourlyChart(biData.data.hourly_sales);
-          renderDepartmentChart(biData.data.department_sales);
-          renderTopItems(biData.data.top_items);
+        const root = (biData && biData.data) ? biData.data : (biData || {});
+        if (biRes.ok && (biData.success || root.kpis)) {
+          renderKPIs(root.kpis, root.daily_target, root.target_progress_pct);
+          renderHourlyChart(root.hourly_sales || []);
+          renderDepartmentChart(root.department_sales || []);
+          renderTopItems(root.top_items || []);
         }
 
         if (invRes.ok && invData.success && Array.isArray(invData.inventory)) {
@@ -250,13 +271,40 @@
       }
     }
 
-    function renderKPIs(kpis) {
+    function renderKPIs(kpis, dailyTarget = 5000, targetProgress = 0) {
       if (!kpis) return;
-      document.getElementById('kpi-revenue').textContent = (kpis.total_revenue || 0).toLocaleString();
+      const rev = Number(kpis.total_revenue || 0);
+      document.getElementById('kpi-revenue').textContent = rev.toLocaleString();
       document.getElementById('kpi-orders').textContent = (kpis.total_orders || 0).toLocaleString();
       document.getElementById('kpi-aov').textContent = (kpis.aov || 0).toLocaleString();
       const waste = kpis.total_waste_cost ?? kpis.waste_cost ?? 0;
       document.getElementById('kpi-waste').textContent = waste.toLocaleString();
+
+      // Daily Sales Target Progress Bar
+      const target = Number(kpis.daily_target || dailyTarget || 5000);
+      const achieved = rev;
+      const pct = target > 0 ? Math.min(100, Math.round((achieved / target) * 100)) : 100;
+
+      const achievedEl = document.getElementById('target-achieved-val');
+      const goalEl = document.getElementById('target-goal-val');
+      const badgeEl = document.getElementById('target-percent-badge');
+      const barEl = document.getElementById('target-progress-bar');
+
+      if (achievedEl) achievedEl.textContent = achieved.toLocaleString();
+      if (goalEl) goalEl.textContent = target.toLocaleString();
+      if (badgeEl) {
+        badgeEl.textContent = `${pct}%`;
+        if (pct >= 100) {
+          badgeEl.className = 'px-2 py-0.5 rounded-full font-black font-mono text-[11px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40';
+        } else if (pct >= 50) {
+          badgeEl.className = 'px-2 py-0.5 rounded-full font-black font-mono text-[11px] bg-amber-500/20 text-amber-300 border border-amber-500/40';
+        } else {
+          badgeEl.className = 'px-2 py-0.5 rounded-full font-black font-mono text-[11px] bg-rose-500/20 text-rose-300 border border-rose-500/40';
+        }
+      }
+      if (barEl) {
+        barEl.style.width = `${pct}%`;
+      }
     }
 
     function renderHourlyChart(hourlyRows) {
@@ -359,7 +407,7 @@
       tbody.innerHTML = '';
 
       if (!items || items.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="4" class="py-6 text-center text-slate-500">لا توجد مبيعات مسجلة في هذا النطاق الزمني</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-slate-500">لا توجد مبيعات مسجلة في هذا النطاق الزمني</td></tr>`;
         return;
       }
 
@@ -370,12 +418,23 @@
         const itemName = item.item_name || item.name || 'صنف';
         const qty = item.qty ?? item.quantity ?? item.quantity_sold ?? 0;
         const total = Number(item.total ?? item.revenue ?? 0);
+        const marginPct = Number(item.profit_margin_pct !== undefined ? item.profit_margin_pct : (item.margin_pct || 65));
+
+        let marginBadgeClass = 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30';
+        if (marginPct < 40) {
+          marginBadgeClass = 'text-rose-400 bg-rose-500/10 border-rose-500/30';
+        } else if (marginPct < 60) {
+          marginBadgeClass = 'text-amber-400 bg-amber-500/10 border-amber-500/30';
+        }
 
         tr.innerHTML = `
           <td class="py-1.5 px-2 text-slate-400 font-mono font-bold text-[11px]">${index + 1}</td>
           <td class="py-1.5 px-2 text-white font-bold">${itemName}</td>
           <td class="py-1.5 px-2 text-center font-mono font-black text-amber-400 text-xs">${qty}</td>
           <td class="py-1.5 px-2 text-left font-mono font-black text-emerald-400 text-xs">${total.toLocaleString()} ج.م</td>
+          <td class="py-1.5 px-2 text-center font-mono font-black text-xs">
+            <span class="px-2 py-0.5 rounded-full border text-[11px] font-bold ${marginBadgeClass}">${marginPct.toFixed(1)}%</span>
+          </td>
         `;
         tbody.appendChild(tr);
       });

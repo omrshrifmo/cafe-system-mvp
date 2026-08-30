@@ -691,11 +691,15 @@
             <input type="number" id="pay-visa" min="0" step="1" placeholder="0" oninput="updateCheckoutRemaining()" class="w-full px-3 py-1.5 bg-slate-950 border border-slate-700 rounded-xl text-blue-400 font-mono font-bold text-xs focus:border-emerald-500 focus:outline-none" />
           </div>
           <div>
+            <label class="block text-xs font-bold text-slate-300 mb-1">🎁 ضيافة (House / Comp):</label>
+            <input type="number" id="pay-comp" min="0" step="1" placeholder="0" oninput="updateCheckoutRemaining()" class="w-full px-3 py-1.5 bg-slate-950 border border-rose-500/60 rounded-xl text-rose-400 font-mono font-bold text-xs focus:border-rose-400 focus:outline-none" />
+          </div>
+          <div>
             <label class="block text-xs font-bold text-slate-300 mb-1">👛 محفظة (Wallet):</label>
             <input type="number" id="pay-wallet" min="0" step="1" placeholder="0" oninput="updateCheckoutRemaining()" class="w-full px-3 py-1.5 bg-slate-950 border border-slate-700 rounded-xl text-purple-400 font-mono font-bold text-xs focus:border-emerald-500 focus:outline-none" />
           </div>
-          <div class="col-span-2">
-            <label class="block text-xs font-bold text-amber-400 mb-1">🎁 البقشيش / الإكرامية (Tips EGP):</label>
+          <div>
+            <label class="block text-xs font-bold text-amber-400 mb-1">🎁 البقشيش / الإكرامية (Tips):</label>
             <input type="number" id="pay-tip" min="0" step="1" placeholder="0" class="w-full px-3 py-1.5 bg-slate-950 border border-amber-500/50 rounded-xl text-amber-300 font-mono font-bold text-xs focus:border-amber-400 focus:outline-none" />
           </div>
         </div>
@@ -712,9 +716,10 @@
           </div>
         </div>
 
-        <div class="flex items-center gap-2 pt-1">
-          <button type="button" onclick="autofillPayment('CASH')" class="flex-1 px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-bold border border-slate-700 cursor-pointer">دفع كاش بالكامل (CASH)</button>
-          <button type="button" onclick="autofillPayment('INSTAPAY')" class="flex-1 px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-emerald-300 rounded-lg text-xs font-bold border border-slate-700 cursor-pointer">دفع InstaPay بالكامل</button>
+        <div class="grid grid-cols-3 gap-2 pt-1">
+          <button type="button" onclick="autofillPayment('CASH')" class="px-2 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-bold border border-slate-700 cursor-pointer">دفع كاش بالكامل</button>
+          <button type="button" onclick="autofillPayment('INSTAPAY')" class="px-2 py-1.5 bg-slate-800 hover:bg-slate-700 text-emerald-300 rounded-lg text-xs font-bold border border-slate-700 cursor-pointer">دفع InstaPay</button>
+          <button type="button" onclick="autofillPayment('COMP')" class="px-2 py-1.5 bg-rose-950/60 hover:bg-rose-900 text-rose-300 rounded-lg text-xs font-bold border border-rose-700/60 cursor-pointer">ضيافة (Comp 🎁)</button>
         </div>
 
         <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between text-xs">
@@ -808,6 +813,80 @@
     let currentSearchQuery = '';
     let currentModalZoneFilter = 'ALL';
     let ws = null;
+    let currentAuthUserId = null;
+
+    // --- Activity Recovery & Draft Orders (POS & Auth) ---
+    async function initAuthUser() {
+      try {
+        const cached = JSON.parse(localStorage.getItem('currentUser') || localStorage.getItem('user') || '{}');
+        if (cached && cached.id) {
+          currentAuthUserId = cached.id;
+        }
+        const res = await fetch('/api/auth/me');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.user) {
+            currentAuthUserId = data.user.id;
+            localStorage.setItem('currentUser', JSON.stringify(data.user));
+          }
+        }
+      } catch (e) {}
+      restoreDraftCart();
+    }
+
+    function getDraftCartKey() {
+      const uId = currentAuthUserId || (window.currentUser && window.currentUser.id) || 'default';
+      return `draft_cart_${uId}`;
+    }
+
+    function saveDraftCart() {
+      try {
+        const key = getDraftCartKey();
+        if (cart && cart.length > 0) {
+          localStorage.setItem(key, JSON.stringify({
+            userId: currentAuthUserId,
+            tableNumber: selectedTableNumber,
+            cart: cart,
+            savedAt: Date.now()
+          }));
+        } else {
+          localStorage.removeItem(key);
+        }
+      } catch (e) {
+        console.warn('Failed to save draft cart', e);
+      }
+    }
+
+    function restoreDraftCart() {
+      try {
+        const key = getDraftCartKey();
+        const raw = localStorage.getItem(key);
+        if (raw) {
+          const data = JSON.parse(raw);
+          if (data && Array.isArray(data.cart) && data.cart.length > 0 && cart.length === 0) {
+            cart = data.cart;
+            if (data.tableNumber && !selectedTableNumber) {
+              selectedTableNumber = data.tableNumber;
+            }
+            renderCartUI();
+            if (window.UIState && window.UIState.showToast) {
+              UIState.showToast('تمت استعادة مسودة السلة السابقة تلقائياً 📋', 'success');
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to restore draft cart', e);
+      }
+    }
+
+    function clearDraftCart() {
+      try {
+        const key = getDraftCartKey();
+        localStorage.removeItem(key);
+      } catch (e) {
+        console.warn('Failed to clear draft cart', e);
+      }
+    }
 
     let posSystemConfig = {
       currency: 'ج.م',
@@ -1709,6 +1788,7 @@
 
     function clearCart() {
       cart = [];
+      clearDraftCart();
       renderCartUI();
     }
 
@@ -1955,6 +2035,9 @@
         sendBtn.disabled = true;
         sendBtnText.textContent = 'إرسال للمطبخ (0)';
       }
+
+      // Persist draft cart to localStorage for activity recovery
+      saveDraftCart();
     }
 
     // Send Cart Orders to Kitchen / KDS with Debounce Guard
@@ -2157,6 +2240,7 @@
       const cash = Number(document.getElementById('pay-cash').value) || 0;
       const instapay = Number(document.getElementById('pay-instapay').value) || 0;
       const visa = Number(document.getElementById('pay-visa').value) || 0;
+      const comp = Number(document.getElementById('pay-comp').value) || 0;
       const wallet = Number(document.getElementById('pay-wallet').value) || 0;
 
       let pointsDiscount = 0;
@@ -2168,7 +2252,7 @@
       const netBill = Math.max(0, currentCheckoutTotal - pointsDiscount);
       document.getElementById('checkout-total-bill').textContent = `${netBill} ${posSystemConfig.currency || 'ج.م'} ${pointsDiscount > 0 ? `(خصم ${pointsDiscount} ${posSystemConfig.currency || 'ج.م'} نقاط)` : ''}`;
 
-      const totalPaid = cash + instapay + visa + wallet;
+      const totalPaid = cash + instapay + visa + comp + wallet;
       const remaining = netBill - totalPaid;
       
       const remEl = document.getElementById('checkout-remaining');
@@ -2202,10 +2286,12 @@
       document.getElementById('pay-cash').value = '';
       document.getElementById('pay-instapay').value = '';
       document.getElementById('pay-visa').value = '';
+      document.getElementById('pay-comp').value = '';
       document.getElementById('pay-wallet').value = '';
 
       if (method === 'CASH') document.getElementById('pay-cash').value = netBill;
       if (method === 'INSTAPAY') document.getElementById('pay-instapay').value = netBill;
+      if (method === 'COMP') document.getElementById('pay-comp').value = netBill;
       
       updateCheckoutRemaining();
     }
@@ -2233,12 +2319,14 @@
         const cash = Number(document.getElementById('pay-cash').value) || 0;
         const instapay = Number(document.getElementById('pay-instapay').value) || 0;
         const visa = Number(document.getElementById('pay-visa').value) || 0;
+        const comp = Number(document.getElementById('pay-comp').value) || 0;
         const wallet = Number(document.getElementById('pay-wallet').value) || 0;
 
         const payments = [];
         if (cash > 0) payments.push({ method: 'CASH', amount: cash });
         if (instapay > 0) payments.push({ method: 'INSTAPAY', amount: instapay });
         if (visa > 0) payments.push({ method: 'VISA', amount: visa });
+        if (comp > 0) payments.push({ method: 'ضيافة', amount: comp });
         if (wallet > 0) payments.push({ method: 'WALLET', amount: wallet });
 
         const customerPhone = document.getElementById('customer-phone').value.trim();
@@ -2276,6 +2364,7 @@
             UIState.showToast('تم إغلاق الفاتورة وطباعة الإيصال وتسجيل الدفع بنجاح! 🖨️', 'success');
             closeCheckoutModal();
             cart = [];
+            clearDraftCart();
             activeTableOrders = [];
             activeTableTotals = null;
             renderCartUI();
@@ -2373,11 +2462,20 @@
 
     // Initialize POS
     initNetworkMonitor();
+    initAuthUser();
     loadPosConfig();
     fetchMenu();
     fetchTableSessions();
     connectWebSocket();
     setInterval(fetchTableSessions, 10000);
+
+    // Activity recovery triggers on login/unlock/tab focus
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'currentUser' || (e.key && e.key.startsWith('draft_cart_'))) {
+        initAuthUser();
+      }
+    });
+    window.addEventListener('focus', restoreDraftCart);
   </script>
 </body>
 </html>

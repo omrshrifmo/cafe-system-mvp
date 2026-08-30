@@ -704,7 +704,7 @@ async function calculateProfitabilityAndLossability(scope, salesSummary, cogsSum
   if (!itemSales || itemSales.length === 0) {
     itemSales = await allQuery(`
       SELECT 
-        oi.id as menu_item_id,
+        MAX(oi.id) as menu_item_id,
         oi.item_name_snapshot as item_name,
         oi.department as category,
         COALESCE(AVG(oi.unit_price_minor), 0) as unit_price_minor,
@@ -712,20 +712,49 @@ async function calculateProfitabilityAndLossability(scope, salesSummary, cogsSum
         COALESCE(SUM(oi.unit_price_minor * oi.quantity), 0) as total_revenue_minor
       FROM order_items oi
       JOIN order_sessions os ON oi.session_id = os.id
-      WHERE oi.status = 'ACTIVE'
-      GROUP BY oi.id, oi.item_name_snapshot, oi.department
+      WHERE oi.status IN ('ACTIVE', 'SETTLED', 'CLOSED', 'PAID', 'COMPLETED')
+      GROUP BY oi.item_name_snapshot, oi.department
       ORDER BY total_revenue_minor DESC
       LIMIT 20
     `);
   }
 
-  const itemsAnalysis = (itemSales || []).map(item => {
+  const itemsAnalysis = await Promise.all((itemSales || []).map(async (item) => {
     const rev = Math.round(Number(item.total_revenue_minor) || 0);
     const qty = Math.round(Number(item.total_qty) || 1);
     const unitPrice = Math.round(Number(item.unit_price_minor) || (rev / qty) || 5000);
-    // Estimated BOM unit cost (30%)
-    const unitCost = Math.round(unitPrice * 0.30);
-    const unitMargin = unitPrice - unitCost;
+    
+    // Exact Calculated BOM Cost + Indirect Cost (packaging/cups per item)
+    let calculatedBomCostMinor = 0;
+    let indirectCostMinor = 0;
+
+    try {
+      const recipeRows = await allQuery(`
+        SELECT r.quantity_required, COALESCE(r.indirect_cost, 0) as indirect_cost,
+               COALESCE(inv.unit_cost, i.cost_per_unit_minor / 100.0, 0) as unit_cost_egp
+        FROM recipes r
+        LEFT JOIN inventory_items i ON (r.inventory_id = i.id)
+        LEFT JOIN inventory inv ON (r.inventory_id = inv.id)
+        WHERE r.menu_item_name = ?
+      `, [item.item_name]);
+
+      if (recipeRows && recipeRows.length > 0) {
+        for (const r of recipeRows) {
+          calculatedBomCostMinor += Math.round((Number(r.quantity_required) || 0) * (Number(r.unit_cost_egp) || 0) * 100);
+          if (r.indirect_cost) {
+            indirectCostMinor = Math.max(indirectCostMinor, Math.round(Number(r.indirect_cost) * 100));
+          }
+        }
+      } else {
+        calculatedBomCostMinor = Math.round(unitPrice * 0.30);
+      }
+    } catch (e) {
+      calculatedBomCostMinor = Math.round(unitPrice * 0.30);
+    }
+
+    const totalUnitCostMinor = calculatedBomCostMinor + indirectCostMinor;
+    const unitMargin = unitPrice - totalUnitCostMinor;
+    // Formula: ((Selling Price - (Calculated BOM Cost + Indirect Cost)) / Selling Price) * 100
     const marginPct = unitPrice > 0 ? Number(((unitMargin / unitPrice) * 100).toFixed(2)) : 0;
 
     return {
@@ -735,12 +764,16 @@ async function calculateProfitabilityAndLossability(scope, salesSummary, cogsSum
       quantity_sold: qty,
       revenue_minor: rev,
       unit_selling_price_minor: unitPrice,
-      unit_cogs_minor: unitCost,
+      selling_price: unitPrice / 100.0,
+      bom_cost: calculatedBomCostMinor / 100.0,
+      indirect_cost: indirectCostMinor / 100.0,
+      unit_cogs_minor: totalUnitCostMinor,
       unit_margin_minor: unitMargin,
+      profit_margin_pct: marginPct,
       margin_pct: marginPct,
-      is_low_margin: marginPct < 35.0
+      is_low_margin: marginPct < 40.0
     };
-  });
+  }));
 
   const lowMarginItems = itemsAnalysis.filter(i => i.is_low_margin);
 
@@ -854,12 +887,23 @@ async function generateReport(reportType, rawParams = {}) {
         const totalAdvances = 0;
         const expectedCash = Math.max(0, cashCollected - totalExpenses - totalAdvances + 200);
 
+        let dailyTarget = 5000;
+        try {
+          const cfgRow = await getQuery(`SELECT value FROM system_config WHERE key = 'daily_target'`);
+          if (cfgRow && cfgRow.value) dailyTarget = parseFloat(cfgRow.value) || 5000;
+        } catch (e) {}
+
+        const todayRevenue = sales.net_sales_minor / 100.0;
+        const targetProgressPct = dailyTarget > 0 ? Number(((todayRevenue / dailyTarget) * 100).toFixed(1)) : 100;
+
         return {
           success: true,
           report_type: REPORT_TYPES.EOD_FINANCIAL,
           scope,
           report_date: scope.date_range.start_date,
           shift_filter: scope.shiftId || 'ALL',
+          daily_target: dailyTarget,
+          target_progress_pct: targetProgressPct,
           financials: {
             gross_sales_minor: sales.gross_sales_minor,
             discounts_minor: sales.discounts_minor,
@@ -873,7 +917,9 @@ async function generateReport(reportType, rawParams = {}) {
             net_income_minor: netIncomeMinor
           },
           report: {
-            total_revenue: sales.net_sales_minor / 100,
+            total_revenue: todayRevenue,
+            daily_target: dailyTarget,
+            target_progress_pct: targetProgressPct,
             total_orders: sales.total_orders,
             drawer_expenses: totalExpenses,
             total_advances: totalAdvances,
@@ -904,13 +950,26 @@ async function generateReport(reportType, rawParams = {}) {
       }
 
       case REPORT_TYPES.BI_ANALYTICS: {
+        let dailyTarget = 5000;
+        try {
+          const cfgRow = await getQuery(`SELECT value FROM system_config WHERE key = 'daily_target'`);
+          if (cfgRow && cfgRow.value) dailyTarget = parseFloat(cfgRow.value) || 5000;
+        } catch (e) {}
+
+        const todayRevenue = sales.net_sales_minor / 100.0;
+        const targetProgressPct = dailyTarget > 0 ? Number(((todayRevenue / dailyTarget) * 100).toFixed(1)) : 100;
+
         return {
           success: true,
           report_type: REPORT_TYPES.BI_ANALYTICS,
           scope,
           range: rawParams.range || 'today',
+          daily_target: dailyTarget,
+          target_progress_pct: targetProgressPct,
           kpis: {
-            total_revenue: sales.net_sales_minor / 100,
+            total_revenue: todayRevenue,
+            daily_target: dailyTarget,
+            target_progress_pct: targetProgressPct,
             total_orders: sales.total_orders,
             aov: (sales.aov_minor || 0) / 100,
             waste_cost: cogs.manual_waste_minor / 100,
@@ -926,7 +985,12 @@ async function generateReport(reportType, rawParams = {}) {
           top_items: profitability.margins.by_item.slice(0, 10).map(i => ({
             name: i.item_name,
             quantity: i.quantity_sold,
-            revenue: i.revenue_minor / 100
+            revenue: i.revenue_minor / 100,
+            selling_price: i.selling_price || (i.unit_selling_price_minor / 100),
+            bom_cost: i.bom_cost || 0,
+            indirect_cost: i.indirect_cost || 0,
+            profit_margin_pct: i.profit_margin_pct !== undefined ? i.profit_margin_pct : i.margin_pct,
+            margin_pct: i.profit_margin_pct !== undefined ? i.profit_margin_pct : i.margin_pct
           })),
           department_sales: Object.keys(departmentBreakdown.departments).map(k => ({
             department: k,

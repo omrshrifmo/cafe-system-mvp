@@ -26,7 +26,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"/home/omrshrifmo/.antigravity-ide/extensions/serhiivoinolovych.claude-skill-deployer-1.0.147-universal/resources/hooks/terminal-watch.js\" claude",
+            "command": "node \"/home/omrshrifmo/.antigravity-ide/extensions/serhiivoinolovych.claude-skill-deployer-1.0.148-universal/resources/hooks/terminal-watch.js\" claude",
             "timeout": 5
           }
         ]

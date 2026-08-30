@@ -594,32 +594,38 @@
       if (cart.length === 0) return;
       const btn = document.getElementById('placeOrderBtn');
       btn.disabled = true;
-      btn.textContent = '⏳ جاري الإرسال...';
+      btn.textContent = '⏳ جاري إرسال الطلب للمطبخ...';
       const notes = document.getElementById('orderNotes').value;
+      const token = urlParams.get('token') || urlParams.get('table_token') || null;
 
       try {
-        let lastOrderId = null;
-        for (const item of cart) {
-          const res = await fetch('/api/public/order', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              item_name: item.item_name,
-              quantity: item.quantity,
-              price: item.price,
-              table_number: tableNumber,
-              item_notes: notes,
-              order_type: tableNumber > 0 ? 'QR' : 'TAKEAWAY'
-            })
-          });
-          const data = await res.json();
-          if (!data.success) throw new Error(data.error || 'خطأ في الإرسال');
-          lastOrderId = data.order?.id;
+        const res = await fetch('/api/public/orders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            table_number: tableNumber,
+            token: token,
+            items: cart.map(it => ({
+              item_name: it.item_name,
+              name: it.item_name,
+              quantity: it.quantity,
+              price: it.price,
+              department: it.department || 'BARISTA'
+            })),
+            notes: notes || 'طلب من قائمة QR للجوال'
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || 'فشل إرسال الطلب');
         }
+
+        const orderRef = data.order_id || data.order?.id || data.order?.session_id;
 
         // Show success
         document.getElementById('cartModal').classList.remove('open');
-        document.getElementById('successRef').textContent = lastOrderId ? `رقم الطلب: #${lastOrderId}` : '';
+        document.getElementById('successRef').textContent = orderRef ? `رقم الطلب: #${orderRef}` : '';
         document.getElementById('successOverlay').classList.add('open');
         cart = [];
         updateCartBar();
@@ -630,7 +636,7 @@
         if (window.UIState && window.UIState.showApiError) {
           UIState.showApiError(err.message);
         } else {
-          showToast('حدث خطأ: ' + err.message);
+          showToast('حدث خطأ أثناء إرسال الطلب: ' + err.message);
         }
       }
     }

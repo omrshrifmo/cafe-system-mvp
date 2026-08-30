@@ -494,9 +494,15 @@ db.serialize(() => {
       description TEXT NOT NULL,
       amount REAL DEFAULT 0,
       payment_source TEXT DEFAULT 'DRAWER',
+      category TEXT DEFAULT 'OPERATIONAL',
+      user_id INTEGER,
+      expense_date TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
+  db.run(`ALTER TABLE daily_expenses ADD COLUMN category TEXT DEFAULT 'OPERATIONAL'`, () => {});
+  db.run(`ALTER TABLE daily_expenses ADD COLUMN user_id INTEGER`, () => {});
+  db.run(`ALTER TABLE daily_expenses ADD COLUMN expense_date TEXT`, () => {});
 
   // Customers Loyalty Table (نقاط ولاء العملاء)
   db.run(`
@@ -673,6 +679,22 @@ db.serialize(() => {
   });
   db.run(`ALTER TABLE recipes ADD COLUMN instructions TEXT`, () => {});
   db.run(`ALTER TABLE recipes ADD COLUMN tolerance_percent REAL DEFAULT 5.0`, () => {});
+  db.run(`ALTER TABLE recipes ADD COLUMN indirect_cost REAL DEFAULT 0`, () => {});
+
+  // Physical Inventory Reconciliations (نظام الجرد الفعلي)
+  db.run(`
+    CREATE TABLE IF NOT EXISTS inventory_reconciliations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      inventory_id INTEGER NOT NULL,
+      theoretical_qty REAL NOT NULL,
+      actual_qty REAL NOT NULL,
+      variance REAL NOT NULL,
+      user_id INTEGER,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_inv_reconciliations_inv ON inventory_reconciliations(inventory_id)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_inv_reconciliations_created ON inventory_reconciliations(created_at)`);
 });
 
 /**

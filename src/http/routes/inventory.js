@@ -54,6 +54,32 @@ router.get('/inventory/reconciliation', requireAuth, requirePermission('inventor
   }
 });
 
+// Direct Physical Inventory Reconciliation (نظام الجرد الفعلي)
+router.post('/inventory/reconcile', requireAuth, requirePermission('inventory:adjust'), async (req, res, next) => {
+  try {
+    const { reconcilePhysicalInventory } = require('../../domain/inventory/service');
+    const result = await reconcilePhysicalInventory(req.body, req.user ? req.user.id : null);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/inventory/reconciliations', requireAuth, requirePermission('inventory:read'), async (req, res, next) => {
+  try {
+    const { getPhysicalReconciliations } = require('../../domain/inventory/service');
+    const limit = parseInt(req.query.limit, 10) || 50;
+    const reconciliations = await getPhysicalReconciliations(limit);
+    res.json({
+      success: true,
+      data: reconciliations,
+      reconciliations
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // Purchases Lifecycle
 router.get(['/purchases', '/purchases/history'], requireAuth, async (req, res, next) => {
   try {

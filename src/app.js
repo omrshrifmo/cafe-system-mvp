@@ -82,6 +82,7 @@ function createApp() {
     '/setup.html',
     '/manual.html',
     '/health.html',
+    '/qr-menu.html'
   ]);
 
   app.use((req, res, next) => {

@@ -438,11 +438,139 @@ async function postStocktake(sessionId, actorId = null, pin = null) {
   });
 }
 
+/**
+ * Direct Physical Inventory Reconciliation (نظام الجرد الفعلي المباشر)
+ */
+async function reconcilePhysicalInventory(dataOrId, actualQtyArg = null, actorIdArg = null) {
+  let inventory_id, actual_qty, user_id, notes;
+  if (typeof dataOrId === 'object' && dataOrId !== null) {
+    inventory_id = dataOrId.inventory_id || dataOrId.id;
+    actual_qty = dataOrId.actual_qty !== undefined ? dataOrId.actual_qty : dataOrId.actual_count;
+    user_id = dataOrId.user_id || (typeof actorIdArg === 'object' ? actorIdArg?.id : actorIdArg);
+    notes = dataOrId.notes;
+  } else {
+    inventory_id = dataOrId;
+    actual_qty = actualQtyArg;
+    user_id = typeof actorIdArg === 'object' ? (actorIdArg && actorIdArg.id) : actorIdArg;
+  }
+
+  const targetUserId = user_id || 1;
+  const actualCount = parseFloat(actual_qty);
+  if (isNaN(actualCount) || actualCount < 0) {
+    throw new Error('VALIDATION_ERROR: يرجى إدخال كمية جرد فعلية صحيحة');
+  }
+
+  return runTransaction(async (tx) => {
+    // 1. Get theoretical quantity from inventory_items or inventory
+    let invItem = await tx.get(
+      `SELECT id, name, unit, cost_per_unit_minor, current_stock_microunits FROM inventory_items WHERE id = ?`,
+      [inventory_id]
+    );
+
+    if (!invItem) {
+      invItem = await tx.get(`SELECT id, name, unit, unit_cost, current_stock FROM inventory WHERE id = ?`, [inventory_id]);
+    }
+
+    if (!invItem) {
+      throw new Error(`NOT_FOUND: الخامة المطلوبة غير موجودة في المخزون [ID: ${inventory_id}]`);
+    }
+
+    const theoreticalQty = invItem.current_stock_microunits !== undefined 
+      ? (invItem.current_stock_microunits / 1000000.0) 
+      : (Number(invItem.current_stock) || 0);
+
+    const variance = Math.round((actualCount - theoreticalQty) * 1000000) / 1000000.0;
+    const actualMicrounits = Math.round(actualCount * 1000000);
+    const varianceMicrounits = Math.round(variance * 1000000);
+
+    // 2. Overwrite current_stock with actual count
+    try {
+      await tx.run(
+        `UPDATE inventory_items SET current_stock_microunits = ? WHERE id = ?`,
+        [actualMicrounits, invItem.id]
+      );
+    } catch (e) {}
+
+    try {
+      await tx.run(
+        `UPDATE inventory SET current_stock = ? WHERE id = ?`,
+        [actualCount, invItem.id]
+      );
+    } catch (e) {}
+
+    // 3. Insert into inventory_reconciliations table
+    const recResult = await tx.run(
+      `INSERT INTO inventory_reconciliations (inventory_id, theoretical_qty, actual_qty, variance, user_id, created_at)
+       VALUES (?, ?, ?, ?, ?, datetime('now', 'localtime'))`,
+      [invItem.id, theoreticalQty, actualCount, variance, targetUserId]
+    );
+
+    // 4. Log in append-only inventory_ledger
+    if (varianceMicrounits !== 0) {
+      try {
+        const ledgerId = `REC-${Date.now()}-${invItem.id}`;
+        await tx.run(
+          `INSERT INTO inventory_ledger (id, inventory_item_id, event_type, reference_type, reference_id, quantity_delta_microunits, balance_after_microunits, cost_basis, notes, created_by)
+           VALUES (?, ?, 'STOCKTAKE_DISCREPANCY', 'RECONCILIATION', ?, ?, ?, 'ACTUAL_COUNT', ?, ?)`,
+          [ledgerId, invItem.id, String(recResult.lastID), varianceMicrounits, actualMicrounits, notes || `تسوية جرد فعلي (الرصيد الفعلي: ${actualCount} ${invItem.unit || ''})`, targetUserId]
+        );
+      } catch (e) {}
+    }
+
+    return {
+      success: true,
+      theoretical_qty: theoreticalQty,
+      actual_qty: actualCount,
+      variance: variance,
+      reconciliation: {
+        id: recResult.lastID,
+        inventory_id: invItem.id,
+        item_name: invItem.name,
+        unit: invItem.unit,
+        theoretical_qty: theoreticalQty,
+        actual_qty: actualCount,
+        variance: variance,
+        user_id: targetUserId
+      },
+      message: `تم تسوية وتحديث رصيد [${invItem.name}] إلى ${actualCount} ${invItem.unit || ''} بنجاح (الفارق: ${variance >= 0 ? '+' : ''}${variance})`
+    };
+  });
+}
+
+async function getPhysicalReconciliations(limitOrInvId = 50) {
+  if (typeof limitOrInvId === 'number' && limitOrInvId > 100) {
+    return allQuery(
+      `SELECT r.id, r.inventory_id, r.theoretical_qty, r.actual_qty, r.variance, r.user_id, r.created_at,
+              COALESCE(i.name, inv.name) as item_name, COALESCE(i.unit, inv.unit) as unit, u.name as user_name
+       FROM inventory_reconciliations r
+       LEFT JOIN inventory_items i ON r.inventory_id = i.id
+       LEFT JOIN inventory inv ON r.inventory_id = inv.id
+       LEFT JOIN users u ON r.user_id = u.id
+       WHERE r.inventory_id = ?
+       ORDER BY r.id DESC`,
+      [limitOrInvId]
+    );
+  }
+  return allQuery(
+    `SELECT r.id, r.inventory_id, r.theoretical_qty, r.actual_qty, r.variance, r.user_id, r.created_at,
+            COALESCE(i.name, inv.name) as item_name, COALESCE(i.unit, inv.unit) as unit, u.name as user_name
+     FROM inventory_reconciliations r
+     LEFT JOIN inventory_items i ON r.inventory_id = i.id
+     LEFT JOIN inventory inv ON r.inventory_id = inv.id
+     LEFT JOIN users u ON r.user_id = u.id
+     ORDER BY r.id DESC
+     LIMIT ?`,
+    [limitOrInvId || 50]
+  );
+}
+
 module.exports = {
   NEGATIVE_STOCK_POLICIES,
   STOCKTAKE_STATUSES,
   getInventory,
   getInventoryReconciliationAudit,
+  reconcilePhysicalInventory,
+  getPhysicalReconciliations,
   logPurchase,
   logWaste,
   transferMaterial,

@@ -174,123 +174,143 @@ async function submitOrderWithBOM(orderData, actorId = null) {
       session = { id: sRes.lastID, public_ref: publicRef };
     }
 
-    // 2. Resolve catalog item & BOM
-    const targetItemName = item_name || (Array.isArray(orderData.items) && orderData.items[0] ? (orderData.items[0].name || orderData.items[0].item_name) : 'قهوة تركي');
-    const targetQty = Math.max(1, parseInt(quantity || (Array.isArray(orderData.items) && orderData.items[0] ? orderData.items[0].quantity : 1), 10) || 1);
-    const targetSugar = sugar_level || (Array.isArray(orderData.items) && orderData.items[0] ? orderData.items[0].sugar_level : null);
-    const targetRoast = roast_type || (Array.isArray(orderData.items) && orderData.items[0] ? orderData.items[0].roast_type : null);
+    // 2. Resolve items & BOM
+    const rawItems = (Array.isArray(orderData.items) && orderData.items.length > 0)
+      ? orderData.items
+      : [{
+          name: item_name || 'قهوة تركي',
+          item_name: item_name || 'قهوة تركي',
+          quantity: quantity || 1,
+          sugar_level: sugar_level || 'مظبوط',
+          roast_type: roast_type || 'افتراضي',
+          price: orderData.price || 0,
+          department: orderData.department || null
+        }];
 
-    let catalogItem = await getMenuItemWithActivePriceAndBOM(targetItemName);
-    if (!catalogItem) {
-      // Fallback lookup or create temporary ad-hoc representation
-      catalogItem = await tx.get(`SELECT * FROM menu_items LIMIT 1`);
-      if (catalogItem) {
-        catalogItem.name = targetItemName;
-        catalogItem.price_minor = catalogItem.price_minor || 4500;
-        catalogItem.department = catalogItem.department || 'BARISTA';
-      } else {
-        catalogItem = { id: 1, name: targetItemName, price_minor: 4500, department: 'BARISTA', publication_version: 1 };
+    const createdItems = [];
+
+    for (const rawItem of rawItems) {
+      const targetItemName = rawItem.name || rawItem.item_name || 'قهوة تركي';
+      const targetQty = Math.max(1, parseInt(rawItem.quantity || rawItem.qty || 1, 10) || 1);
+      const targetSugar = rawItem.sugar_level || rawItem.sugar || sugar_level || null;
+      const targetRoast = rawItem.roast_type || rawItem.roast || roast_type || null;
+
+      let catalogItem = await getMenuItemWithActivePriceAndBOM(targetItemName);
+      if (!catalogItem) {
+        // Fallback lookup or create temporary ad-hoc representation
+        catalogItem = await tx.get(`SELECT * FROM menu_items LIMIT 1`);
+        if (catalogItem) {
+          catalogItem.name = targetItemName;
+          catalogItem.price_minor = catalogItem.price_minor || (rawItem.price ? Math.round(rawItem.price * 100) : 4500);
+          catalogItem.department = rawItem.department || catalogItem.department || 'BARISTA';
+        } else {
+          catalogItem = { id: 1, name: targetItemName, price_minor: 4500, department: rawItem.department || 'BARISTA', publication_version: 1 };
+        }
       }
+
+      const qty = targetQty;
+      const modifiers = { sugar_level: targetSugar, roast_type: targetRoast };
+
+      // 3. Evaluate offers
+      let itemDiscountMinor = 0;
+      let appliedOfferId = null;
+      for (const offer of activeOffers) {
+        const d = evaluateOffer(offer, catalogItem, qty);
+        if (d > itemDiscountMinor) {
+          itemDiscountMinor = d;
+          appliedOfferId = offer.id;
+        }
+      }
+
+      const taxMinor = 0;
+      const serviceMinor = 0;
+      const catalogVersion = catalogItem.publication_version || 1;
+      const quoteSnapshot = JSON.stringify(catalogItem);
+
+      // 4. Create Order Item row
+      const itemRes = await tx.run(
+        `INSERT INTO order_items (
+           session_id, menu_item_id, item_name_snapshot, unit_price_minor, quantity, modifiers_json, 
+           recipe_version_id, department, waiter_id, price_minor, tax_minor, service_minor, 
+           discount_minor, offer_id, catalog_version, quote_snapshot
+         )
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          session.id,
+          catalogItem.id,
+          catalogItem.name,
+          catalogItem.price_minor,
+          qty,
+          JSON.stringify(modifiers),
+          catalogItem.active_recipe_version_id || null,
+          catalogItem.department || 'BARISTA',
+          actualWaiterId,
+          catalogItem.price_minor * qty,
+          taxMinor,
+          serviceMinor,
+          itemDiscountMinor,
+          appliedOfferId,
+          catalogVersion,
+          quoteSnapshot
+        ]
+      );
+
+      const orderItemId = itemRes.lastID;
+
+      // 5. BOM Inventory Deductions via immutable inventory_ledger
+      await deductBOM(tx, orderItemId, catalogItem, qty, actualWaiterId);
+
+      // 6. Update session totals
+      const lineTotal = (catalogItem.price_minor * qty) - itemDiscountMinor;
+      await tx.run(
+        `UPDATE order_sessions SET subtotal_minor = subtotal_minor + ?, total_minor = total_minor + ?, version = version + 1 WHERE id = ?`,
+        [lineTotal, lineTotal, session.id]
+      );
+
+      // 7. Insert print job for BOH Kitchen Ticket
+      const printJobId = crypto.randomUUID();
+      const ticketPayload = JSON.stringify({
+        order_id: orderItemId,
+        table_number: tNum,
+        item_name: catalogItem.name,
+        quantity: qty,
+        department: catalogItem.department,
+        sugar_level: targetSugar || 'مظبوط',
+        roast_type: targetRoast || 'افتراضي',
+        waiter_id: actualWaiterId,
+        created_at: new Date().toLocaleString('ar-EG')
+      });
+
+      await tx.run(
+        `INSERT INTO print_jobs (id, job_type, payload_json, status) VALUES (?, 'KITCHEN_TICKET', ?, 'PENDING')`,
+        [printJobId, ticketPayload]
+      );
+
+      // 7. Insert outbox event for real-time WebSocket broadcast
+      await tx.run(
+        `INSERT INTO outbox_events (event_id, topic, aggregate_type, aggregate_id, payload_json)
+         VALUES (?, 'ORDER_PLACED', 'ORDER_ITEM', ?, ?)`,
+        [crypto.randomUUID(), String(orderItemId), ticketPayload]
+      );
+
+      createdItems.push({
+        id: orderItemId,
+        session_id: session.id,
+        table_number: tNum,
+        item_name: catalogItem.name,
+        price: catalogItem.price,
+        quantity: qty,
+        department: catalogItem.department,
+        kds_status: 'PENDING',
+        sugar_level: targetSugar,
+        roast_type: targetRoast,
+        waiter_id: actualWaiterId
+      });
     }
 
-    const qty = targetQty;
-    const modifiers = { sugar_level: targetSugar, roast_type: targetRoast };
-
-    // 3. Evaluate offers
-    let itemDiscountMinor = 0;
-    let appliedOfferId = null;
-    for (const offer of activeOffers) {
-      const d = evaluateOffer(offer, catalogItem, qty);
-      if (d > itemDiscountMinor) {
-        itemDiscountMinor = d;
-        appliedOfferId = offer.id;
-      }
-    }
-
-    const taxMinor = 0;
-    const serviceMinor = 0;
-    const catalogVersion = catalogItem.publication_version || 1;
-    const quoteSnapshot = JSON.stringify(catalogItem);
-
-    // 4. Create Order Item row
-    const itemRes = await tx.run(
-      `INSERT INTO order_items (
-         session_id, menu_item_id, item_name_snapshot, unit_price_minor, quantity, modifiers_json, 
-         recipe_version_id, department, waiter_id, price_minor, tax_minor, service_minor, 
-         discount_minor, offer_id, catalog_version, quote_snapshot
-       )
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        session.id,
-        catalogItem.id,
-        catalogItem.name,
-        catalogItem.price_minor,
-        qty,
-        JSON.stringify(modifiers),
-        catalogItem.active_recipe_version_id || null,
-        catalogItem.department || 'BARISTA',
-        actualWaiterId,
-        catalogItem.price_minor * qty,
-        taxMinor,
-        serviceMinor,
-        itemDiscountMinor,
-        appliedOfferId,
-        catalogVersion,
-        quoteSnapshot
-      ]
-    );
-
-    const orderItemId = itemRes.lastID;
-
-    // 5. BOM Inventory Deductions via immutable inventory_ledger
-    await deductBOM(tx, orderItemId, catalogItem, qty, actualWaiterId);
-
-    // 6. Update session totals
-    const lineTotal = (catalogItem.price_minor * qty) - itemDiscountMinor;
-    await tx.run(
-      `UPDATE order_sessions SET subtotal_minor = subtotal_minor + ?, total_minor = total_minor + ?, version = version + 1 WHERE id = ?`,
-      [lineTotal, lineTotal, session.id]
-    );
-
-    // 7. Insert print job for BOH Kitchen Ticket
-    const printJobId = crypto.randomUUID();
-    const ticketPayload = JSON.stringify({
-      order_id: orderItemId,
-      table_number: tNum,
-      item_name: catalogItem.name,
-      quantity: qty,
-      department: catalogItem.department,
-      sugar_level: sugar_level || 'مظبوط',
-      roast_type: roast_type || 'افتراضي',
-      waiter_id: actualWaiterId,
-      created_at: new Date().toLocaleString('ar-EG')
-    });
-
-    await tx.run(
-      `INSERT INTO print_jobs (id, job_type, payload_json, status) VALUES (?, 'KITCHEN_TICKET', ?, 'PENDING')`,
-      [printJobId, ticketPayload]
-    );
-
-    // 7. Insert outbox event for real-time WebSocket broadcast
-    await tx.run(
-      `INSERT INTO outbox_events (event_id, topic, aggregate_type, aggregate_id, payload_json)
-       VALUES (?, 'ORDER_PLACED', 'ORDER_ITEM', ?, ?)`,
-      [crypto.randomUUID(), String(orderItemId), ticketPayload]
-    );
-
-    return {
-      id: orderItemId,
-      session_id: session.id,
-      table_number: tNum,
-      item_name: catalogItem.name,
-      price: catalogItem.price,
-      quantity: qty,
-      department: catalogItem.department,
-      kds_status: 'PENDING',
-      sugar_level,
-      roast_type,
-      waiter_id: actualWaiterId
-    };
+    return createdItems.length === 1
+      ? createdItems[0]
+      : { id: createdItems[0].id, session_id: session.id, items: createdItems, count: createdItems.length, order: createdItems[0] };
   });
 }
 

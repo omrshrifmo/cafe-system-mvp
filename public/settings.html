@@ -56,6 +56,12 @@
           </div>
 
           <div>
+            <label class="block font-bold text-slate-300 mb-1">الهدف اليومي للمبيعات (Daily Target EGP):</label>
+            <input type="number" id="cfg-daily-target" min="0" step="100" class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-emerald-400 font-bold font-mono focus:border-amber-500 focus:outline-none" placeholder="5000" />
+            <p class="text-[10px] text-slate-500 mt-0.5">الهدف اليومي المالي لمتابعة مؤشرات الإنجاز في لوحة BI و EOD.</p>
+          </div>
+
+          <div>
             <label class="block font-bold text-slate-300 mb-1">رسالة رأس الفاتورة (Header Note):</label>
             <input type="text" id="cfg-header-note" class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-slate-200 focus:border-amber-500 focus:outline-none" placeholder="أهلاً بكم في كافيه مزاج" />
           </div>
@@ -359,8 +365,95 @@
         </div>
       </section>
 
-      <!-- Card 6: Factory Reset & Client Handover -->
-      <section class="stat-card space-y-4 border-rose-500/30 bg-rose-950/10">
+      <!-- Card 6: Device Trust & Active Session Management -->
+      <section class="stat-card space-y-4 md:col-span-2 border-sky-500/30 bg-slate-900/90 shadow-2xl">
+        <div class="flex flex-wrap items-center justify-between border-b border-slate-800 pb-3 gap-2">
+          <div class="flex items-center gap-2">
+            <span class="text-2xl">💻</span>
+            <div>
+              <h2 class="text-base font-extrabold text-white">إدارة الأجهزة والجلسات النشطة (Device & Session Management)</h2>
+              <p class="text-[11px] text-slate-400">مراقبة الجلسات المفتوحة، معرفات الأجهزة، وفصل الأجهزة المفقودة أو المشبوهة فورياً</p>
+            </div>
+          </div>
+          <button onclick="loadActiveSessions()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-sky-300 border border-sky-500/30 rounded-xl text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors">
+            <span>🔄</span>
+            <span>تحديث الجلسات</span>
+          </button>
+        </div>
+
+        <div class="overflow-x-auto rounded-xl border border-slate-800">
+          <table class="w-full text-right text-xs">
+            <thead class="bg-slate-950 text-slate-400 text-[10px]">
+              <tr>
+                <th class="p-3"># الجلسة</th>
+                <th class="p-3">الموظف</th>
+                <th class="p-3">الدور</th>
+                <th class="p-3">الجهاز / الفئة</th>
+                <th class="p-3">عنوان IP</th>
+                <th class="p-3">آخر نشاط</th>
+                <th class="p-3 text-center">إجراء الإبطال</th>
+              </tr>
+            </thead>
+            <tbody id="sessions-table-body" class="divide-y divide-slate-800 text-slate-300">
+              <tr>
+                <td colspan="7" class="p-4 text-center text-slate-500">جاري تحميل قائمة الجلسات النشطة...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Card 7: In-App Database Backup & Safe Restore -->
+      <section class="stat-card space-y-4 md:col-span-2 border-emerald-500/30 bg-slate-900/90 shadow-2xl">
+        <div class="flex flex-wrap items-center justify-between border-b border-slate-800 pb-3 gap-2">
+          <div class="flex items-center gap-2">
+            <span class="text-2xl">💾</span>
+            <div>
+              <h2 class="text-base font-extrabold text-white">النسخ الاحتياطي واستعادة البيانات (Backup & Restore)</h2>
+              <p class="text-[11px] text-slate-400">تصدير نسخة فورية مشفرة من قاعدة البيانات واستعادة النسخ الاحتياطية بأمان تام</p>
+            </div>
+          </div>
+          <span class="px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold rounded-lg">
+            SQLite WAL Snapshot
+          </span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+          <!-- Download Backup -->
+          <div class="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-3">
+            <div class="flex items-center gap-2 text-emerald-400 font-bold">
+              <span class="text-lg">📥</span>
+              <span>تصدير نسخة احتياطية فورية</span>
+            </div>
+            <p class="text-slate-400 text-[11px] leading-relaxed">
+              إنشاء نسخة متطابقة وفورية لقاعدة بيانات الكافيه (cafe.db) وتحميلها على جهازك باسم <span class="font-mono text-emerald-400">mazaj_backup_YYYYMMDD.db</span>.
+            </p>
+            <button onclick="downloadDatabaseBackup()" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl flex items-center justify-center gap-2 shadow-lg cursor-pointer transition-all">
+              <span>📥 تحميل ملف النسخة الاحتياطية (.db)</span>
+            </button>
+          </div>
+
+          <!-- Restore Backup -->
+          <div class="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-3">
+            <div class="flex items-center gap-2 text-amber-400 font-bold">
+              <span class="text-lg">📤</span>
+              <span>استعادة نسخة احتياطية سابقة</span>
+            </div>
+            <p class="text-slate-400 text-[11px] leading-relaxed">
+              رفع ملف قاعدة بيانات SQLite مع فحص سلامة الجداول واستبدال البيانات بأمان.
+            </p>
+            <div class="space-y-2">
+              <input type="file" id="restore-db-file" accept=".db,.sqlite" class="w-full text-xs text-slate-400 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-slate-800 file:text-amber-300 hover:file:bg-slate-700 cursor-pointer" />
+              <button onclick="triggerDatabaseRestore()" class="w-full py-2.5 bg-amber-600 hover:bg-amber-500 text-slate-950 font-black rounded-xl flex items-center justify-center gap-2 shadow-lg cursor-pointer transition-all">
+                <span>⚠️ استعادة قاعدة البيانات من الملف</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Card 8: Factory Reset & Client Handover -->
+      <section class="stat-card space-y-4 border-rose-500/30 bg-rose-950/10 md:col-span-2">
         <div class="flex items-center gap-2 border-b border-rose-500/30 pb-3">
           <span class="text-xl">🚨</span>
           <h2 class="text-base font-extrabold text-rose-400">إعادة ضبط المصنع (Factory Reset)</h2>
@@ -575,6 +668,7 @@
           const c = data.config;
           document.getElementById('cfg-cafe-name').value = c.cafe_name || 'كافيه مزاج';
           document.getElementById('cfg-currency').value = c.currency || 'ج.م';
+          document.getElementById('cfg-daily-target').value = c.daily_target !== undefined ? c.daily_target : 5000;
           document.getElementById('cfg-header-note').value = c.header_note || '';
           document.getElementById('cfg-footer-note').value = c.footer_note || '';
           
@@ -824,6 +918,7 @@
       const payload = {
         cafe_name: document.getElementById('cfg-cafe-name').value.trim() || 'كافيه مزاج',
         currency: document.getElementById('cfg-currency').value.trim() || 'ج.م',
+        daily_target: parseFloat(document.getElementById('cfg-daily-target').value) || 5000,
         header_note: document.getElementById('cfg-header-note').value.trim(),
         footer_note: document.getElementById('cfg-footer-note').value.trim(),
         apply_taxes: document.getElementById('cfg-apply-taxes').checked,
@@ -1079,9 +1174,103 @@
       }
     }
 
+    // --- Device & Session Management ---
+    async function loadActiveSessions() {
+      const tbody = document.getElementById('sessions-table-body');
+      if (!tbody) return;
+      try {
+        const res = await fetch('/api/auth/sessions');
+        const data = await res.json();
+        if (data.success && Array.isArray(data.sessions)) {
+          if (data.sessions.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-slate-500">لا توجد جلسات نشطة حالياً</td></tr>';
+            return;
+          }
+          tbody.innerHTML = data.sessions.map((s, idx) => `
+            <tr class="hover:bg-slate-800/40 transition-colors">
+              <td class="p-3 font-mono text-slate-400">${idx + 1}</td>
+              <td class="p-3 font-bold text-white">${s.user_name || 'موظف ' + s.user_id}</td>
+              <td class="p-3"><span class="px-2 py-0.5 rounded-lg bg-indigo-500/20 text-indigo-300 text-[10px] font-bold">${s.role}</span></td>
+              <td class="p-3 text-slate-300 font-mono text-[11px]">${s.device_name || s.device_id || 'متصفح ويب'}</td>
+              <td class="p-3 font-mono text-slate-400 text-[11px]">${s.ip_address || '—'}</td>
+              <td class="p-3 text-slate-400 text-[11px]">${s.last_seen ? new Date(s.last_seen).toLocaleTimeString('ar-EG') : 'الآن'}</td>
+              <td class="p-3 text-center">
+                <button onclick="revokeSession('${s.id}')" class="px-2.5 py-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 rounded-lg text-xs font-bold cursor-pointer transition-colors">
+                  🚫 إلغاء الجلسة
+                </button>
+              </td>
+            </tr>
+          `).join('');
+        } else {
+          tbody.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-slate-500">تعذر تحميل الجلسات (يلزم صلاحية المالك)</td></tr>';
+        }
+      } catch (err) {
+        tbody.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-rose-400">خطأ في الاتصال بالخادم</td></tr>';
+      }
+    }
+
+    async function revokeSession(sessionId) {
+      if (window.UIState && window.UIState.confirm) {
+        const ok = await UIState.confirm('هل أنت متأكد من إلغاء هذه الجلسة وفصل الجهاز فورياً؟');
+        if (!ok) return;
+      }
+      try {
+        const res = await fetch(`/api/auth/sessions/${sessionId}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (data.success) {
+          showToast('تم إلغاء الجلسة وفصل الجهاز بنجاح 🔒');
+          loadActiveSessions();
+        } else {
+          showToast(data.error || 'فشل إلغاء الجلسة', true);
+        }
+      } catch (e) {
+        showToast('خطأ بالاتصال بالسيرفر', true);
+      }
+    }
+
+    // --- Backup & Restore ---
+    function downloadDatabaseBackup() {
+      showToast('جاري إنشاء وتحميل النسخة الاحتياطية... ⏳');
+      window.location.href = '/api/system/backup';
+    }
+
+    async function triggerDatabaseRestore() {
+      const fileInput = document.getElementById('restore-db-file');
+      if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+        showToast('يرجى اختيار ملف قاعدة بيانات (.db / .sqlite) أولاً', true);
+        return;
+      }
+
+      if (window.UIState && window.UIState.confirm) {
+        const ok = await UIState.confirm('تحذير شديد الأهمية: استعادة قاعدة البيانات ستستبدل البيانات الحالية بالكامل بملف النسخة الاحتياطية. هل أنت متأكد من المتابعة؟');
+        if (!ok) return;
+      }
+
+      const formData = new FormData();
+      formData.append('database', fileInput.files[0]);
+
+      try {
+        showToast('جاري فحص واستعادة قاعدة البيانات... ⏳');
+        const res = await fetch('/api/system/restore', {
+          method: 'POST',
+          body: formData
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          showToast('تمت استعادة قاعدة البيانات بنجاح! سيتم إعادة تحميل الصفحة 🚀');
+          setTimeout(() => window.location.reload(), 1500);
+        } else {
+          showToast(data.error || 'فشلت استعادة قاعدة البيانات', true);
+        }
+      } catch (err) {
+        showToast('خطأ في الاتصال بالخادم أثناء الاستعادة', true);
+      }
+    }
+
     window.addEventListener('DOMContentLoaded', () => {
       loadSettings();
       loadUsers();
+      loadActiveSessions();
     });
   </script>
 </body>

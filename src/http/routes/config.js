@@ -123,4 +123,118 @@ router.post('/system/factory-reset', requireAuth, async (req, res, next) => {
   }
 });
 
+// =========================================================================
+// In-App Backup & Recovery System (Safe SQLite WAL Snapshot & Full Restore)
+// =========================================================================
+const fs = require('fs');
+const path = require('path');
+const multer = require('multer');
+const { createHotBackup, verifyBackup } = require('../../domain/system/backupService');
+const { closeDb } = require('../../db/connection');
+
+const uploadBackup = multer({
+  dest: path.join(__dirname, '../../../backups/uploads'),
+  limits: { fileSize: 50 * 1024 * 1024 } // 50MB max
+});
+
+// GET /api/system/backup (also alias /api/backup)
+router.get(['/system/backup', '/backup'], requireAuth, async (req, res, next) => {
+  try {
+    if (!['SUPER_ADMIN', 'OWNER', 'ADMIN'].includes(req.user.role)) {
+      return res.status(403).json({
+        success: false,
+        error: 'غير مصرح: النسخ الاحتياطي يتطلب صلاحيات المالك أو السوبر أدمن'
+      });
+    }
+
+    const manifest = await createHotBackup();
+    const filePath = manifest.file_path;
+
+    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const downloadName = `mazaj_backup_${dateStr}.db`;
+
+    res.setHeader('Content-Type', 'application/x-sqlite3');
+    res.setHeader('Content-Disposition', `attachment; filename="${downloadName}"`);
+    res.download(filePath, downloadName, (err) => {
+      if (err && !res.headersSent) {
+        next(err);
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/system/restore (also alias /api/restore)
+router.post(['/system/restore', '/restore'], requireAuth, uploadBackup.single('database'), async (req, res, next) => {
+  try {
+    if (!['SUPER_ADMIN', 'OWNER', 'ADMIN'].includes(req.user.role)) {
+      return res.status(403).json({
+        success: false,
+        error: 'غير مصرح: استعادة النظام تتطلب صلاحيات السوبر أدمن'
+      });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        error: 'يرجى اختيار ملف قاعدة بيانات SQLite (.db / .sqlite)'
+      });
+    }
+
+    const uploadedPath = req.file.path;
+
+    // Verify integrity of the uploaded backup before touching active DB
+    let verification;
+    try {
+      verification = await verifyBackup(uploadedPath);
+    } catch (verErr) {
+      try { fs.unlinkSync(uploadedPath); } catch (e) {}
+      return res.status(400).json({
+        success: false,
+        error: 'الملف المرفوع تالف أو ليس قاعدة بيانات SQLite صالحة: ' + verErr.message
+      });
+    }
+
+    if (!verification || !verification.valid) {
+      try { fs.unlinkSync(uploadedPath); } catch (e) {}
+      return res.status(400).json({
+        success: false,
+        error: 'الملف المرفوع تالف أو ليس قاعدة بيانات SQLite صالحة'
+      });
+    }
+
+    // Safely close connection, flush WAL, and replace DB file
+    const targetDbPath = env.DATABASE_PATH || path.join(__dirname, '../../../cafe.db');
+    const walPath = `${targetDbPath}-wal`;
+    const shmPath = `${targetDbPath}-shm`;
+
+    await closeDb();
+
+    // Copy uploaded file to target DB path
+    fs.copyFileSync(uploadedPath, targetDbPath);
+    try { fs.unlinkSync(uploadedPath); } catch (e) {}
+
+    // Clean up old WAL/SHM files so new database opens cleanly
+    if (fs.existsSync(walPath)) {
+      try { fs.unlinkSync(walPath); } catch (e) {}
+    }
+    if (fs.existsSync(shmPath)) {
+      try { fs.unlinkSync(shmPath); } catch (e) {}
+    }
+
+    res.json({
+      success: true,
+      message: 'تمت استعادة قاعدة البيانات بنجاح واستئناف الخدمات 🚀',
+      tables_count: verification.table_count,
+      checksum: verification.sha256_checksum
+    });
+  } catch (err) {
+    if (req.file && fs.existsSync(req.file.path)) {
+      try { fs.unlinkSync(req.file.path); } catch (e) {}
+    }
+    next(err);
+  }
+});
+
 module.exports = router;

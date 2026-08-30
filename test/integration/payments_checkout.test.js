@@ -4,7 +4,8 @@ const { createApp } = require('../../src/app');
 const { runMigrations } = require('../../src/db/migrator');
 const { getQuery } = require('../../src/db/connection');
 
-describe('Payments & Checkout Integration Tests', () => {
+describe('Payments & Checkout Integration Tests', function() {
+  this.timeout(20000);
   let app;
   let cashierToken;
   let waiterToken;

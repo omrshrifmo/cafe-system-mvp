@@ -91,6 +91,24 @@
           <span id="formula-result" class="font-black text-emerald-300 font-mono">--</span>
         </div>
       </div>
+
+      <!-- Daily Sales Target Progress Bar -->
+      <div class="mt-4 pt-3 border-t border-emerald-500/20 space-y-2">
+        <div class="flex items-center justify-between text-xs">
+          <div class="flex items-center gap-1.5 font-bold text-slate-200">
+            <span>🎯</span>
+            <span>الهدف اليومي للمبيعات (Daily Target):</span>
+            <span id="eod-target-goal" class="text-amber-400 font-mono font-bold">5,000 ج.م</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-slate-400">المحقق: <strong id="eod-target-achieved" class="text-emerald-400 font-mono font-bold">0 ج.م</strong></span>
+            <span id="eod-target-badge" class="px-2 py-0.5 rounded-full font-black font-mono text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/40">0%</span>
+          </div>
+        </div>
+        <div class="w-full bg-slate-950 rounded-full h-3 p-0.5 border border-slate-800 overflow-hidden">
+          <div id="eod-target-bar" class="h-full rounded-full bg-gradient-to-r from-amber-500 via-emerald-500 to-teal-400" style="width: 0%"></div>
+        </div>
+      </div>
     </section>
 
     <!-- Cash Drawer Shift Declaration Panel (Blind Cashier Mode Compliant) -->
@@ -329,6 +347,30 @@
         document.getElementById('formula-result').textContent = `${expectedCash} ج.م`;
 
         document.getElementById('rec-expected-val').textContent = `${expectedCash} ج.م`;
+
+        // Daily Target Progress Bar
+        const target = Number(report.daily_target || 5000);
+        const achieved = Number(report.total_revenue || 0);
+        const pct = target > 0 ? Math.min(100, Math.round((achieved / target) * 100)) : 100;
+
+        const goalEl = document.getElementById('eod-target-goal');
+        const achEl = document.getElementById('eod-target-achieved');
+        const badgeEl = document.getElementById('eod-target-badge');
+        const barEl = document.getElementById('eod-target-bar');
+
+        if (goalEl) goalEl.textContent = `${target.toLocaleString()} ج.م`;
+        if (achEl) achEl.textContent = `${achieved.toLocaleString()} ج.م`;
+        if (badgeEl) {
+          badgeEl.textContent = `${pct}%`;
+          if (pct >= 100) {
+            badgeEl.className = 'px-2 py-0.5 rounded-full font-black font-mono text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40';
+          } else if (pct >= 50) {
+            badgeEl.className = 'px-2 py-0.5 rounded-full font-black font-mono text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/40';
+          } else {
+            badgeEl.className = 'px-2 py-0.5 rounded-full font-black font-mono text-[10px] bg-rose-500/20 text-rose-300 border border-rose-500/40';
+          }
+        }
+        if (barEl) barEl.style.width = `${pct}%`;
       }
 
       document.getElementById('total-orders-badge').textContent = `${report.total_orders || 0} طلب`;

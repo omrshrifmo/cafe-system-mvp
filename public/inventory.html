@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>إدارة المخزون ومطابقة BOM - كافيه مزاج</title>
+  <title>إدارة المخزون والجرد الفعلي ومطابقة BOM - كافيه مزاج</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="/nav.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -15,25 +15,32 @@
       theme: { extend: { fontFamily: { cairo: ['Cairo', 'sans-serif'] } } }
     }
   </script>
-  <style> body { font-family: 'Cairo', sans-serif; } </style>
+  <style>
+    body { font-family: 'Cairo', sans-serif; }
+    * { -webkit-font-smoothing: antialiased; }
+  </style>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col overflow-y-auto selection:bg-amber-500 selection:text-black">
 
   <!-- Page Action Header -->
-  <div class="shrink-0 bg-slate-900/90 border-b border-slate-800 px-6 py-3.5 flex items-center justify-between shadow-md z-20">
+  <div class="shrink-0 bg-slate-900 border-b border-slate-800 px-6 py-3.5 flex items-center justify-between shadow-md z-20">
     <div class="flex items-center gap-3">
       <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 text-xl shadow-inner">
         📦
       </div>
       <div>
-        <h1 class="text-lg font-black text-white">إدارة المخزون ومطابقة BOM والخامات</h1>
-        <p class="text-xs text-slate-400">تتبع استهلاك الوصفات، الهالك التلقائي 5%، والتحويلات والإعارات بين الأقسام</p>
+        <h1 class="text-lg font-black text-white">إدارة المخزون والجرد الفعلي ومطابقة BOM</h1>
+        <p class="text-xs text-slate-400">تتبع استهلاك الوصفات، إجراء الجرد الفعلي الفوري، ومعالجة الهالك والتحويلات</p>
       </div>
     </div>
 
     <!-- Actions -->
     <div class="flex items-center gap-3">
-      <button onclick="refreshCurrentTab()" class="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl text-xs font-black flex items-center gap-1.5 cursor-pointer shadow-lg transition-colors">
+      <button onclick="openStocktakeModal()" id="quick-stocktake-btn" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-black flex items-center gap-1.5 cursor-pointer shadow-lg">
+        <span>📋</span>
+        <span>إجراء جرد سريع (Stock Take)</span>
+      </button>
+      <button onclick="refreshCurrentTab()" class="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl text-xs font-black flex items-center gap-1.5 cursor-pointer shadow-lg">
         <span>🔄</span>
         <span>تحديث البيانات</span>
       </button>
@@ -41,9 +48,12 @@
   </div>
 
   <!-- Navigation Tabs -->
-  <nav class="shrink-0 bg-slate-900/90 border-b border-slate-800 px-4 py-1.5 flex items-center gap-2 z-10 flex-wrap">
+  <nav class="shrink-0 bg-slate-900 border-b border-slate-800 px-4 py-1.5 flex items-center gap-2 z-10 flex-wrap">
     <button onclick="switchTab('stock')" id="tab-btn-stock" class="px-3.5 py-1.5 rounded-xl text-xs font-black bg-amber-500 text-slate-950 cursor-pointer shadow">
       📦 رصيد الأقسام الحالي
+    </button>
+    <button onclick="switchTab('reconcile')" id="tab-btn-reconcile" class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 cursor-pointer">
+      📋 إجراء جرد فعلي وتسوية الفروقات
     </button>
     <button onclick="switchTab('bom')" id="tab-btn-bom" class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 cursor-pointer">
       🧪 مطابقة BOM الفعلي مع المتوقع (5% Buffer)
@@ -57,7 +67,7 @@
   </nav>
 
   <!-- Main Content Area -->
-  <main class="w-full p-4 md:p-6 flex-1 flex flex-col min-h-0 overflow-y-auto">
+  <main class="w-full p-4 md:p-6 flex-1 flex flex-col min-h-0 overflow-y-auto space-y-4">
 
     <!-- Tab 1: Live Stock -->
     <section id="tab-content-stock" class="space-y-4">
@@ -71,7 +81,7 @@
             </div>
             <span id="barista-count" class="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold">0 خامات</span>
           </div>
-          <div id="barista-grid" class="space-y-2.5 flex-1"></div>
+          <div id="barista-grid" class="space-y-2.5 flex-1 max-h-[600px] overflow-y-auto pr-1"></div>
         </div>
 
         <!-- Shisha Stock -->
@@ -83,7 +93,7 @@
             </div>
             <span id="shisha-count" class="text-[10px] font-mono px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 font-bold">0 خامات</span>
           </div>
-          <div id="shisha-grid" class="space-y-2.5 flex-1"></div>
+          <div id="shisha-grid" class="space-y-2.5 flex-1 max-h-[600px] overflow-y-auto pr-1"></div>
         </div>
 
         <!-- Kitchen Stock -->
@@ -95,12 +105,106 @@
             </div>
             <span id="kitchen-count" class="text-[10px] font-mono px-2 py-0.5 rounded bg-orange-500/20 text-orange-300 font-bold">0 خامات</span>
           </div>
-          <div id="kitchen-grid" class="space-y-2.5 flex-1"></div>
+          <div id="kitchen-grid" class="space-y-2.5 flex-1 max-h-[600px] overflow-y-auto pr-1"></div>
         </div>
       </div>
     </section>
 
-    <!-- Tab 2: BOM Expected vs Actual Reconciliation -->
+    <!-- Tab 2: Physical Stock Take Reconciliation (الجرد الفعلي) -->
+    <section id="tab-content-reconcile" class="hidden space-y-4">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <!-- Stock Take Input Form -->
+        <div class="bg-slate-900 border border-emerald-500/30 rounded-2xl p-4 shadow-xl flex flex-col justify-between">
+          <div>
+            <div class="flex items-center gap-2 border-b border-slate-800 pb-3 mb-4">
+              <span class="text-xl">📋</span>
+              <div>
+                <h3 class="text-sm font-black text-white">تسوية جرد فعلي لخامة (Stock Take)</h3>
+                <p class="text-[11px] text-slate-400">إدخال الكمية المعدودة فعلياً وتعديل الرصيد تلقائياً وتسجيل الفارق</p>
+              </div>
+            </div>
+
+            <div class="space-y-3">
+              <div>
+                <label class="block text-xs font-bold text-slate-300 mb-1">اختر المادة الخام / الصنف</label>
+                <select id="reconcile-item-select" onchange="onReconcileItemSelect()" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:border-emerald-500 focus:outline-none">
+                  <option value="">-- اختر الصنف للجرد --</option>
+                </select>
+              </div>
+
+              <div class="grid grid-cols-2 gap-2 bg-slate-950/60 p-3 rounded-xl border border-slate-800/80">
+                <div>
+                  <span class="text-[10px] text-slate-400 block">الرصيد الدفتري الحالي:</span>
+                  <span id="reconcile-theoretical-display" class="font-mono font-black text-amber-400 text-sm">-</span>
+                </div>
+                <div>
+                  <span class="text-[10px] text-slate-400 block">وحدة القياس:</span>
+                  <span id="reconcile-unit-display" class="text-xs text-slate-300 font-bold">-</span>
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold text-emerald-400 mb-1">الكمية الفعلية المعدودة باليد (Actual Count)</label>
+                <input type="number" step="0.001" min="0" id="reconcile-actual-input" oninput="calculateReconcileVariance()" placeholder="مثال: 5.250" class="w-full bg-slate-950 border border-emerald-500/50 rounded-xl px-3 py-2 text-sm font-mono font-black text-white focus:border-emerald-400 focus:outline-none">
+              </div>
+
+              <div id="reconcile-variance-box" class="hidden p-3 rounded-xl border">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-bold">الفارق المحسوب (العجز / الزيادة):</span>
+                  <span id="reconcile-variance-display" class="font-mono font-black text-sm">0</span>
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold text-slate-300 mb-1">ملاحظات الجرد / سبب الفارق</label>
+                <input type="text" id="reconcile-notes-input" placeholder="مثال: جرد نهاية اليوم / هدر طبيعي" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-200 focus:border-emerald-500 focus:outline-none">
+              </div>
+            </div>
+          </div>
+
+          <button onclick="submitReconciliation()" class="mt-4 w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-black flex items-center justify-center gap-2 cursor-pointer shadow-lg">
+            <span>✅</span>
+            <span>اعتماد وتسوية الرصيد الفعلي للمخزن</span>
+          </button>
+        </div>
+
+        <!-- Reconciliation History Table -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl lg:col-span-2 flex flex-col">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+            <div>
+              <h3 class="text-sm font-black text-emerald-400 flex items-center gap-2">
+                <span>📜</span> سجل تسويات الجرد الفعلي المعتمدة (Reconciliations Ledger)
+              </h3>
+              <p class="text-[10px] text-slate-400">سجل غير قابل للتعديل يوثق الأرصدة الدفترية والفعلية ومقدار العجز/الزيادة</p>
+            </div>
+            <button onclick="fetchPhysicalReconciliations()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold cursor-pointer">
+              تحديث السجل 🔄
+            </button>
+          </div>
+
+          <div class="overflow-x-auto flex-1 max-h-[550px]">
+            <table class="w-full text-right text-xs">
+              <thead>
+                <tr class="bg-slate-950 text-slate-400 border-b border-slate-800 font-bold text-[11px]">
+                  <th class="p-2.5">#</th>
+                  <th class="p-2.5">المادة الخام</th>
+                  <th class="p-2.5">الرصيد الدفتري</th>
+                  <th class="p-2.5">الرصيد الفعلي</th>
+                  <th class="p-2.5">الفارق (Variance)</th>
+                  <th class="p-2.5">المسؤول</th>
+                  <th class="p-2.5">التاريخ والوقت</th>
+                </tr>
+              </thead>
+              <tbody id="reconciliations-table-body" class="divide-y divide-slate-800/60 font-mono">
+                <tr><td colspan="7" class="p-6 text-center text-slate-500">جاري تحميل سجل التسويات...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tab 3: BOM Expected vs Actual Reconciliation -->
     <section id="tab-content-bom" class="hidden space-y-4">
       <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl">
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-2 border-b border-slate-800 pb-3 mb-4">
@@ -129,14 +233,14 @@
               </tr>
             </thead>
             <tbody id="bom-reconciliation-table" class="divide-y divide-slate-800/60 font-mono">
-              <!-- Rows injected dynamically -->
+              <tr><td colspan="7" class="p-6 text-center text-slate-500">جاري تحميل تقرير المطابقة...</td></tr>
             </tbody>
           </table>
         </div>
       </div>
     </section>
 
-    <!-- Tab 3: Transfers Ledger -->
+    <!-- Tab 4: Transfers Ledger -->
     <section id="tab-content-transfers" class="hidden space-y-4">
       <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl">
         <h3 class="text-sm font-black text-indigo-400 mb-3 flex items-center gap-2">
@@ -156,14 +260,15 @@
                 <th class="p-2.5">التوقيت</th>
               </tr>
             </thead>
-            <tbody id="transfers-table-body" class="divide-y divide-slate-800/60">
+            <tbody id="transfers-table-body" class="divide-y divide-slate-800/60 font-mono">
+              <tr><td colspan="8" class="p-6 text-center text-slate-500">جاري تحميل سجل التحويلات...</td></tr>
             </tbody>
           </table>
         </div>
       </div>
     </section>
 
-    <!-- Tab 4: Waste Log -->
+    <!-- Tab 5: Waste Log -->
     <section id="tab-content-waste" class="hidden space-y-4">
       <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl">
         <h3 class="text-sm font-black text-rose-400 mb-3 flex items-center gap-2">
@@ -181,7 +286,8 @@
                 <th class="p-2.5">التاريخ والوقت</th>
               </tr>
             </thead>
-            <tbody id="waste-table-body" class="divide-y divide-slate-800/60">
+            <tbody id="waste-table-body" class="divide-y divide-slate-800/60 font-mono">
+              <tr><td colspan="6" class="p-6 text-center text-slate-500">جاري تحميل سجل الهالك...</td></tr>
             </tbody>
           </table>
         </div>
@@ -190,38 +296,87 @@
 
   </main>
 
-  <script>
-    let activeTab = 'stock';
+  <!-- Modal for Quick Stocktake -->
+  <div id="stocktakeModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
+    <div class="bg-slate-900 border border-emerald-500/40 rounded-2xl max-w-lg w-full p-5 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div class="flex items-center gap-2">
+          <span class="text-2xl">📋</span>
+          <h3 class="text-base font-black text-white">إجراء جرد فعلي سريع (Stock Take)</h3>
+        </div>
+        <button onclick="closeStocktakeModal()" class="text-slate-400 hover:text-white text-lg cursor-pointer">✕</button>
+      </div>
 
-    function updateClock() {
-      const el = document.getElementById('live-clock');
-      if (el) el.textContent = new Date().toLocaleTimeString('ar-EG');
-    }
-    setInterval(updateClock, 1000);
-    updateClock();
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs font-bold text-slate-300 mb-1">اختر المادة الخام</label>
+          <select id="modal-reconcile-item" onchange="onModalItemSelect()" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:border-emerald-500 focus:outline-none">
+            <option value="">-- اختر الصنف --</option>
+          </select>
+        </div>
+
+        <div class="p-3 bg-slate-950 rounded-xl border border-slate-800 flex items-center justify-between">
+          <span class="text-xs text-slate-400">الرصيد الدفتري الحالي:</span>
+          <span id="modal-theoretical-qty" class="font-mono font-black text-amber-400 text-sm">-</span>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-emerald-400 mb-1">الكمية الفعلية المعدودة (Actual Quantity)</label>
+          <input type="number" step="0.001" min="0" id="modal-actual-qty" placeholder="0.00" class="w-full bg-slate-950 border border-emerald-500 rounded-xl px-3 py-2 text-sm font-mono font-black text-white focus:outline-none">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-300 mb-1">ملاحظات / سبب التعديل</label>
+          <input type="text" id="modal-reconcile-notes" placeholder="ملاحظات الجرد..." class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-200 focus:outline-none">
+        </div>
+      </div>
+
+      <div class="flex gap-2 pt-2 border-t border-slate-800">
+        <button onclick="submitModalReconciliation()" class="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-black cursor-pointer shadow">
+          تأكيد وحفظ الجرد 📋
+        </button>
+        <button onclick="closeStocktakeModal()" class="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold cursor-pointer">
+          إلغاء
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentTab = 'stock';
+    let inventoryData = [];
 
     function switchTab(tab) {
-      activeTab = tab;
-      ['stock', 'bom', 'transfers', 'waste'].forEach(t => {
-        const c = document.getElementById(`tab-content-${t}`);
-        if (c) c.classList.add('hidden');
-        const b = document.getElementById(`tab-btn-${t}`);
-        if (b) b.className = 'px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 cursor-pointer';
+      currentTab = tab;
+      const tabs = ['stock', 'reconcile', 'bom', 'transfers', 'waste'];
+      tabs.forEach(t => {
+        const content = document.getElementById(`tab-content-${t}`);
+        const btn = document.getElementById(`tab-btn-${t}`);
+        if (content) content.classList.add('hidden');
+        if (btn) {
+          btn.className = 'px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 cursor-pointer';
+        }
       });
 
-      const currentContent = document.getElementById(`tab-content-${tab}`);
-      if (currentContent) currentContent.classList.remove('hidden');
-      const currentBtn = document.getElementById(`tab-btn-${tab}`);
-      if (currentBtn) currentBtn.className = 'px-3.5 py-1.5 rounded-xl text-xs font-black bg-amber-500 text-slate-950 cursor-pointer shadow';
+      const activeContent = document.getElementById(`tab-content-${tab}`);
+      const activeBtn = document.getElementById(`tab-btn-${tab}`);
+      if (activeContent) activeContent.classList.remove('hidden');
+      if (activeBtn) {
+        activeBtn.className = 'px-3.5 py-1.5 rounded-xl text-xs font-black bg-amber-500 text-slate-950 cursor-pointer shadow';
+      }
 
       refreshCurrentTab();
     }
 
     function refreshCurrentTab() {
-      if (activeTab === 'stock') fetchInventory();
-      else if (activeTab === 'bom') fetchBOMReconciliation();
-      else if (activeTab === 'transfers') fetchTransfers();
-      else if (activeTab === 'waste') fetchWaste();
+      if (currentTab === 'stock') fetchInventory();
+      else if (currentTab === 'reconcile') {
+        fetchInventory();
+        fetchPhysicalReconciliations();
+      }
+      else if (currentTab === 'bom') fetchBOMReconciliation();
+      else if (currentTab === 'transfers') fetchTransfers();
+      else if (currentTab === 'waste') fetchWaste();
     }
 
     async function fetchInventory() {
@@ -230,14 +385,16 @@
         const data = await res.json();
         const items = Array.isArray(data) ? data : (data.inventory || data.items || data.data || []);
         if (Array.isArray(items)) {
-          renderInventory(items);
+          inventoryData = items;
+          renderLiveStock(items);
+          populateReconcileSelect(items);
         }
       } catch (e) {
-        console.error("Error fetching inventory:", e);
+        console.error('Error fetching inventory:', e);
       }
     }
 
-    function renderInventory(items) {
+    function renderLiveStock(items) {
       const baristaGrid = document.getElementById('barista-grid');
       const shishaGrid = document.getElementById('shisha-grid');
       const kitchenGrid = document.getElementById('kitchen-grid');
@@ -255,16 +412,17 @@
         const stock = rawStock % 1 === 0 ? rawStock : parseFloat(rawStock.toFixed(2));
         const unit = item.unit || 'وحدة';
         const dept = String(item.department || item.category || 'BARISTA').toUpperCase();
+        const isLow = stock <= Number(item.min_stock_level || 0);
 
         const card = document.createElement('div');
-        card.className = 'bg-slate-950 p-2.5 rounded-xl border border-slate-800 flex items-center justify-between hover:border-amber-500/40 transition-colors shadow-sm';
+        card.className = `p-2.5 rounded-xl bg-slate-950 border ${isLow ? 'border-rose-500/50 bg-rose-950/20' : 'border-slate-800'} flex items-center justify-between hover:border-amber-500/40 shadow-sm`;
         card.innerHTML = `
           <div>
             <h4 class="font-bold text-white text-xs">${item.name}</h4>
-            <span class="text-[10px] text-slate-500 font-mono">ID: #${item.id}</span>
+            <span class="text-[10px] text-slate-500 font-mono">ID: #${item.id} | حد أدنى: ${item.min_stock_level || 0}</span>
           </div>
           <div class="text-right">
-            <span class="text-sm font-black font-mono text-amber-400">${stock}</span>
+            <span class="text-sm font-black font-mono ${isLow ? 'text-rose-400' : 'text-amber-400'}">${stock}</span>
             <span class="text-[10px] text-slate-400 font-bold mr-1">${unit}</span>
           </div>
         `;
@@ -284,6 +442,187 @@
       document.getElementById('barista-count').textContent = `${cBarista} خامات`;
       document.getElementById('shisha-count').textContent = `${cShisha} خامات`;
       document.getElementById('kitchen-count').textContent = `${cKitchen} خامات`;
+    }
+
+    function populateReconcileSelect(items) {
+      const sel = document.getElementById('reconcile-item-select');
+      const modalSel = document.getElementById('modal-reconcile-item');
+      const options = '<option value="">-- اختر الصنف --</option>' + items.map(it => `
+        <option value="${it.id}" data-stock="${it.current_stock !== undefined ? it.current_stock : (it.current_stock_microunits/1000000)}" data-unit="${it.unit}">${it.name} (${it.department || 'عام'}) - رصيد: ${Number(it.current_stock || 0).toFixed(2)} ${it.unit}</option>
+      `).join('');
+
+      if (sel) sel.innerHTML = options;
+      if (modalSel) modalSel.innerHTML = options;
+    }
+
+    function onReconcileItemSelect() {
+      const sel = document.getElementById('reconcile-item-select');
+      const opt = sel.options[sel.selectedIndex];
+      if (opt && opt.value) {
+        document.getElementById('reconcile-theoretical-display').textContent = Number(opt.getAttribute('data-stock') || 0).toFixed(3);
+        document.getElementById('reconcile-unit-display').textContent = opt.getAttribute('data-unit') || '-';
+        calculateReconcileVariance();
+      } else {
+        document.getElementById('reconcile-theoretical-display').textContent = '-';
+        document.getElementById('reconcile-unit-display').textContent = '-';
+        document.getElementById('reconcile-variance-box').classList.add('hidden');
+      }
+    }
+
+    function calculateReconcileVariance() {
+      const sel = document.getElementById('reconcile-item-select');
+      const opt = sel.options[sel.selectedIndex];
+      if (!opt || !opt.value) return;
+
+      const theoretical = parseFloat(opt.getAttribute('data-stock') || 0);
+      const actualInput = document.getElementById('reconcile-actual-input').value;
+      const box = document.getElementById('reconcile-variance-box');
+      const display = document.getElementById('reconcile-variance-display');
+
+      if (actualInput !== '') {
+        const actual = parseFloat(actualInput);
+        const variance = actual - theoretical;
+        box.classList.remove('hidden');
+        display.textContent = `${variance >= 0 ? '+' : ''}${variance.toFixed(3)} ${opt.getAttribute('data-unit') || ''}`;
+        if (variance < 0) {
+          box.className = 'p-3 rounded-xl border border-rose-500/40 bg-rose-950/30 text-rose-400';
+        } else if (variance > 0) {
+          box.className = 'p-3 rounded-xl border border-blue-500/40 bg-blue-950/30 text-blue-400';
+        } else {
+          box.className = 'p-3 rounded-xl border border-emerald-500/40 bg-emerald-950/30 text-emerald-400';
+        }
+      } else {
+        box.classList.add('hidden');
+      }
+    }
+
+    async function submitReconciliation() {
+      const sel = document.getElementById('reconcile-item-select');
+      const inventory_id = sel.value;
+      const actual_qty = document.getElementById('reconcile-actual-input').value;
+      const notes = document.getElementById('reconcile-notes-input').value;
+
+      if (!inventory_id) {
+        if (window.UIState && UIState.showToast) UIState.showToast('يرجى اختيار الصنف أولاً', 'warning');
+        return;
+      }
+      if (actual_qty === '' || isNaN(parseFloat(actual_qty))) {
+        if (window.UIState && UIState.showToast) UIState.showToast('يرجى إدخال الكمية الفعلية المعدودة', 'warning');
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/inventory/reconcile', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            inventory_id: parseInt(inventory_id, 10),
+            actual_qty: parseFloat(actual_qty),
+            notes
+          })
+        });
+
+        const data = await res.json();
+        if (data.success) {
+          if (window.UIState && UIState.showToast) UIState.showToast(data.message || 'تمت تسوية الجرد بنجاح ✅', 'success');
+          document.getElementById('reconcile-actual-input').value = '';
+          document.getElementById('reconcile-notes-input').value = '';
+          document.getElementById('reconcile-variance-box').classList.add('hidden');
+          fetchInventory();
+          fetchPhysicalReconciliations();
+        } else {
+          if (window.UIState && UIState.showApiError) UIState.showApiError(data.error || 'فشلت تسوية الجرد');
+        }
+      } catch (e) {
+        console.error('Error submitting reconciliation:', e);
+      }
+    }
+
+    async function fetchPhysicalReconciliations() {
+      try {
+        const res = await fetch('/api/inventory/reconciliations');
+        const data = await res.json();
+        const tbody = document.getElementById('reconciliations-table-body');
+        const list = Array.isArray(data.data) ? data.data : (Array.isArray(data.reconciliations) ? data.reconciliations : []);
+        if (res.ok && (data.success || Array.isArray(list))) {
+          if (list.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="p-6 text-center text-slate-500">لا توجد تسويات جرد سابقة مسجلة</td></tr>';
+            return;
+          }
+
+          tbody.innerHTML = list.map(r => {
+            const v = Number(r.variance);
+            const varColor = v < 0 ? 'text-rose-400' : v > 0 ? 'text-blue-400' : 'text-emerald-400';
+            return `
+              <tr class="hover:bg-slate-800/40">
+                <td class="p-2.5 font-mono text-slate-400">#${r.id}</td>
+                <td class="p-2.5 font-bold text-white">${r.item_name || 'خامة #' + r.inventory_id}</td>
+                <td class="p-2.5 text-slate-300 font-mono">${Number(r.theoretical_qty).toFixed(2)} ${r.unit || ''}</td>
+                <td class="p-2.5 font-black text-amber-400 font-mono">${Number(r.actual_qty).toFixed(2)} ${r.unit || ''}</td>
+                <td class="p-2.5 font-black font-mono ${varColor}">${v >= 0 ? '+' : ''}${v.toFixed(2)}</td>
+                <td class="p-2.5 text-slate-300 font-bold">${r.user_name || 'الإدارة'}</td>
+                <td class="p-2.5 font-mono text-slate-400 text-[10px]">${new Date(r.created_at).toLocaleString('ar-EG')}</td>
+              </tr>
+            `;
+          }).join('');
+        }
+      } catch (e) {
+        console.error('Error fetching reconciliations:', e);
+      }
+    }
+
+    function openStocktakeModal() {
+      document.getElementById('stocktakeModal').classList.remove('hidden');
+    }
+
+    function closeStocktakeModal() {
+      document.getElementById('stocktakeModal').classList.add('hidden');
+    }
+
+    function onModalItemSelect() {
+      const sel = document.getElementById('modal-reconcile-item');
+      const opt = sel.options[sel.selectedIndex];
+      if (opt && opt.value) {
+        document.getElementById('modal-theoretical-qty').textContent = `${Number(opt.getAttribute('data-stock') || 0).toFixed(3)} ${opt.getAttribute('data-unit') || ''}`;
+      } else {
+        document.getElementById('modal-theoretical-qty').textContent = '-';
+      }
+    }
+
+    async function submitModalReconciliation() {
+      const sel = document.getElementById('modal-reconcile-item');
+      const inventory_id = sel.value;
+      const actual_qty = document.getElementById('modal-actual-qty').value;
+      const notes = document.getElementById('modal-reconcile-notes').value;
+
+      if (!inventory_id || actual_qty === '') {
+        if (window.UIState && UIState.showToast) UIState.showToast('يرجى اختيار الصنف وإدخال الكمية الفعلية', 'warning');
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/inventory/reconcile', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            inventory_id: parseInt(inventory_id, 10),
+            actual_qty: parseFloat(actual_qty),
+            notes
+          })
+        });
+
+        const data = await res.json();
+        if (data.success) {
+          closeStocktakeModal();
+          if (window.UIState && UIState.showToast) UIState.showToast(data.message || 'تمت تسوية الجرد بنجاح ✅', 'success');
+          fetchInventory();
+          if (currentTab === 'reconcile') fetchPhysicalReconciliations();
+        } else {
+          if (window.UIState && UIState.showApiError) UIState.showApiError(data.error || 'فشلت تسوية الجرد');
+        }
+      } catch (e) {
+        console.error('Error submitting modal reconciliation:', e);
+      }
     }
 
     async function fetchBOMReconciliation() {

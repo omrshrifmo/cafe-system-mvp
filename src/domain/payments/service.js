@@ -19,7 +19,10 @@ async function getSystemTaxConfig() {
     cafe_name: cfg.cafe_name || 'كافيه مزاج',
     printer_ip: cfg.printer_ip || '192.168.1.100',
     printer_port: parseInt(cfg.printer_port || '9100', 10),
-    cash_drawer_auto_kick: cfg.cash_drawer_auto_kick !== 'false'
+    cash_drawer_auto_kick: cfg.cash_drawer_auto_kick !== 'false',
+    daily_target: parseFloat(cfg.daily_target || '5000'),
+    header_note: cfg.header_note || '',
+    footer_note: cfg.footer_note || ''
   };
 }
 
@@ -247,11 +250,14 @@ async function settleSession(checkoutPayload, actor = null) {
     const paymentsArr = Array.isArray(payments) ? payments : [];
     let totalPaidMinor = 0;
     let cashPaidMinor = 0;
+    let isHouseComp = false;
 
     for (const p of paymentsArr) {
-      const pMinor = Math.round((Number(p.amount) || 0) * 100);
+      const isComp = ['ضيافة', 'COMP', 'HOSPITALITY', 'HOUSE'].includes(String(p.method).toUpperCase()) || p.method === 'ضيافة';
+      if (isComp) isHouseComp = true;
+      const pMinor = isComp ? finalBillMinor : Math.round((Number(p.amount) || 0) * 100);
       totalPaidMinor += pMinor;
-      if (p.method === 'CASH') cashPaidMinor += pMinor;
+      if (p.method === 'CASH' && !isComp) cashPaidMinor += pMinor;
     }
 
     // Validate payment sufficiency
@@ -264,9 +270,10 @@ async function settleSession(checkoutPayload, actor = null) {
     // 4. Record Payment rows
     let remainingChangeToSubtract = changeOwedMinor;
     for (const p of paymentsArr) {
-      const pMinor = Math.round((Number(p.amount) || 0) * 100);
+      const isComp = ['ضيافة', 'COMP', 'HOSPITALITY', 'HOUSE'].includes(String(p.method).toUpperCase()) || p.method === 'ضيافة';
+      const pMinor = isComp ? finalBillMinor : Math.round((Number(p.amount) || 0) * 100);
       let netPayment = pMinor;
-      if (p.method === 'CASH' && remainingChangeToSubtract > 0) {
+      if (p.method === 'CASH' && !isComp && remainingChangeToSubtract > 0) {
         const sub = Math.min(pMinor, remainingChangeToSubtract);
         netPayment = pMinor - sub;
         remainingChangeToSubtract -= sub;
@@ -292,6 +299,61 @@ async function settleSession(checkoutPayload, actor = null) {
           );
         }
       }
+    }
+
+    // 4.1 Handle Hospitality & Comps (طلبات الضيافة)
+    // If order is checked out as 'ضيافة', log total BOM cost as daily expense categorized as 'PR / Hospitality'
+    if (isHouseComp) {
+      let bomCostEgp = 0;
+      for (const it of items) {
+        const qty = it.quantity || 1;
+        const itemName = it.name || it.item_name;
+        try {
+          const rows = await tx.all(`
+            SELECT r.quantity_required,
+                   COALESCE(inv.unit_cost, i.cost_per_unit_minor / 100.0, 0) as unit_cost
+            FROM recipes r
+            LEFT JOIN inventory_items i ON (r.inventory_id = i.id)
+            LEFT JOIN inventory inv ON (r.inventory_id = inv.id)
+            WHERE r.menu_item_name = ?
+          `, [itemName]);
+
+          if (rows && rows.length > 0) {
+            for (const r of rows) {
+              bomCostEgp += (Number(r.quantity_required) || 0) * (Number(r.unit_cost) || 0) * qty;
+            }
+          } else {
+            bomCostEgp += (it.unit_price_minor / 100.0) * qty * 0.35;
+          }
+        } catch (e) {
+          bomCostEgp += (it.unit_price_minor / 100.0) * qty * 0.35;
+        }
+      }
+
+      const expenseAmt = Math.max(0.5, Math.round(bomCostEgp * 100) / 100);
+      const expenseDesc = `ضيافة طاولة #${tNum || 'طلب'} - تكلفة خامات BOM (${items.map(i => i.name || i.item_name).join('، ')})`;
+
+      try {
+        await tx.run(
+          `INSERT INTO daily_expenses (user_id, category, amount, description, expense_date, created_at)
+           VALUES (?, 'PR / Hospitality', ?, ?, date('now', 'localtime'), datetime('now', 'localtime'))`,
+          [actor ? actor.id : 1, expenseAmt, expenseDesc]
+        );
+      } catch (e) {
+        try {
+          await tx.run(
+            `INSERT INTO daily_expenses (user_id, category, amount, description)
+             VALUES (?, 'PR / Hospitality', ?, ?)`,
+            [actor ? actor.id : 1, expenseAmt, expenseDesc]
+          );
+        } catch (err) {}
+      }
+
+      logger.info('Hospitality Comp Order Logged as PR / Hospitality Expense', {
+        sessionId: session.id,
+        tableNumber: tNum,
+        bomCostEgp: expenseAmt
+      });
     }
 
     // 5. Update loyalty points

@@ -95,9 +95,10 @@ function csrfProtection(req, res, next) {
   if (hasSessionCookie) {
     // A pure cross-site HTML form cannot send custom JSON content-type without preflight
     const isJson = req.is('application/json');
-    const isCustomHeader = req.headers['x-csrf-token'] || req.headers['x-requested-with'];
+    const isMultipart = req.is('multipart/form-data') || req.headers['content-type']?.includes('multipart/form-data');
+    const isCustomHeader = req.headers['x-csrf-token'] || req.headers['x-requested-with'] || req.headers['x-device-id'];
 
-    if (!isJson && !isCustomHeader) {
+    if (!isJson && !isMultipart && !isCustomHeader) {
       return res.status(403).json({
         success: false,
         error: 'CSRF_BLOCKED: State-mutating requests must provide application/json Content-Type or X-CSRF-Token header.',
