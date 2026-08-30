@@ -327,12 +327,41 @@ async function rotateUserPin(userId, oldPin, newPin, actorId = null, ip = null) 
   return true;
 }
 
+/**
+ * Verify PIN against authorized roles
+ */
+async function verifyPinForRole(pin, allowedRoles = []) {
+  const cleanPin = String(pin).trim();
+  const users = await allQuery(`
+    SELECT id, name, role, pin_hash, is_active 
+    FROM users 
+    WHERE is_active = 1
+  `);
+
+  for (const user of users) {
+    const userRole = normalizeRole(user.role);
+    const isAllowed = allowedRoles.length === 0 || allowedRoles.map(r => normalizeRole(r)).includes(userRole);
+    if (isAllowed) {
+      const match = await verifyPin(cleanPin, user.pin_hash);
+      if (match) {
+        return {
+          id: user.id,
+          name: user.name,
+          role: userRole
+        };
+      }
+    }
+  }
+  return null;
+}
+
 module.exports = {
   authenticateWithPin,
   validateSession,
   revokeSession,
   revokeAllUserSessions,
   verifyReauthentication,
+  verifyPinForRole,
   rotateUserPin,
   hashPin,
   verifyPin,

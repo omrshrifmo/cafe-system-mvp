@@ -214,6 +214,18 @@ async function settleSession(checkoutPayload, actor = null) {
       calculatedDiscountMinor = Math.round(discount_amount * 100);
     }
 
+    // Scan and apply active promotions (HAPPY_HOUR, BOGO, COMBO, TIER_DISCOUNT)
+    try {
+      const { evaluateBestPromotion } = require('../promotions/promotionEngine');
+      const promoResult = await evaluateBestPromotion(items.length > 0 ? items : (checkoutPayload.items || []), {
+        subtotalMinor,
+        customer_phone
+      });
+      if (promoResult && promoResult.discountMinor > calculatedDiscountMinor) {
+        calculatedDiscountMinor = promoResult.discountMinor;
+      }
+    } catch (e) {}
+
     const tipMinor = Math.round((Number(tip_amount) || 0) * 100);
     const redeemedPoints = Math.max(0, parseInt(points_redeemed, 10) || 0);
     const loyaltyDiscountMinor = redeemedPoints * 100; // 1 point = 1 unit
@@ -381,19 +393,22 @@ async function settleSession(checkoutPayload, actor = null) {
       [crypto.randomUUID(), String(tNum), JSON.stringify({ table_number: tNum, status: 'PAID' })]
     );
 
+    const invoiceObj = {
+      table_number: tNum,
+      subtotal: subtotalMinor / 100,
+      service_amount: serviceMinor / 100,
+      vat_amount: taxMinor / 100,
+      discount_amount: totalDiscountMinor / 100,
+      total_amount: finalBillMinor / 100,
+      change_owed: changeOwedMinor / 100,
+      currency: config.currency
+    };
+
     return {
       success: true,
       message: 'تم إغلاق الحساب وتسجيل الدفع بنجاح',
-      invoice: {
-        table_number: tNum,
-        subtotal: subtotalMinor / 100,
-        service_amount: serviceMinor / 100,
-        vat_amount: taxMinor / 100,
-        discount_amount: totalDiscountMinor / 100,
-        total_amount: finalBillMinor / 100,
-        change_owed: changeOwedMinor / 100,
-        currency: config.currency
-      },
+      invoice: invoiceObj,
+      bill: invoiceObj,
       customer: customerResult
     };
   });

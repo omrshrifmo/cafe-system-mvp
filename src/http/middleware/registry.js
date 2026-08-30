@@ -54,7 +54,7 @@ const routeRegistry = [
   // Inventory & Purchasing & Suppliers & Stocktakes
   { method: 'ALL', pathRegex: /^\/api\/inventory/, permission: 'inventory:read' },
   { method: 'ALL', pathRegex: /^\/api\/purchases?/, permission: 'inventory:purchase' },
-  { method: 'ALL', pathRegex: /^\/api\/stocktakes/, permission: 'inventory:manage' },
+  { method: 'ALL', pathRegex: /^\/api\/stocktakes/, permission: 'inventory:adjust' },
   { method: 'ALL', pathRegex: /^\/api\/suppliers/, permission: 'inventory:read' },
   
   // HR / Payroll / Staff / Attendance / Penalties / Tips / Allowances
@@ -79,6 +79,11 @@ const routeRegistry = [
   { method: 'ALL', pathRegex: /^\/api\/realtime/, permission: 'authenticated' },
   { method: 'ALL', pathRegex: /^\/api\/sync/, permission: 'authenticated' },
   { method: 'ALL', pathRegex: /^\/api\/(kds|runner|floor)/, permission: 'authenticated' },
+  
+  // Entertainment, Gaming & WiFi Vouchers & Promotions & Menu Engineering
+  { method: 'ALL', pathRegex: /^\/api\/(entertainment|wifi)(\/.*)?$/, permission: 'authenticated' },
+  { method: 'ALL', pathRegex: /^\/api\/promotions(\/.*)?$/, permission: 'authenticated' },
+  { method: 'ALL', pathRegex: /^\/api\/menu-engineering(\/.*)?$/, permission: 'authenticated' },
   
   // Settings & Admin & Hardware & Devices & Emergency
   { method: 'POST', pathRegex: /^\/api\/devices\/register$/, permission: 'public' },

@@ -37,6 +37,9 @@
       </div>
     </div>
     <div class="flex items-center gap-3">
+      <button onclick="openPromotionsModal()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 px-4 py-2 rounded-xl text-xs font-black transition-colors shadow-md cursor-pointer flex items-center gap-1.5">
+        <span>🎁</span><span>العروض والخصومات</span>
+      </button>
       <button onclick="openFeedbackModal()" class="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-xl text-xs font-black transition-colors shadow-md cursor-pointer flex items-center gap-1.5">
         <span>➕</span><span>تقييم جديد</span>
       </button>
@@ -549,8 +552,7 @@
       if (!_activeSettleCustomer || !_activeSettleCustomer.phone) return;
       const amt = parseFloat(document.getElementById('settleDebtAmount').value);
       if (isNaN(amt) || amt <= 0) {
-        if (window.UIState) UIState.showToast('يرجى إدخال مبلغ سداد صالح', 'error');
-        else alert('يرجى إدخال مبلغ سداد صالح');
+        if (window.UIState && UIState.showToast) UIState.showToast('يرجى إدخال مبلغ سداد صالح', 'error');
         return;
       }
       const paymentMethod = document.getElementById('settleDebtMethod').value;
@@ -569,15 +571,12 @@
         if (data.success) {
           closeSettleDebtModal();
           await loadCustomers();
-          if (window.UIState) UIState.showToast(data.message || 'تم سداد الحساب بنجاح ✅', 'success');
-          else alert(data.message || 'تم سداد الحساب بنجاح');
+          if (window.UIState && UIState.showToast) UIState.showToast(data.message || 'تم سداد الحساب بنجاح ✅', 'success');
         } else {
-          if (window.UIState) UIState.showApiError(data.error || 'فشل تسجيل السداد');
-          else alert(data.error || 'فشل تسجيل السداد');
+          if (window.UIState && UIState.showApiError) UIState.showApiError(data.error || 'فشل تسجيل السداد');
         }
       } catch (e) {
-        if (window.UIState) UIState.showToast('فشل الاتصال بالخادم', 'error');
-        else alert('فشل الاتصال بالخادم');
+        if (window.UIState && UIState.showToast) UIState.showToast('فشل الاتصال بالخادم', 'error');
       } finally {
         btn.disabled = false;
         btn.innerHTML = '<span>✅</span><span>تأكيد السداد والتحصيل</span>';
@@ -650,10 +649,170 @@
       }
     }
 
+    // Promotions Management
+    function openPromotionsModal() {
+      document.getElementById('promotionsModal').classList.remove('hidden');
+      loadPromotions();
+    }
+    function closePromotionsModal() {
+      document.getElementById('promotionsModal').classList.add('hidden');
+    }
+
+    async function loadPromotions() {
+      try {
+        const res = await fetch('/api/promotions');
+        const data = await res.json();
+        const tbody = document.getElementById('promotionsTableBody');
+        if (data.success && Array.isArray(data.promotions)) {
+          if (data.promotions.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center py-6 text-slate-500">لا توجد عروض ترويجية نشطة حالياً.</td></tr>';
+            return;
+          }
+          tbody.innerHTML = data.promotions.map(p => `
+            <tr class="border-b border-slate-800 hover:bg-slate-800/40 text-xs">
+              <td class="py-2.5 px-3 font-bold text-white">${p.name}</td>
+              <td class="py-2.5 px-3 font-mono text-amber-300">${p.type}</td>
+              <td class="py-2.5 px-3 text-slate-300">${p.discount_percent > 0 ? p.discount_percent + '%' : (p.discount_amount > 0 ? p.discount_amount + ' ج.م' : 'BOGO/مجاني')}</td>
+              <td class="py-2.5 px-3 text-center">
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold ${p.is_active ? 'bg-emerald-500/20 text-emerald-300' : 'bg-slate-800 text-slate-500'}">
+                  ${p.is_active ? 'مفعل 🟢' : 'معطل ⚪'}
+                </span>
+              </td>
+              <td class="py-2.5 px-3 text-center">
+                <button onclick="togglePromo(${p.id}, ${p.is_active ? 0 : 1})" class="text-xs text-sky-400 hover:text-sky-300 font-bold px-2 py-1 bg-slate-800 rounded-lg">
+                  ${p.is_active ? 'تعطيل' : 'تفعيل'}
+                </button>
+              </td>
+            </tr>
+          `).join('');
+        }
+      } catch (e) {
+        console.error('Error loading promotions:', e);
+      }
+    }
+
+    async function togglePromo(id, state) {
+      try {
+        await fetch(`/api/promotions/${id}/toggle`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ is_active: state })
+        });
+        loadPromotions();
+      } catch (e) {}
+    }
+
+    async function createPromo() {
+      const name = document.getElementById('newPromoName').value.trim();
+      const type = document.getElementById('newPromoType').value;
+      const targetItem = document.getElementById('newPromoTarget').value.trim();
+      const rewardItem = document.getElementById('newPromoReward').value.trim();
+      const discountPercent = parseFloat(document.getElementById('newPromoPercent').value) || 0;
+      const discountAmount = parseFloat(document.getElementById('newPromoAmount').value) || 0;
+      const startTime = document.getElementById('newPromoStart').value;
+      const endTime = document.getElementById('newPromoEnd').value;
+
+      if (!name) {
+        if (window.UIState && UIState.showToast) UIState.showToast('اسم العرض مطلوب', 'error');
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/promotions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name,
+            type,
+            target_item_name: targetItem,
+            reward_item_name: rewardItem,
+            discount_percent: discountPercent,
+            discount_amount: discountAmount,
+            start_time: startTime,
+            end_time: endTime
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          document.getElementById('newPromoName').value = '';
+          document.getElementById('newPromoTarget').value = '';
+          document.getElementById('newPromoReward').value = '';
+          loadPromotions();
+          if (window.UIState && UIState.showToast) UIState.showToast('تم إنشاء العرض بنجاح ✅', 'success');
+        } else {
+          if (window.UIState && UIState.showApiError) UIState.showApiError(data.error || 'حدث خطأ في إنشاء العرض');
+        }
+      } catch (e) {
+        console.error('Error creating promo:', e);
+      }
+    }
+
     // Init
     loadCustomers();
     loadFeedback();
     setInterval(loadFeedback, 30000);
   </script>
+
+  <!-- Promotions Modal -->
+  <div id="promotionsModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-2xl p-6 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="text-base font-black text-white flex items-center gap-2">
+          <span>🎁</span>
+          <span>إدارة العروض الترويجية والخصومات (Marketing & Promotions)</span>
+        </h3>
+        <button onclick="closePromotionsModal()" class="text-slate-400 hover:text-white text-lg">✕</button>
+      </div>
+
+      <!-- Create Promo Form -->
+      <div class="bg-slate-950/60 p-4 rounded-2xl border border-slate-800 space-y-3">
+        <div class="font-bold text-xs text-amber-300">➕ إضافة عرض ترويجي جديد:</div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+          <input type="text" id="newPromoName" placeholder="اسم العرض (مثلاً: هابي أور القهوة)" class="bg-slate-800 border border-slate-700 text-white rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-amber-500">
+          <select id="newPromoType" class="bg-slate-800 border border-slate-700 text-white rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-amber-500">
+            <option value="HAPPY_HOUR">هابي أور (Happy Hour - وقت محدد)</option>
+            <option value="BOGO">اشترِ قطعة واحصل على الأخرى (BOGO)</option>
+            <option value="COMBO">خصم كومبو (Combo Discount)</option>
+            <option value="PERCENTAGE">نسبة مئوية عامة (Percentage)</option>
+            <option value="TIER_DISCOUNT">خصم مستويات الولاء (Tier Discount)</option>
+          </select>
+          <input type="text" id="newPromoTarget" placeholder="الصنف المستهدف (اختياري)" class="bg-slate-800 border border-slate-700 text-white rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-amber-500">
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+          <input type="text" id="newPromoReward" placeholder="صنف المكافأة المجاني" class="bg-slate-800 border border-slate-700 text-white rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-amber-500">
+          <input type="number" id="newPromoPercent" placeholder="نسبة الخصم %" class="bg-slate-800 border border-slate-700 text-white rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-amber-500">
+          <input type="number" id="newPromoAmount" placeholder="مبلغ الخصم ج.م" class="bg-slate-800 border border-slate-700 text-white rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-amber-500">
+          <div class="flex gap-1">
+            <input type="time" id="newPromoStart" class="w-1/2 bg-slate-800 border border-slate-700 text-white rounded-xl px-2 py-2 text-xs">
+            <input type="time" id="newPromoEnd" class="w-1/2 bg-slate-800 border border-slate-700 text-white rounded-xl px-2 py-2 text-xs">
+          </div>
+        </div>
+        <button onclick="createPromo()" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs py-2 rounded-xl shadow-md">
+          حفظ وتفعيل العرض فوراً 🚀
+        </button>
+      </div>
+
+      <!-- Active Promos Table -->
+      <div>
+        <div class="font-bold text-xs text-slate-300 mb-2">📋 العروض المسجلة في النظام:</div>
+        <div class="overflow-x-auto border border-slate-800 rounded-xl">
+          <table class="w-full text-right">
+            <thead class="bg-slate-800 text-slate-400 text-[10px]">
+              <tr>
+                <th class="py-2 px-3">اسم العرض</th>
+                <th class="py-2 px-3">النوع</th>
+                <th class="py-2 px-3">قيمة الخصم</th>
+                <th class="py-2 px-3 text-center">الحالة</th>
+                <th class="py-2 px-3 text-center">إجراء</th>
+              </tr>
+            </thead>
+            <tbody id="promotionsTableBody" class="divide-y divide-slate-800/60">
+              <tr><td colspan="5" class="text-center py-6 text-slate-500 text-xs">جاري التحميل...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
 </body>
 </html>

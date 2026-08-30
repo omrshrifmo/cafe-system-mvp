@@ -428,10 +428,14 @@ db.serialize(() => {
       reserved_at DATETIME NOT NULL,
       duration_minutes INTEGER DEFAULT 90,
       status TEXT DEFAULT 'CONFIRMED',
+      event_type TEXT DEFAULT 'NORMAL',
+      chair_number TEXT,
       notes TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
+  db.run(`ALTER TABLE reservations ADD COLUMN event_type TEXT DEFAULT 'NORMAL'`, () => {});
+  db.run(`ALTER TABLE reservations ADD COLUMN chair_number TEXT`, () => {});
 
   // Shifts Table (Clock In / Clock Out)
   db.run(`
@@ -531,6 +535,88 @@ db.serialize(() => {
       status TEXT DEFAULT 'OPEN'
     )
   `);
+
+  // Rentable Entertainment Resources Table (PlayStation, Xbox, Billiards)
+  db.run(`
+    CREATE TABLE IF NOT EXISTS rentable_resources (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      type TEXT NOT NULL, -- 'PS5', 'PS4', 'XBOX', 'BILLIARDS', 'VIP_ROOM'
+      hourly_rate_single REAL NOT NULL DEFAULT 40,
+      hourly_rate_multi REAL NOT NULL DEFAULT 60,
+      status TEXT NOT NULL DEFAULT 'AVAILABLE', -- 'AVAILABLE', 'IN_USE', 'MAINTENANCE'
+      current_session_id INTEGER,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // Entertainment Rental Sessions Table
+  db.run(`
+    CREATE TABLE IF NOT EXISTS entertainment_sessions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      resource_id INTEGER NOT NULL,
+      table_number INTEGER,
+      order_session_id INTEGER,
+      player_mode TEXT NOT NULL DEFAULT 'SINGLE', -- 'SINGLE', 'MULTI'
+      started_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      ended_at DATETIME,
+      duration_minutes INTEGER DEFAULT 0,
+      hourly_rate REAL NOT NULL,
+      total_amount REAL DEFAULT 0,
+      status TEXT NOT NULL DEFAULT 'ACTIVE', -- 'ACTIVE', 'ENDED', 'BILLED'
+      created_by INTEGER,
+      notes TEXT,
+      FOREIGN KEY(resource_id) REFERENCES rentable_resources(id)
+    )
+  `);
+
+  // WiFi Hotspot Vouchers Table (MikroTik Integration)
+  db.run(`
+    CREATE TABLE IF NOT EXISTS wifi_vouchers (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      code TEXT UNIQUE NOT NULL,
+      profile TEXT NOT NULL, -- '1_HOUR', '3_HOURS', 'DAY_PASS', '2GB_DATA'
+      duration_minutes INTEGER NOT NULL DEFAULT 60,
+      data_limit_mb INTEGER DEFAULT 0,
+      price REAL NOT NULL DEFAULT 10,
+      status TEXT NOT NULL DEFAULT 'ACTIVE', -- 'ACTIVE', 'USED', 'EXPIRED'
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      expires_at DATETIME
+    )
+  `);
+
+  // Advanced Promotions Table (HAPPY_HOUR, BOGO, COMBO, TIER_DISCOUNT)
+  db.run(`
+    CREATE TABLE IF NOT EXISTS promotions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      type TEXT NOT NULL, -- 'HAPPY_HOUR', 'BOGO', 'COMBO', 'TIER_DISCOUNT', 'PERCENTAGE'
+      target_item_name TEXT,
+      reward_item_name TEXT,
+      discount_percent REAL DEFAULT 0,
+      discount_amount REAL DEFAULT 0,
+      start_time TEXT, -- e.g. '14:00'
+      end_time TEXT,   -- e.g. '17:00'
+      min_spend REAL DEFAULT 0,
+      customer_tier TEXT DEFAULT 'ALL', -- 'ALL', 'VIP', 'GOLD', 'SILVER'
+      is_active INTEGER DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // Seed default entertainment resources if empty
+  db.get(`SELECT COUNT(*) as count FROM rentable_resources`, [], (err, row) => {
+    if (!err && (!row || row.count === 0)) {
+      db.run(`INSERT INTO rentable_resources (name, type, hourly_rate_single, hourly_rate_multi, status) VALUES 
+        ('بلايستيشن 5 (جهاز 1)', 'PS5', 50, 70, 'AVAILABLE'),
+        ('بلايستيشن 5 (جهاز 2)', 'PS5', 50, 70, 'AVAILABLE'),
+        ('بلايستيشن 4 (جهاز 3)', 'PS4', 35, 50, 'AVAILABLE'),
+        ('طاولة بلياردو رقم 1', 'BILLIARDS', 60, 60, 'AVAILABLE'),
+        ('طاولة بلياردو رقم 2', 'BILLIARDS', 60, 60, 'AVAILABLE'),
+        ('غرفة ألعاب VIP', 'VIP_ROOM', 100, 150, 'AVAILABLE')
+      `);
+    }
+  });
 
   // Waste Log Table
   db.run(`

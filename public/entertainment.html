@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>كافيه مزاج - صالة الألعاب والترفيه (Entertainment & Gaming)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap');
+    * { font-family: 'Cairo', sans-serif; }
+    .no-select { user-select: none; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col no-select">
+
+  <!-- Header Bar -->
+  <header class="bg-slate-900 border-b border-slate-800 px-6 py-3.5 flex items-center justify-between shadow-lg shrink-0">
+    <div class="flex items-center gap-3">
+      <a href="/portal.html" class="p-2 bg-slate-800 hover:bg-slate-700 rounded-xl border border-slate-700 text-amber-400 font-bold flex items-center gap-1.5 transition-all text-xs">
+        <span>←</span>
+        <span>بوابة الأنظمة</span>
+      </a>
+      <div class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></div>
+      <h1 class="text-base font-black text-white flex items-center gap-2">
+        <span>🎮</span>
+        <span>إدارة صالة الألعاب والترفيه (Gaming & Billiards)</span>
+      </h1>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="flex items-center gap-3">
+      <button onclick="openWifiModal()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl border border-indigo-400/30 flex items-center gap-1.5 shadow-md">
+        <span>📶</span>
+        <span>توليد كود واي فاي (Hotspot)</span>
+      </button>
+      <button onclick="fetchResources()" class="p-2 bg-slate-800 hover:bg-slate-700 rounded-xl border border-slate-700 text-slate-300">
+        🔄
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Content Grid -->
+  <main class="flex-1 p-6 overflow-y-auto">
+    <div class="max-w-7xl mx-auto space-y-6">
+
+      <!-- Summary KPI Ribbon -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex items-center gap-3.5 shadow-md">
+          <div class="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400 flex items-center justify-center text-2xl">
+            🎮
+          </div>
+          <div>
+            <div class="text-xs font-bold text-slate-400">أجهزة البلايستيشن</div>
+            <div id="psCount" class="text-lg font-black text-purple-300">3 أجهزة</div>
+          </div>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex items-center gap-3.5 shadow-md">
+          <div class="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center text-2xl">
+            🎱
+          </div>
+          <div>
+            <div class="text-xs font-bold text-slate-400">طاولات البلياردو</div>
+            <div id="billiardsCount" class="text-lg font-black text-emerald-300">2 طاولة</div>
+          </div>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex items-center gap-3.5 shadow-md">
+          <div class="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center text-2xl">
+            ⏳
+          </div>
+          <div>
+            <div class="text-xs font-bold text-slate-400">جلسات نشطة حالياً</div>
+            <div id="activeSessionsCount" class="text-lg font-black text-amber-300">0 جلسة</div>
+          </div>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex items-center gap-3.5 shadow-md">
+          <div class="w-12 h-12 rounded-xl bg-sky-500/10 border border-sky-500/20 text-sky-400 flex items-center justify-center text-2xl">
+            💰
+          </div>
+          <div>
+            <div class="text-xs font-bold text-slate-400">إيرادات الألعاب التقديرية</div>
+            <div id="estimatedGamingRev" class="text-lg font-black text-sky-300">0 ج.م</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Gaming & Billiards Resources Grid -->
+      <div id="resourcesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <!-- Rendered via JS -->
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Start Session Modal -->
+  <div id="startModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md p-6 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 id="modalResourceTitle" class="text-base font-black text-white flex items-center gap-2">
+          <span>🎮</span>
+          <span>بدء تشغيل الجهاز</span>
+        </h3>
+        <button onclick="closeStartModal()" class="text-slate-400 hover:text-white text-lg">✕</button>
+      </div>
+
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs font-bold text-slate-400 mb-1">نوع اللعب:</label>
+          <div class="grid grid-cols-2 gap-2">
+            <button type="button" id="modeSingleBtn" onclick="selectPlayerMode('SINGLE')" class="p-2.5 rounded-xl border font-bold text-xs bg-amber-500/20 border-amber-500 text-amber-300">
+              فردي (سنجل 👤)
+            </button>
+            <button type="button" id="modeMultiBtn" onclick="selectPlayerMode('MULTI')" class="p-2.5 rounded-xl border font-bold text-xs bg-slate-800 border-slate-700 text-slate-400">
+              زوجي / جماعي (ملتي 👥)
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-400 mb-1">ربط بطاولة الصالة (اختياري لتحميل الفاتورة):</label>
+          <input type="number" id="sessionTableInput" placeholder="رقم الطاولة (مثلاً 5)" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-400 mb-1">ملاحظات إضافية:</label>
+          <input type="text" id="sessionNotesInput" placeholder="مثلاً: ذراعين إضافية أو وقت محدد" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500">
+        </div>
+      </div>
+
+      <div class="flex gap-3 pt-2">
+        <button onclick="confirmStartSession()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs py-3 rounded-xl shadow-lg">
+          تأكيد وبدء العداد ⏱️
+        </button>
+        <button onclick="closeStartModal()" class="px-4 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs rounded-xl">
+          إلغاء
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- WiFi Voucher Modal -->
+  <div id="wifiModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md p-6 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="text-base font-black text-white flex items-center gap-2">
+          <span>📶</span>
+          <span>توليد كود هوتسبوت واي فاي (MikroTik)</span>
+        </h3>
+        <button onclick="closeWifiModal()" class="text-slate-400 hover:text-white text-lg">✕</button>
+      </div>
+
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs font-bold text-slate-400 mb-1">باقة الإنترنت:</label>
+          <select id="wifiProfileSelect" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-500">
+            <option value="1_HOUR">ساعة واحدة (1 Hour Pass) - 10 ج.م</option>
+            <option value="3_HOURS">3 ساعات (3 Hours Pass) - 20 ج.م</option>
+            <option value="DAY_PASS">يوم كامل (Day Pass) - 35 ج.م</option>
+            <option value="2GB_DATA">باقة سعة (2GB Ultra Data) - 25 ج.م</option>
+          </select>
+        </div>
+
+        <div id="generatedVoucherBox" class="hidden p-4 bg-indigo-950/40 border border-indigo-500/30 rounded-2xl text-center space-y-2">
+          <div class="text-xs text-indigo-300 font-bold">كود الواي فاي الجديد للعميل:</div>
+          <div id="voucherCodeDisplay" class="text-2xl font-mono font-black text-amber-400 tracking-wider"></div>
+          <div class="text-[10px] text-slate-400">جاهز للتسليم ومطابق لإعدادات راوتر MikroTik</div>
+        </div>
+      </div>
+
+      <div class="flex gap-3 pt-2">
+        <button onclick="submitGenerateWifi()" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs py-3 rounded-xl shadow-lg">
+          توليد وطباعة الكود 🖨️
+        </button>
+        <button onclick="closeWifiModal()" class="px-4 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs rounded-xl">
+          إغلاق
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    'use strict';
+    let resources = [];
+    let selectedResourceId = null;
+    let selectedPlayerMode = 'SINGLE';
+    let timerInterval = null;
+
+    async function fetchResources() {
+      try {
+        const res = await fetch('/api/entertainment/resources');
+        const data = await res.json();
+        if (data.success && Array.isArray(data.data)) {
+          resources = data.data;
+          renderResources();
+        }
+      } catch (err) {
+        console.error('Error fetching entertainment resources:', err);
+      }
+    }
+
+    function renderResources() {
+      const grid = document.getElementById('resourcesGrid');
+      if (!grid) return;
+      grid.innerHTML = '';
+
+      let activeCount = 0;
+      let totalEstRev = 0;
+
+      resources.forEach(r => {
+        const isInUse = r.status === 'IN_USE';
+        if (isInUse) {
+          activeCount++;
+          totalEstRev += (r.current_cost || 0);
+        }
+
+        const icon = r.type === 'BILLIARDS' ? '🎱' : (r.type === 'VIP_ROOM' ? '👑' : '🎮');
+        const card = document.createElement('div');
+        card.className = `bg-slate-900 border ${isInUse ? 'border-amber-500/60 shadow-amber-500/10' : 'border-slate-800'} rounded-2xl p-5 shadow-xl flex flex-col justify-between transition-all`;
+
+        card.innerHTML = `
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center gap-2.5">
+                <span class="text-2xl">${icon}</span>
+                <div>
+                  <h3 class="text-sm font-black text-white">${r.name}</h3>
+                  <span class="text-[10px] font-mono text-slate-400">نوع: ${r.type}</span>
+                </div>
+              </div>
+              <span class="px-2.5 py-1 text-[10px] font-bold rounded-lg ${isInUse ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse' : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'}">
+                ${isInUse ? '🔴 قيد الاستخدام' : '🟢 متاح للتشغيل'}
+              </span>
+            </div>
+
+            <div class="bg-slate-950/60 rounded-xl p-3 border border-slate-800/80 mb-4 space-y-1.5">
+              <div class="flex justify-between text-xs">
+                <span class="text-slate-400">سعر الساعة (فردي):</span>
+                <span class="font-bold text-white font-mono">${r.hourly_rate_single} ج.م/ساعة</span>
+              </div>
+              <div class="flex justify-between text-xs">
+                <span class="text-slate-400">سعر الساعة (جماعي):</span>
+                <span class="font-bold text-white font-mono">${r.hourly_rate_multi} ج.م/ساعة</span>
+              </div>
+            </div>
+
+            ${isInUse ? `
+              <div class="p-3 bg-amber-950/30 border border-amber-500/30 rounded-xl mb-4 space-y-2">
+                <div class="flex justify-between items-center text-xs">
+                  <span class="text-amber-300 font-bold">العداد المباشر:</span>
+                  <span class="font-black text-amber-400 font-mono text-sm">${formatMinutes(r.elapsed_minutes)} دقيقة</span>
+                </div>
+                <div class="flex justify-between items-center text-xs">
+                  <span class="text-slate-300">المبلغ التقديري:</span>
+                  <span class="font-black text-emerald-400 font-mono text-base">${r.current_cost || 0} ج.م</span>
+                </div>
+                ${r.table_number ? `<div class="text-[10px] text-slate-400">مرتبط بطاولة رقم: <strong class="text-white">طاولة ${r.table_number}</strong></div>` : ''}
+              </div>
+            ` : ''}
+          </div>
+
+          <div>
+            ${isInUse ? `
+              <button onclick="stopSession(${r.active_session_id})" class="w-full bg-red-600 hover:bg-red-500 text-white font-black text-xs py-2.5 rounded-xl border border-red-400/30 shadow-lg flex items-center justify-center gap-1.5">
+                <span>🛑</span>
+                <span>إنهاء الجلسة وحساب التكلفة</span>
+              </button>
+            ` : `
+              <button onclick="openStartModal(${r.id}, '${r.name}')" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs py-2.5 rounded-xl border border-emerald-400/30 shadow-lg flex items-center justify-center gap-1.5">
+                <span>⏱️</span>
+                <span>بدء تشغيل الجلسة</span>
+              </button>
+            `}
+          </div>
+        `;
+
+        grid.appendChild(card);
+      });
+
+      document.getElementById('activeSessionsCount').textContent = `${activeCount} جلسة`;
+      document.getElementById('estimatedGamingRev').textContent = `${Math.round(totalEstRev)} ج.م`;
+    }
+
+    function formatMinutes(min) {
+      if (!min) return '0';
+      const h = Math.floor(min / 60);
+      const m = min % 60;
+      return h > 0 ? `${h} س و ${m} د` : `${m}`;
+    }
+
+    function openStartModal(resourceId, resourceName) {
+      selectedResourceId = resourceId;
+      document.getElementById('modalResourceTitle').innerHTML = `<span>🎮</span><span>بدء تشغيل ${resourceName}</span>`;
+      document.getElementById('sessionTableInput').value = '';
+      document.getElementById('sessionNotesInput').value = '';
+      selectPlayerMode('SINGLE');
+      document.getElementById('startModal').classList.remove('hidden');
+    }
+
+    function closeStartModal() {
+      document.getElementById('startModal').classList.add('hidden');
+    }
+
+    function selectPlayerMode(mode) {
+      selectedPlayerMode = mode;
+      const sBtn = document.getElementById('modeSingleBtn');
+      const mBtn = document.getElementById('modeMultiBtn');
+      if (mode === 'SINGLE') {
+        sBtn.className = "p-2.5 rounded-xl border font-bold text-xs bg-amber-500/20 border-amber-500 text-amber-300";
+        mBtn.className = "p-2.5 rounded-xl border font-bold text-xs bg-slate-800 border-slate-700 text-slate-400";
+      } else {
+        mBtn.className = "p-2.5 rounded-xl border font-bold text-xs bg-amber-500/20 border-amber-500 text-amber-300";
+        sBtn.className = "p-2.5 rounded-xl border font-bold text-xs bg-slate-800 border-slate-700 text-slate-400";
+      }
+    }
+
+    async function confirmStartSession() {
+      if (!selectedResourceId) return;
+      const tableNum = document.getElementById('sessionTableInput').value;
+      const notes = document.getElementById('sessionNotesInput').value;
+
+      try {
+        const res = await fetch('/api/entertainment/sessions/start', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            resource_id: selectedResourceId,
+            table_number: tableNum ? parseInt(tableNum, 10) : null,
+            player_mode: selectedPlayerMode,
+            notes
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          closeStartModal();
+          await fetchResources();
+          if (window.UIState && UIState.showToast) UIState.showToast('تم بدء جلسة اللعب بنجاح 🎮', 'success');
+        } else {
+          if (window.UIState && UIState.showApiError) UIState.showApiError(data.error || 'حدث خطأ أثناء بدء الجلسة');
+        }
+      } catch (err) {
+        console.error('Error starting session:', err);
+      }
+    }
+
+    async function stopSession(sessionId) {
+      try {
+        const res = await fetch(`/api/entertainment/sessions/${sessionId}/stop`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        const data = await res.json();
+        if (data.success) {
+          if (window.UIState && UIState.showToast) UIState.showToast(data.message || 'تم إنهاء الجلسة واحتساب التكلفة', 'success');
+          await fetchResources();
+        } else {
+          if (window.UIState && UIState.showApiError) UIState.showApiError(data.error || 'تعذر إنهاء الجلسة');
+        }
+      } catch (err) {
+        console.error('Error stopping session:', err);
+      }
+    }
+
+    function openWifiModal() {
+      document.getElementById('generatedVoucherBox').classList.add('hidden');
+      document.getElementById('wifiModal').classList.remove('hidden');
+    }
+
+    function closeWifiModal() {
+      document.getElementById('wifiModal').classList.add('hidden');
+    }
+
+    async function submitGenerateWifi() {
+      const profile = document.getElementById('wifiProfileSelect').value;
+      try {
+        const res = await fetch('/api/wifi/voucher', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ profile })
+        });
+        const data = await res.json();
+        if (data.success && data.voucher) {
+          document.getElementById('voucherCodeDisplay').textContent = data.voucher.code;
+          document.getElementById('generatedVoucherBox').classList.remove('hidden');
+          if (window.UIState && UIState.showToast) UIState.showToast('تم توليد كرت الإنترنت بنجاح 📶', 'success');
+        } else {
+          if (window.UIState && UIState.showApiError) UIState.showApiError(data.error || 'حدث خطأ في توليد الكود');
+        }
+      } catch (err) {
+        console.error('Error generating voucher:', err);
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      fetchResources();
+      timerInterval = setInterval(fetchResources, 15000); // 15s refresh
+    });
+  </script>
+</body>
+</html>

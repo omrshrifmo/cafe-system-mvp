@@ -96,6 +96,21 @@
         </div>
         <div class="grid grid-cols-2 gap-3">
           <div>
+            <label class="text-slate-400 text-sm mb-1 block">نوع الحجز والمناسبة</label>
+            <select id="resEventType" class="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-3 py-3 text-sm focus:outline-none focus:border-amber-500">
+              <option value="NORMAL">طاولة عادية 🪑</option>
+              <option value="MATCH_CHAIR">حجز كراسي مباراة ⚽</option>
+              <option value="BIRTHDAY">مناسبة خاصة / عيد ميلاد 🎂</option>
+              <option value="VIP_EVENT">صالة كبار الشخصيات VIP 👑</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-slate-400 text-sm mb-1 block">أرقام الكراسي (للمباريات)</label>
+            <input id="resChairNumber" type="text" placeholder="مثلاً: C1, C2, C3" class="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500">
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
             <label class="text-slate-400 text-sm mb-1 block">رقم الطاولة</label>
             <input id="resTable" type="number" min="1" max="50" placeholder="اختياري" class="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500">
           </div>
@@ -106,7 +121,7 @@
         </div>
         <div>
           <label class="text-slate-400 text-sm mb-1 block">ملاحظات</label>
-          <textarea id="resNotes" rows="2" placeholder="مناسبة خاصة، طلبات خاصة..." class="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500 resize-none"></textarea>
+          <textarea id="resNotes" rows="2" placeholder="طلبات إضافية، تجهيز كيكة، شاشة عرض..." class="w-full bg-slate-800 border border-slate-700 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500 resize-none"></textarea>
         </div>
       </div>
       <div class="flex gap-3 mt-5">
@@ -256,6 +271,8 @@
         party_size: parseInt(document.getElementById('resPartySize').value) || 2,
         reserved_at: datetime,
         duration_minutes: parseInt(document.getElementById('resDuration').value) || 90,
+        event_type: document.getElementById('resEventType').value || 'NORMAL',
+        chair_number: document.getElementById('resChairNumber').value.trim() || null,
         notes: document.getElementById('resNotes').value.trim()
       };
       try {

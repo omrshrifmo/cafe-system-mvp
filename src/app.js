@@ -34,6 +34,9 @@ const updatesRoutes = require('./http/routes/updates');
 const auditRoutes = require('./http/routes/audit');
 const deviceRoutes = require('./http/routes/devices');
 const demoRoutes = require('./http/routes/demo');
+const entertainmentRoutes = require('./http/routes/entertainment');
+const promotionsRoutes = require('./http/routes/promotions');
+const menuEngineeringRoutes = require('./http/routes/menuEngineering');
 const { securityHeaders, strictCors, csrfProtection, blockDebugEndpoints, requireHttps } = require('./http/middleware/security');
 const { adminLimiter, healthLimiter, updateLimiter } = require('./http/middleware/rate-limit');
 const { router: healthRoutes, recordRequestMetric } = require('./http/routes/health');
@@ -161,6 +164,9 @@ function createApp() {
   app.use('/api/activity-ledger', auditRoutes);
   app.use('/api/devices', deviceRoutes);
   app.use('/api/admin', adminLimiter, adminRoutes);
+  app.use('/api', entertainmentRoutes);
+  app.use('/api', promotionsRoutes);
+  app.use('/api', menuEngineeringRoutes);
   app.use('/api', healthRoutes);
 
   // Health check endpoint (publicly accessible for load balancers and monitoring)

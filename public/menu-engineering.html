@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>كافيه مزاج - هندسة المنيو والربحية (Menu Engineering & Margin Analytics)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap');
+    * { font-family: 'Cairo', sans-serif; }
+    .no-select { user-select: none; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col no-select">
+
+  <!-- Header -->
+  <header class="bg-slate-900 border-b border-slate-800 px-6 py-3.5 flex items-center justify-between shadow-lg shrink-0">
+    <div class="flex items-center gap-3">
+      <a href="/portal.html" class="p-2 bg-slate-800 hover:bg-slate-700 rounded-xl border border-slate-700 text-amber-400 font-bold flex items-center gap-1.5 transition-all text-xs">
+        <span>←</span>
+        <span>بوابة الأنظمة</span>
+      </a>
+      <div class="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-pulse"></div>
+      <h1 class="text-base font-black text-white flex items-center gap-2">
+        <span>📊</span>
+        <span>هندسة المنيو وتحليلات الربحية والتكاليف الحية (Menu Engineering - Stars vs. Dogs)</span>
+      </h1>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <label class="text-xs text-slate-400 font-bold">حد إنذار هامش الربح:</label>
+      <select id="thresholdSelect" onchange="loadReport()" class="bg-slate-800 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500">
+        <option value="30">30% فأقل</option>
+        <option value="40" selected>40% فأقل (المعيار الآمن)</option>
+        <option value="50">50% فأقل</option>
+      </select>
+      <button onclick="loadReport()" class="p-2 bg-slate-800 hover:bg-slate-700 rounded-xl border border-slate-700 text-slate-300">
+        🔄
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="flex-1 p-6 overflow-y-auto">
+    <div class="max-w-7xl mx-auto space-y-6">
+
+      <!-- Critical Low Margin Alerts -->
+      <div id="criticalAlertsContainer" class="hidden space-y-2">
+        <!-- Rendered via JS -->
+      </div>
+
+      <!-- Overview KPI Cards -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-md">
+          <div class="text-xs font-bold text-slate-400">إجمالي أصناف المنيو</div>
+          <div id="kpiTotalItems" class="text-lg font-black text-white mt-1">0 صنف</div>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-md">
+          <div class="text-xs font-bold text-slate-400">متوسط هامش الربح للصنف</div>
+          <div id="kpiAvgMargin" class="text-lg font-black text-emerald-400 mt-1">0.00 ج.م</div>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-md">
+          <div class="text-xs font-bold text-slate-400">متوسط حجم مبيعات الصنف</div>
+          <div id="kpiAvgVolume" class="text-lg font-black text-sky-300 mt-1">0 طلب</div>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-md">
+          <div class="text-xs font-bold text-red-400">تنبيهات انخفاض الهامش</div>
+          <div id="kpiAlertCount" class="text-lg font-black text-red-400 mt-1">0 تنبيه ⚠️</div>
+        </div>
+      </div>
+
+      <!-- 4-Quadrant Menu Engineering Matrix (BCG Matrix) -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+        
+        <!-- Stars (النجوم) -->
+        <div class="bg-slate-900 border border-amber-500/40 rounded-2xl p-5 shadow-xl space-y-3">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div class="flex items-center gap-2">
+              <span class="text-2xl">⭐</span>
+              <div>
+                <h3 class="text-sm font-black text-amber-300">النجوم الساطعة (Stars)</h3>
+                <p class="text-[10px] text-slate-400">ربحية مرتفعة + حجم مبيعات مرتفع</p>
+              </div>
+            </div>
+            <span id="badgeStarsCount" class="px-2.5 py-0.5 rounded-lg text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">0 صنف</span>
+          </div>
+          <div id="starsList" class="space-y-2 max-h-72 overflow-y-auto pr-1">
+            <!-- Injected via JS -->
+          </div>
+        </div>
+
+        <!-- Plowhorses (خيول الجر) -->
+        <div class="bg-slate-900 border border-sky-500/40 rounded-2xl p-5 shadow-xl space-y-3">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div class="flex items-center gap-2">
+              <span class="text-2xl">🐎</span>
+              <div>
+                <h3 class="text-sm font-black text-sky-300">خيول الجر (Plowhorses)</h3>
+                <p class="text-[10px] text-slate-400">مبيعات مرتفعة + هامش ربح منخفض (تحتاج إعادة تسعير/تكلفة)</p>
+              </div>
+            </div>
+            <span id="badgePlowhorsesCount" class="px-2.5 py-0.5 rounded-lg text-xs font-bold bg-sky-500/20 text-sky-300 border border-sky-500/30">0 صنف</span>
+          </div>
+          <div id="plowhorsesList" class="space-y-2 max-h-72 overflow-y-auto pr-1">
+            <!-- Injected via JS -->
+          </div>
+        </div>
+
+        <!-- Puzzles (الألغاز) -->
+        <div class="bg-slate-900 border border-purple-500/40 rounded-2xl p-5 shadow-xl space-y-3">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div class="flex items-center gap-2">
+              <span class="text-2xl">🧩</span>
+              <div>
+                <h3 class="text-sm font-black text-purple-300">الألغاز المحيرة (Puzzles)</h3>
+                <p class="text-[10px] text-slate-400">ربحية ممتازة + مبيعات منخفضة (تحتاج ترويج وإبراز)</p>
+              </div>
+            </div>
+            <span id="badgePuzzlesCount" class="px-2.5 py-0.5 rounded-lg text-xs font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30">0 صنف</span>
+          </div>
+          <div id="puzzlesList" class="space-y-2 max-h-72 overflow-y-auto pr-1">
+            <!-- Injected via JS -->
+          </div>
+        </div>
+
+        <!-- Dogs (الأصناف الخاسرة) -->
+        <div class="bg-slate-900 border border-red-500/40 rounded-2xl p-5 shadow-xl space-y-3">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div class="flex items-center gap-2">
+              <span class="text-2xl">🐕</span>
+              <div>
+                <h3 class="text-sm font-black text-red-400">الأصناف الخاسرة (Dogs)</h3>
+                <p class="text-[10px] text-slate-400">ربحية منخفضة + مبيعات منخفضة (مرشحة للإلغاء)</p>
+              </div>
+            </div>
+            <span id="badgeDogsCount" class="px-2.5 py-0.5 rounded-lg text-xs font-bold bg-red-500/20 text-red-400 border border-red-500/30">0 صنف</span>
+          </div>
+          <div id="dogsList" class="space-y-2 max-h-72 overflow-y-auto pr-1">
+            <!-- Injected via JS -->
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </main>
+
+  <script>
+    'use strict';
+
+    async function loadReport() {
+      const threshold = document.getElementById('thresholdSelect').value;
+      try {
+        const res = await fetch(`/api/menu-engineering?threshold=${threshold}`);
+        const data = await res.json();
+        if (data.success) {
+          renderSummary(data.summary);
+          renderAlerts(data.critical_alerts);
+          renderQuadrant('starsList', data.matrix.stars, 'amber');
+          renderQuadrant('plowhorsesList', data.matrix.plowhorses, 'sky');
+          renderQuadrant('puzzlesList', data.matrix.puzzles, 'purple');
+          renderQuadrant('dogsList', data.matrix.dogs, 'red');
+
+          document.getElementById('badgeStarsCount').textContent = `${data.summary.counts.stars} صنف`;
+          document.getElementById('badgePlowhorsesCount').textContent = `${data.summary.counts.plowhorses} صنف`;
+          document.getElementById('badgePuzzlesCount').textContent = `${data.summary.counts.puzzles} صنف`;
+          document.getElementById('badgeDogsCount').textContent = `${data.summary.counts.dogs} صنف`;
+        }
+      } catch (err) {
+        console.error('Error loading menu engineering report:', err);
+      }
+    }
+
+    function renderSummary(summary) {
+      if (!summary) return;
+      document.getElementById('kpiTotalItems').textContent = `${summary.total_items} صنف`;
+      document.getElementById('kpiAvgMargin').textContent = `${summary.average_contribution_margin} ج.م`;
+      document.getElementById('kpiAvgVolume').textContent = `${summary.average_sales_volume} طلب`;
+      document.getElementById('kpiAlertCount').textContent = `${summary.critical_alerts_count} تنبيه ⚠️`;
+    }
+
+    function renderAlerts(alerts) {
+      const container = document.getElementById('criticalAlertsContainer');
+      if (!alerts || alerts.length === 0) {
+        container.classList.add('hidden');
+        return;
+      }
+
+      container.classList.remove('hidden');
+      container.innerHTML = alerts.map(a => `
+        <div class="p-3 bg-red-950/40 border border-red-500/40 rounded-xl flex items-center justify-between text-xs shadow-md">
+          <div class="flex items-center gap-2">
+            <span class="text-red-400 text-base">⚠️</span>
+            <span class="font-bold text-red-200">${a.message}</span>
+          </div>
+          <div class="font-mono text-red-300 font-bold">
+            التكلفة: ${a.real_cost} ج.م | السعر: ${a.selling_price} ج.م
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderQuadrant(containerId, items, themeColor) {
+      const el = document.getElementById(containerId);
+      if (!el) return;
+
+      if (!items || items.length === 0) {
+        el.innerHTML = `<div class="text-center py-8 text-slate-500 text-xs">لا توجد أصناف في هذا الربع حالياً.</div>`;
+        return;
+      }
+
+      el.innerHTML = items.map(it => `
+        <div class="p-3 bg-slate-950/60 border border-slate-800 rounded-xl space-y-1.5 hover:border-${themeColor}-500/50 transition-all">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-white text-xs">${it.name}</span>
+            <span class="text-xs font-mono font-black text-emerald-400">${it.price} ج.م</span>
+          </div>
+          <div class="flex justify-between text-[10px] text-slate-400 font-mono">
+            <span>التكلفة الفعلية: <strong class="text-slate-200">${it.real_cost} ج.م</strong></span>
+            <span>الهامش: <strong class="text-amber-400">${it.contribution_margin} ج.م (${it.margin_percent}%)</strong></span>
+            <span>المبيعات: <strong class="text-sky-300">${it.sales_volume}</strong></span>
+          </div>
+          <div class="text-[10px] text-slate-400 pt-1 border-t border-slate-800/80">
+            💡 ${it.recommendation_ar}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    window.addEventListener('DOMContentLoaded', loadReport);
+  </script>
+</body>
+</html>
